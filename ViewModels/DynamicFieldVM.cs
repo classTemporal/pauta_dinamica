@@ -15,12 +15,34 @@ namespace PautaDinamicaApp.ViewModels
         public DynamicFieldVM(FieldDefinition definition)
         {
             Definition = definition;
+            InitializeDefaultValue();
+        }
 
-            // Default values based on type
-            if (definition.Type == FieldType.Boolean) _value = false;
-            if (definition.Type == FieldType.Date) _value = DateTime.Now;
-
-            // We don't call Validate() here so the form starts "clean" (no red borders)
+        private void InitializeDefaultValue()
+        {
+            if (!string.IsNullOrEmpty(Definition.DefaultValue))
+            {
+                if (Definition.Type == FieldType.Boolean)
+                {
+                    if (bool.TryParse(Definition.DefaultValue, out bool b)) _value = b;
+                }
+                else if (Definition.Type == FieldType.Date)
+                {
+                    if (DateTime.TryParse(Definition.DefaultValue, out DateTime d)) _value = d;
+                    else if (Definition.DefaultValue.Equals("TODAY", StringComparison.OrdinalIgnoreCase)) _value = DateTime.Now;
+                }
+                else
+                {
+                    _value = Definition.DefaultValue;
+                }
+            }
+            else
+            {
+                // Fallbacks if no default is specified
+                if (Definition.Type == FieldType.Boolean) _value = false;
+                else if (Definition.Type == FieldType.Date) _value = DateTime.Now;
+                else _value = null;
+            }
         }
 
         public string Id => Definition.Id;
@@ -57,15 +79,19 @@ namespace PautaDinamicaApp.ViewModels
 
         public void Reset()
         {
-            // Reset value to default
-            if (Definition.Type == FieldType.Boolean) Value = false;
-            else if (Definition.Type == FieldType.Date) Value = DateTime.Now;
-            else Value = null;
+            if (Definition.KeepValueOnReset)
+            {
+                // No tocamos Value, mantenemos lo que tenga
+            }
+            else
+            {
+                InitializeDefaultValue();
+            }
 
             // Clear validation state
             IsValid = true;
             ValidationError = "";
-            OnPropertyChanged(nameof(Value)); // Notify that Value might have changed
+            OnPropertyChanged(nameof(Value));
         }
 
         public bool Validate()

@@ -48,12 +48,14 @@ namespace PautaDinamicaApp.ViewModels
             ToggleMultiSelectCommand = new RelayCommand(_ => ToggleMultiSelect());
             SelectAllCommand = new RelayCommand(_ => SelectAll());
             DeleteSelectedCommand = new RelayCommand(_ => DeleteSelected());
+            PickDateCommand = new RelayCommand(p => PickDate(p as FieldDefinition));
 
             // Tipos disponibles para el Combo
             AvailableTypes = Enum.GetValues(typeof(FieldType)).Cast<FieldType>().ToList();
         }
 
         public bool IsSaveSuccessful { get; private set; }
+        public ICommand PickDateCommand { get; }
 
         public ObservableCollection<FieldDefinition> Fields
         {
@@ -200,6 +202,19 @@ namespace PautaDinamicaApp.ViewModels
 
                 OnPropertyChanged(nameof(Fields));
                 OnPropertyChanged(nameof(IsSaveSuccessful));
+            }
+        }
+
+        private void PickDate(FieldDefinition? field)
+        {
+            if (field == null) return;
+
+            var selector = new Views.DateSelectorWindow(field.DefaultValue);
+            selector.Owner = Application.Current.Windows.OfType<ConfigWindow>().FirstOrDefault();
+
+            if (selector.ShowDialog() == true)
+            {
+                field.DefaultValue = selector.SelectedValue;
             }
         }
 

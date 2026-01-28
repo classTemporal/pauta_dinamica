@@ -202,7 +202,39 @@ namespace PautaDinamicaApp.ViewModels
             var hasRecords = Records.Any();
             var win = new ConfigWindow(hasRecords);
             win.Owner = Application.Current.MainWindow;
-            if (win.ShowDialog() == true) RefreshFields();
+
+            if (win.ShowDialog() == true)
+            {
+                if (win.DataContext is EditorViewModel editorVm && editorVm.ShouldClearRecords)
+                {
+                    MessageBox.Show("Se requiere realizar un respaldo de sus datos actuales antes de aplicar los cambios estructurales.",
+                        "Respaldo Requerido", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    // 1. Guardar Excel
+                    bool excelSaved = ExportRecordsToExcel(null, $"RESPALDO_EXCEL_{DateTime.Now:yyyyMMdd_HHmm}", silent: false);
+
+                    // 2. Guardar JSON
+                    bool jsonSaved = ExportRecordsToJson(null, $"RESPALDO_JSON_{DateTime.Now:yyyyMMdd_HHmm}");
+
+                    if (excelSaved && jsonSaved)
+                    {
+                        // Solo limpiamos si el usuario guardó ambos (o podemos ser más flexibles, pero esto es lo más seguro)
+                        Records.Clear();
+                        _storageService.SaveRecords(Records.ToList());
+                        MessageBox.Show("Estructura actualizada y registros respaldados correctamente.", "Éxito");
+                    }
+                    else
+                    {
+                        MessageBox.Show("No se han aplicado los cambios porque no se completaron los respaldos. La pauta anterior se mantendrá para evitar pérdida de datos.",
+                            "Cambios Cancelados", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        // Recargar pauta anterior
+                        RefreshFields();
+                        return;
+                    }
+                }
+
+                RefreshFields();
+            }
         }
 
         private void CreateNewRecord()
@@ -275,48 +307,78 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
-        public void ExportRecordsToExcel(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null)
+        public bool ExportRecordsToExcel(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null, bool silent = false)
         {
             var data = recordsToExport ?? Records;
-            if (!data.Any()) return;
-            var sfd = new SaveFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx", FileName = customTitle ?? $"Auditoria_{DateTime.Now:yyyyMMdd_HHmm}" };
-            if (sfd.ShowDialog() == true)
+            if (!data.Any()) return false;
+
+            string filePath;
+            if (silent)
             {
-                try
+                string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
+                if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
+                filePath = Path.Combine(backupDir, $"{customTitle ?? "Backup"}.xlsx");
+            }
+            else
+            {
+                var sfd = new SaveFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx", FileName = customTitle ?? $"Auditoria_{DateTime.Now:yyyyMMdd_HHmm}" };
+                if (sfd.ShowDialog() != true) return false;
+                filePath = sfd.FileName;
+            }
+
+            try
+            {
+                using (var workbook = new XLWorkbook())
                 {
-                    using (var workbook = new XLWorkbook())
+                    var worksheet = workbook.Worksheets.Add("Auditoría");
+                    worksheet.Cell(1, 1).Value = "Fecha";
+                    var fields = CurrentFields.ToList();
+                    for (int i = 0; i < fields.Count; i++) worksheet.Cell(1, i + 2).Value = fields[i].Label;
+
+                    int row = 2;
+                    foreach (var entry in data)
                     {
-                        var worksheet = workbook.Worksheets.Add("Auditoría");
-                        worksheet.Cell(1, 1).Value = "Fecha";
-                        var fields = CurrentFields.ToList();
-                        for (int i = 0; i < fields.Count; i++) worksheet.Cell(1, i + 2).Value = fields[i].Label;
-                        int row = 2;
-                        foreach (var entry in data)
+                        worksheet.Cell(row, 1).Value = entry.Timestamp.ToString("g");
+                        int col = 2;
+                        foreach (var f in fields)
                         {
-                            worksheet.Cell(row, 1).Value = entry.Timestamp.ToString("g");
-                            for (int i = 0; i < fields.Count; i++)
-                            {
-                                if (entry.Values.TryGetValue(fields[i].Id, out var val)) worksheet.Cell(row, i + 2).Value = val?.ToString() ?? "";
-                            }
-                            row++;
+                            if (entry.Values.TryGetValue(f.Id, out var val)) worksheet.Cell(row, col).Value = val?.ToString() ?? "";
+                            col++;
                         }
-                        worksheet.Columns().AdjustToContents();
-                        workbook.SaveAs(sfd.FileName);
+                        row++;
                     }
+                    worksheet.Columns().AdjustToContents();
+                    workbook.SaveAs(filePath);
                 }
-                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+                if (!silent) MessageBox.Show("Exportación a Excel exitosa.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al exportar Excel: {ex.Message}");
+                return false;
             }
         }
 
-        public void ExportRecordsToJson(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null)
+        public bool ExportRecordsToJson(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null)
         {
-            var data = recordsToExport ?? Records;
-            if (!data.Any()) return;
-            var sfd = new SaveFileDialog { Filter = "JSON Files (*.json)|*.json", FileName = customTitle ?? $"Auditoria_JSON_{DateTime.Now:yyyyMMdd_HHmm}" };
-            if (sfd.ShowDialog() == true)
+            var data = (recordsToExport ?? Records).ToList();
+            if (!data.Any()) return false;
+
+            var sfd = new SaveFileDialog { Filter = "JSON Files (*.json)|*.json", FileName = customTitle ?? $"Respaldo_{DateTime.Now:yyyyMMdd_HHmm}" };
+            if (sfd.ShowDialog() != true) return false;
+
+            try
             {
-                try { File.WriteAllText(sfd.FileName, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true })); }
-                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+                string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(sfd.FileName, json);
+                MessageBox.Show("Exportación a JSON exitosa.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al exportar JSON: {ex.Message}");
+                return false;
             }
         }
 

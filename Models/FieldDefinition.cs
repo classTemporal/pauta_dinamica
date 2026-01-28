@@ -44,6 +44,8 @@ namespace PautaDinamicaApp.Models
         private List<ScoringRule> _scoringRules = new();
         private List<string> _targetIds = new();
         private bool _useCustomWeights;
+        private string _defaultValue = string.Empty;
+        private bool _keepValueOnReset;
 
         public string Id { get => _id; set { _id = value; OnPropertyChanged(); } }
         public string Label { get => _label; set { _label = value; OnPropertyChanged(); } }
@@ -52,6 +54,11 @@ namespace PautaDinamicaApp.Models
         public FieldType Type { get => _type; set { _type = value; OnPropertyChanged(); } }
         public bool IsRequired { get => _isRequired; set { _isRequired = value; OnPropertyChanged(); } }
         public List<string> Options { get => _options; set { _options = value; OnPropertyChanged(); } }
+        public string DefaultValue { get => _defaultValue; set { _defaultValue = value; OnPropertyChanged(); } }
+        public bool KeepValueOnReset { get => _keepValueOnReset; set { _keepValueOnReset = value; OnPropertyChanged(); } }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsValid => true; // Dummy property to satisfy global styles in ConfigWindow
 
         // --- LÓGICA DE CÁLCULO ---
         public List<ScoringRule> ScoringRules { get => _scoringRules; set { _scoringRules = value; OnPropertyChanged(); } }

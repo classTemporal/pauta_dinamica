@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:PautaDinamicaApp.ViewModels"
         xmlns:models="clr-namespace:PautaDinamicaApp.Models"
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         Title="Diseñador de Pauta" Height="610" Width="1050"
         WindowStartupLocation="CenterOwner"
         Background="#12151c" Foreground="#e1e1e1">
@@ -16,54 +17,19 @@
                 <ResourceDictionary Source="Resources/FieldTemplates.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-            
+            <conv:PrependOptionConverter x:Key="PrependOptionConverter"/>
+            <x:Array x:Key="BooleanOptions" Type="{x:Type sys:String}">
+                <sys:String>True</sys:String>
+                <sys:String>False</sys:String>
+            </x:Array>
+            <conv:DictConverter x:Key="DictConverter"/>
+
             <SolidColorBrush x:Key="SeparatorBackground" Color="#003566"/>
             <SolidColorBrush x:Key="CardBackground" Color="#1e222d"/>
-            <SolidColorBrush x:Key="AccentBrush" Color="#007bff"/>
-            <SolidColorBrush x:Key="InputBackground" Color="#2d3446"/>
             <SolidColorBrush x:Key="RowAlternatingBackground" Color="#262b38"/>
+            <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
 
-            <!-- Estilo CORE para eliminar el fondo blanco de los ComboBox -->
-            <Style TargetType="ComboBox">
-                <Setter Property="Background" Value="#2d3446"/>
-                <Setter Property="Foreground" Value="White"/>
-                <Setter Property="BorderBrush" Value="#3d4456"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding" Value="5,2"/>
-                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="ComboBox">
-                            <Grid>
-                                <ToggleButton Name="ToggleButton" 
-                                              BorderBrush="{TemplateBinding BorderBrush}" 
-                                              Background="{TemplateBinding Background}" 
-                                              Foreground="{TemplateBinding Foreground}"
-                                              Grid.Column="2" IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}" 
-                                              Focusable="false" ClickMode="Press">
-                                    <ToggleButton.Template>
-                                        <ControlTemplate TargetType="ToggleButton">
-                                            <Border Name="Border" CornerRadius="4" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
-                                                <Path Name="Arrow" Fill="White" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0" Data="M 0 0 L 4 4 L 8 0 Z"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </ToggleButton.Template>
-                                </ToggleButton>
-                                <ContentPresenter Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" Margin="8,3,23,3" VerticalAlignment="Center" HorizontalAlignment="Left" />
-                                <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
-                                    <Grid Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                        <Border Name="DropDownBorder" Background="#2d3446" BorderBrush="#3d4456" BorderThickness="1" CornerRadius="4"/>
-                                        <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
-                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
-                                        </ScrollViewer>
-                                    </Grid>
-                                </Popup>
-                            </Grid>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
+
 
             <!-- Prevenir que el DataGrid ponga fondos blancos al seleccionar -->
             <Style TargetType="DataGridCell">
@@ -122,8 +88,6 @@
                 <Setter Property="FontSize" Value="10"/>
                 <Setter Property="Padding" Value="0"/>
             </Style>
-
-            <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -293,6 +257,9 @@
                                                 <DataTrigger Binding="{Binding Type}" Value="Numeric">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="Boolean">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
                                                 <DataTrigger Binding="{Binding Type}" Value="Date">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
@@ -303,6 +270,179 @@
                                         </Style>
                                     </Button.Style>
                                 </Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Valor Predeterminado -->
+                    <DataGridTemplateColumn Header="Predeterminado" Width="130">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <!-- TEXT & NUMERIC: TextBox -->
+                                    <TextBox Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}" 
+                                             ToolTip="Valor inicial">
+                                        <TextBox.Style>
+                                            <Style TargetType="TextBox" BasedOn="{StaticResource GridTextBoxStyle}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Type}" Value="Text">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Type}" Value="Numeric">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBox.Style>
+                                    </TextBox>
+
+                                    <!-- DROPDOWN: ComboBox with Options -->
+                                    <ComboBox SelectedItem="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                                              ItemsSource="{Binding Options, Converter={StaticResource PrependOptionConverter}}"
+                                              Height="30" VerticalAlignment="Center">
+                                        <ComboBox.Style>
+                                            <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Type}" Value="Dropdown">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ComboBox.Style>
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock>
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="{Binding}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding}" Value="">
+                                                                    <Setter Property="Text" Value="(Ninguno)"/>
+                                                                    <Setter Property="FontStyle" Value="Italic"/>
+                                                                    <Setter Property="Opacity" Value="0.6"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <!-- BOOLEAN: ComboBox with True/False -->
+                                    <ComboBox SelectedItem="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                                              ItemsSource="{Binding Source={StaticResource BooleanOptions}, Converter={StaticResource PrependOptionConverter}}"
+                                              Height="30" VerticalAlignment="Center">
+                                        <ComboBox.Style>
+                                            <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Type}" Value="Boolean">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ComboBox.Style>
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock>
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="{Binding}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding}" Value="">
+                                                                    <Setter Property="Text" Value="(Ninguno)"/>
+                                                                    <Setter Property="FontStyle" Value="Italic"/>
+                                                                    <Setter Property="Opacity" Value="0.6"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding}" Value="True">
+                                                                    <Setter Property="Text" Value="Marcado (1)"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding}" Value="False">
+                                                                    <Setter Property="Text" Value="Desmarcado (0)"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <!-- DATE: Selector -->
+                                    <Button Command="{Binding DataContext.PickDateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Background="#2d3446" BorderBrush="#3d4456" BorderThickness="1"
+                                            Height="30" VerticalAlignment="Center" Padding="8,0"
+                                            ToolTip="Click para configurar fecha automática">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Type}" Value="Date">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <Grid HorizontalAlignment="Stretch">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding DefaultValue}"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding DefaultValue}" Value="">
+                                                                <Setter Property="Text" Value="(Ninguno)"/>
+                                                                <Setter Property="FontStyle" Value="Italic"/>
+                                                                <Setter Property="Opacity" Value="0.6"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding DefaultValue}" Value="{x:Null}">
+                                                                <Setter Property="Text" Value="(Ninguno)"/>
+                                                                <Setter Property="FontStyle" Value="Italic"/>
+                                                                <Setter Property="Opacity" Value="0.6"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Grid.Column="1" Text="📅" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Persistente -->
+                    <DataGridTemplateColumn Header="Persist." Width="55">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding KeepValueOnReset, UpdateSourceTrigger=PropertyChanged}" 
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          ToolTip="Si se marca, el valor NO se borrará al agregar un nuevo ticket (mantiene el anterior).">
+                                    <CheckBox.Style>
+                                        <Style TargetType="CheckBox">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Type}" Value="Separator">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="Calculation">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="Average">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </CheckBox.Style>
+                                </CheckBox>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

@@ -104,7 +104,7 @@
                         <ScrollViewer x:Name="PART_ContentHost"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <DataTrigger Binding="{Binding IsValid}" Value="False">
+                        <DataTrigger Binding="{Binding IsValid, FallbackValue=True}" Value="False">
                             <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
                             <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
                         </DataTrigger>
@@ -151,7 +151,7 @@
                                         </Grid>
                                     </Border>
                                     <ControlTemplate.Triggers>
-                                        <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                        <DataTrigger Binding="{Binding IsValid, FallbackValue=True}" Value="False">
                                             <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
                                             <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
                                         </DataTrigger>
