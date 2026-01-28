@@ -34,6 +34,10 @@ namespace PautaDinamicaApp.ViewModels
             DeleteRecordCommand = new RelayCommand(p => DeleteRecord(p as AuditEntry));
             DeleteAllRecordsCommand = new RelayCommand(_ => DeleteAllRecords());
             ExportToExcelCommand = new RelayCommand(_ => ExportRecordsToExcel());
+            ToggleMultiSelectCommand = new RelayCommand(_ => ToggleMultiSelect());
+            SelectAllCommand = new RelayCommand(_ => ExecuteSelectAll());
+            DeleteSelectedCommand = new RelayCommand(_ => DeleteSelectedRecords());
+            ExportSelectedCommand = new RelayCommand(_ => ExportRecordsToExcel(Records.Where(r => r.IsSelected).ToList(), "Export_Parcial_Auditoria"));
         }
 
         public ObservableCollection<DynamicFieldVM> CurrentFields
@@ -77,6 +81,17 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand DeleteRecordCommand { get; }
         public ICommand DeleteAllRecordsCommand { get; }
         public ICommand ExportToExcelCommand { get; }
+        public ICommand ToggleMultiSelectCommand { get; }
+        public ICommand SelectAllCommand { get; }
+        public ICommand DeleteSelectedCommand { get; }
+        public ICommand ExportSelectedCommand { get; }
+
+        private bool _isMultiSelectMode;
+        public bool IsMultiSelectMode
+        {
+            get => _isMultiSelectMode;
+            set => SetProperty(ref _isMultiSelectMode, value);
+        }
 
         private void LoadData()
         {
@@ -317,6 +332,46 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     MessageBox.Show($"Error al generar el Excel: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            }
+        }
+        private void ToggleMultiSelect()
+        {
+            IsMultiSelectMode = !IsMultiSelectMode;
+            // Clear selection when exiting mode
+            if (!IsMultiSelectMode)
+            {
+                foreach (var rec in Records) rec.IsSelected = false;
+            }
+        }
+
+        private void ExecuteSelectAll()
+        {
+            // Toggle all based on whether all are currently selected
+            bool allSelected = Records.All(r => r.IsSelected);
+            foreach (var rec in Records)
+            {
+                rec.IsSelected = !allSelected;
+            }
+        }
+
+        private void DeleteSelectedRecords()
+        {
+            var selected = Records.Where(r => r.IsSelected).ToList();
+            if (!selected.Any()) return;
+
+            var result = MessageBox.Show($"¿Eliminar {selected.Count} registros seleccionados?",
+                                       "Confirmar Eliminación Múltiple",
+                                       MessageBoxButton.YesNo,
+                                       MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                foreach (var rec in selected)
+                {
+                    Records.Remove(rec);
+                }
+                _storageService.SaveRecords(Records.ToList());
+                CreateNewRecord(); // Reset form just in case
             }
         }
     }

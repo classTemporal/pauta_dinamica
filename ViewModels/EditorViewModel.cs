@@ -61,13 +61,32 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ConfigureOptionsCommand { get; }
         public ICommand SaveConfigCommand { get; }
 
+        private string GetNextAvailableLabel(string baseName)
+        {
+            var existingLabels = Fields.Select(f => f.Label).ToList();
+
+            // Check if base name exists
+            if (!existingLabels.Contains(baseName)) return baseName;
+
+            int i = 2;
+            while (true)
+            {
+                string candidate = $"{baseName} {i}";
+                if (!existingLabels.Contains(candidate))
+                {
+                    return candidate;
+                }
+                i++;
+            }
+        }
+
         private void AddField()
         {
             var lastField = Fields.OrderBy(f => f.Order).LastOrDefault();
             Fields.Add(new FieldDefinition
             {
                 Id = "f_" + Guid.NewGuid().ToString().Substring(0, 4),
-                Label = "Nuevo Campo",
+                Label = GetNextAvailableLabel("Nuevo Campo"),
                 // El nuevo campo hereda la categoría o sección actual
                 Category = lastField?.Category ?? "General",
                 Type = FieldType.Text,
@@ -81,7 +100,7 @@ namespace PautaDinamicaApp.ViewModels
             Fields.Add(new FieldDefinition
             {
                 Id = "s_" + Guid.NewGuid().ToString().Substring(0, 4),
-                Label = "Nuevo Cuadro",
+                Label = GetNextAvailableLabel("Nuevo Cuadro"),
                 Category = "--- SECCIÓN ---", // Marcador visual interno
                 Type = FieldType.Separator,
                 Order = (lastField?.Order ?? 0) + 1
@@ -138,7 +157,7 @@ namespace PautaDinamicaApp.ViewModels
 
             if (win.ShowDialog() == true)
             {
-                field.Options = vm.Options.ToList();
+                field.Options = vm.ResultOptions;
                 // Notificar cambio en OptionsString para que se vea si fuera necesario (aunque ya no usaremos el campo de texto)
                 OnPropertyChanged(nameof(Fields));
             }
@@ -146,7 +165,9 @@ namespace PautaDinamicaApp.ViewModels
 
         private void SaveConfig()
         {
+            // Reset state
             IsSaveSuccessful = false;
+            ShouldClearRecords = false;
 
             // 1. Validar etiquetas vacías
             var emptyLabels = Fields.Where(f => string.IsNullOrWhiteSpace(f.Label)).ToList();
@@ -217,12 +238,14 @@ namespace PautaDinamicaApp.ViewModels
 
                 if (result != MessageBoxResult.Yes)
                 {
-                    return;
+                    return; // Aquí salimos sin poner IsSaveSuccessful = true
                 }
                 ShouldClearRecords = true;
             }
 
             _storageService.SaveConfiguration(list);
+
+            // IMPORTANTE: Primero marcamos éxito Y LUEGO cerramos.
             IsSaveSuccessful = true;
         }
     }

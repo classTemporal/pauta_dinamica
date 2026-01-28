@@ -8,8 +8,11 @@
         xmlns:views="clr-namespace:PautaDinamicaApp.Views"
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
         mc:Ignorable="d"
+        x:Name="MainWin"
         Title="Pauta Dinámica - Auditoría" Height="650" Width="1100"
         WindowStartupLocation="CenterScreen">
+
+
 
     <Window.Resources>
         <ResourceDictionary>
@@ -23,7 +26,7 @@
             <SolidColorBrush x:Key="BorderBrush" Color="#2d3446"/>
             <SolidColorBrush x:Key="AccentBrush" Color="#007bff"/>
             <SolidColorBrush x:Key="TextBrush" Color="#e1e1e1"/>
-            <SolidColorBrush x:Key="SecondaryTextBrush" Color="#94a3b8"/>
+
 
             <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <conv:DictionaryValueConverter x:Key="DictConverter"/>
@@ -36,54 +39,7 @@
                 DateTemplate="{StaticResource DateTemplate}"
                 SeparatorTemplate="{StaticResource SeparatorTemplate}"/>
 
-            <!-- ESTILOS DE BOTONES MODERNOS -->
-            <Style x:Key="ModernButtonBase" TargetType="Button">
-                <Setter Property="Foreground" Value="White"/>
-                <Setter Property="Padding" Value="15,8"/>
-                <Setter Property="FontWeight" Value="Bold"/>
-                <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="SnapsToDevicePixels" Value="True"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="border" Property="Opacity" Value="0.85"/>
-                                </Trigger>
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="border" Property="Opacity" Value="0.7"/>
-                                </Trigger>
-                                <Trigger Property="IsEnabled" Value="False">
-                                    <Setter TargetName="border" Property="Opacity" Value="0.4"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
 
-            <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                <Setter Property="Background" Value="#007bff"/>
-            </Style>
-            <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                <Setter Property="Background" Value="#28a745"/>
-            </Style>
-            <Style x:Key="ExcelButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                <Setter Property="Background" Value="#217346"/>
-            </Style>
-            <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                <Setter Property="Background" Value="#dc3545"/>
-            </Style>
-            <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                <Setter Property="Background" Value="#6f42c1"/>
-            </Style>
-            <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
-            </Style>
 
             <!-- Group Style -->
             <Style x:Key="GroupHeaderStyle" TargetType="{x:Type GroupItem}">
@@ -189,12 +145,30 @@
             <Border Grid.Column="1" Background="{StaticResource CardBackgroundBrush}" CornerRadius="12" Padding="15" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Registros de Llamadas" Foreground="{StaticResource TextBrush}" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
-                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
-                        <Button Content="📊 Exportar a Excel" Command="{Binding ExportToExcelCommand}" Padding="15,8" Style="{StaticResource ExcelButton}"/>
+                    
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,15,0,0">
+                         <!-- Normal Actions -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                    Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                            <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Padding="15,8" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
+                            <Button Content="📊 Exportar a Excel" Command="{Binding ExportToExcelCommand}" Padding="15,8" Style="{StaticResource ExcelButton}"/>
+                        </StackPanel>
+
+                        <!-- MultiSelect Actions -->
+                        <!-- MultiSelect Actions -->
+                        <Border Background="#3d4456" CornerRadius="4" Padding="5" Margin="0,5,0,0"
+                                Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <TextBlock Text="MODO SELECCIÓN" VerticalAlignment="Center" FontWeight="Bold" Foreground="#ffc107" Margin="10,5,20,5"/>
+                                <Button Content="✔️ Seleccionar Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                                <Button Content="🗑️ Borrar Seleccionados" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,5,10,5"/>
+                                <Button Content="📊 Exportar Seleccionados" Command="{Binding ExportSelectedCommand}" Style="{StaticResource ExcelButton}" Margin="0,5,10,5"/>
+                                <Button Content="❌ Cancelar" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Margin="10,5,0,5" Padding="12,8"/>
+                            </WrapPanel>
+                        </Border>
                     </StackPanel>
                     
                     <DataGrid x:Name="RecordsGrid" ItemsSource="{Binding Records}" 
-                               SelectedItem="{Binding SelectedRecord}"
                                AutoGenerateColumns="False"
                                IsReadOnly="True"
                                Background="Transparent"
@@ -206,8 +180,15 @@
                                HeadersVisibility="Column"
                                CanUserAddRows="False"
                                HorizontalScrollBarVisibility="Visible"
+                               SelectionUnit="FullRow"
+
+                               SelectionMode="Extended"
                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                         
+                        <DataGrid.Resources>
+                            <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
+                        </DataGrid.Resources>
+
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
                                 <Setter Property="Background" Value="Transparent"/>
@@ -234,9 +215,9 @@
                                     </Setter.Value>
                                 </Setter>
                                 <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
+                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                         <Setter Property="Background" Value="#3d4456"/>
-                                    </Trigger>
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </DataGrid.RowStyle>
@@ -252,6 +233,24 @@
                         </DataGrid.ColumnHeaderStyle>
 
                         <DataGrid.Columns>
+                            <!-- Checkbox for MultiSelect -->
+                            <DataGridTemplateColumn Width="40">
+                                <DataGridTemplateColumn.HeaderTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="✔"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.HeaderTemplate>
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.Visibility>
+                                    <Binding Path="Data.IsMultiSelectMode" Source="{StaticResource Proxy}" Converter="{StaticResource BooleanToVisibilityConverter}"/>
+                                </DataGridTemplateColumn.Visibility>
+                            </DataGridTemplateColumn>
+
                             <DataGridTemplateColumn Header="Acciones" Width="125">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -268,6 +267,9 @@
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.Visibility>
+                                    <Binding Path="Data.IsMultiSelectMode" Source="{StaticResource Proxy}" Converter="{StaticResource BooleanToVisibilityConverter}" ConverterParameter="Inverse"/>
+                                </DataGridTemplateColumn.Visibility>
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>

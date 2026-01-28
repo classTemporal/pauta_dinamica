@@ -14,6 +14,13 @@ namespace PautaDinamicaApp
         {
             if (this.DataContext is ViewModels.EditorViewModel vm)
             {
+                // Ejecutamos manualmente el comando para asegurar el orden.
+                // Al haber quitado el Command del XAML, ahora controlamos el flujo exacto aquí.
+                if (vm.SaveConfigCommand.CanExecute(null))
+                {
+                    vm.SaveConfigCommand.Execute(null);
+                }
+
                 if (vm.IsSaveSuccessful)
                 {
                     this.DialogResult = true;

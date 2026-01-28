@@ -27,10 +27,10 @@ namespace PautaDinamicaApp
             if (DataContext is not MainViewModel vm) return;
             if (RecordsGrid == null) return;
 
-            // Limpiar todas las columnas excepto la primera (Acciones)
-            while (RecordsGrid.Columns.Count > 1)
+            // Limpiar todas las columnas excepto las primeras dos (Checkbox y Acciones)
+            while (RecordsGrid.Columns.Count > 2)
             {
-                RecordsGrid.Columns.RemoveAt(1);
+                RecordsGrid.Columns.RemoveAt(2);
             }
 
             // Crear columnas dinámicas basadas en la configuración actual

@@ -11,6 +11,21 @@ namespace PautaDinamicaApp.Models
         public DateTime Timestamp { get; set; } = DateTime.Now;
         public Dictionary<string, object> Values { get; set; } = new Dictionary<string, object>();
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (_isSelected != value)
+                {
+                    _isSelected = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        private bool _isSelected;
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public void NotifyUpdate()
