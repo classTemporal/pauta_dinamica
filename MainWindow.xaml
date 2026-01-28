@@ -1,0 +1,227 @@
+﻿<Window x:Class="PautaDinamicaApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PautaDinamicaApp"
+        xmlns:vm="clr-namespace:PautaDinamicaApp.ViewModels"
+        xmlns:views="clr-namespace:PautaDinamicaApp.Views"
+        xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
+        mc:Ignorable="d"
+        Title="Pauta Dinámica - Auditoría" Height="650" Width="1100"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Views/Resources/FieldTemplates.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Colors -->
+            <SolidColorBrush x:Key="BackgroundBrush" Color="#12151c"/>
+            <SolidColorBrush x:Key="CardBackgroundBrush" Color="#1e222d"/>
+            <SolidColorBrush x:Key="BorderBrush" Color="#2d3446"/>
+            <SolidColorBrush x:Key="AccentBrush" Color="#007bff"/>
+            <SolidColorBrush x:Key="TextBrush" Color="#e1e1e1"/>
+            <SolidColorBrush x:Key="SecondaryTextBrush" Color="#94a3b8"/>
+
+            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <conv:DictionaryValueConverter x:Key="DictConverter"/>
+
+            <views:FieldTemplateSelector x:Key="FieldTemplateSelector"
+                TextTemplate="{StaticResource TextTemplate}"
+                NumericTemplate="{StaticResource NumericTemplate}"
+                BooleanTemplate="{StaticResource BooleanTemplate}"
+                DropdownTemplate="{StaticResource DropdownTemplate}"
+                DateTemplate="{StaticResource DateTemplate}"
+                SeparatorTemplate="{StaticResource SeparatorTemplate}"/>
+
+            <!-- ESTILOS DE BOTONES MODERNOS -->
+            <Style x:Key="ModernButtonBase" TargetType="Button">
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Padding" Value="15,8"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Opacity" Value="0.7"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="border" Property="Opacity" Value="0.4"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+                <Setter Property="Background" Value="#007bff"/>
+            </Style>
+            <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+                <Setter Property="Background" Value="#28a745"/>
+            </Style>
+            <Style x:Key="ExcelButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+                <Setter Property="Background" Value="#217346"/>
+            </Style>
+            <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+                <Setter Property="Background" Value="#dc3545"/>
+            </Style>
+            <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+                <Setter Property="Background" Value="#6f42c1"/>
+            </Style>
+            <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
+            </Style>
+
+            <!-- Group Style -->
+            <Style x:Key="GroupHeaderStyle" TargetType="{x:Type GroupItem}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type GroupItem}">
+                            <Border Background="{StaticResource CardBackgroundBrush}" 
+                                    CornerRadius="8" Margin="0,0,0,15" Padding="15"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" Foreground="{StaticResource AccentBrush}" 
+                                               FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                                    <ItemsPresenter />
+                                </StackPanel>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+
+    <Grid Background="{StaticResource BackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Padding="20,15" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+            <Grid>
+                <TextBlock Text="Sistema de Registro de Llamadas" Foreground="{StaticResource TextBrush}" FontSize="22" FontWeight="Bold"/>
+                <Button Content="⚙️ CONFIGURAR PAUTA" Command="{Binding OpenConfigCommand}" 
+                        HorizontalAlignment="Right" Style="{StaticResource GhostButton}" Padding="10,5"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1.2*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Dynamic Form with grouping -->
+            <DockPanel Grid.Column="0" Margin="0,0,10,0">
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,15,0,0">
+                    <Button Content="➕ Agregar Registro" Command="{Binding SaveRecordCommand}" 
+                            Height="40" Padding="20,0" Style="{StaticResource SuccessButton}" Margin="0,0,10,0"/>
+                    <Button Content="📧 Enviar Correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
+                    <Button Content="🗑️ Borrar Todos" Height="40" Padding="20,0" Style="{StaticResource DangerButton}"/>
+                </StackPanel>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding GroupedFields}">
+                        <ItemsControl.GroupStyle>
+                            <GroupStyle ContainerStyle="{StaticResource GroupHeaderStyle}"/>
+                        </ItemsControl.GroupStyle>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Width" Value="250"/>
+                                <Setter Property="Margin" Value="10,5"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Type}" Value="Separator">
+                                        <Setter Property="Width" Value="{Binding RelativeSource={RelativeSource AncestorType=ItemsPresenter}, Path=ActualWidth}"/>
+                                        <Setter Property="Margin" Value="10,15,10,5"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ContentPresenter Content="{Binding}" ContentTemplateSelector="{StaticResource FieldTemplateSelector}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Right: Records Grid -->
+            <Border Grid.Column="1" Background="{StaticResource CardBackgroundBrush}" CornerRadius="12" Padding="15" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Registros de Llamadas" Foreground="{StaticResource TextBrush}" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                        <Button Content="📊 Exportar a Excel" Padding="15,8" Style="{StaticResource ExcelButton}"/>
+                    </StackPanel>
+                    
+                    <DataGrid ItemsSource="{Binding Records}" 
+                               SelectedItem="{Binding SelectedRecord}"
+                               AutoGenerateColumns="False"
+                               IsReadOnly="True"
+                               Background="Transparent"
+                               Foreground="{StaticResource TextBrush}"
+                               BorderThickness="0"
+                               RowBackground="#1e222d"
+                               AlternatingRowBackground="#262b38"
+                               GridLinesVisibility="None"
+                               HeadersVisibility="Column"
+                               CanUserAddRows="False">
+                        
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#007bff"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Padding" Value="10,5"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Acciones" Width="125">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="📧" Style="{StaticResource SecondaryButton}" Width="30" Height="25" Margin="2" Padding="0"/>
+                                            <Button Content="📝" Style="{StaticResource ModernButtonBase}" Background="#ffc107" Foreground="Black" Width="30" Height="25" Margin="2" Padding="0"/>
+                                            <Button Content="🗑️" Style="{StaticResource DangerButton}" Width="30" Height="25" Margin="2" Padding="0"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Ticket" Binding="{Binding Values, Converter={StaticResource DictConverter}, ConverterParameter=f_01}" Width="*"/>
+                            <DataGridTextColumn Header="Servicio" Binding="{Binding Values, Converter={StaticResource DictConverter}, ConverterParameter=f_02}" Width="*"/>
+                            <DataGridTextColumn Header="Analista" Binding="{Binding Values, Converter={StaticResource DictConverter}, ConverterParameter=f_03}" Width="*"/>
+                            <DataGridTextColumn Header="Fecha" Binding="{Binding Timestamp, StringFormat=d}" Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
