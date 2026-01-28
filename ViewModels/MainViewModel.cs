@@ -7,6 +7,9 @@ using System.Windows.Data;
 using System.ComponentModel;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
+using ClosedXML.Excel;
+using Microsoft.Win32;
+using System.Collections.Generic;
 
 namespace PautaDinamicaApp.ViewModels
 {
@@ -30,6 +33,7 @@ namespace PautaDinamicaApp.ViewModels
             OpenConfigCommand = new RelayCommand(_ => OpenConfiguration());
             DeleteRecordCommand = new RelayCommand(p => DeleteRecord(p as AuditEntry));
             DeleteAllRecordsCommand = new RelayCommand(_ => DeleteAllRecords());
+            ExportToExcelCommand = new RelayCommand(_ => ExportRecordsToExcel());
         }
 
         public ObservableCollection<DynamicFieldVM> CurrentFields
@@ -72,6 +76,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand OpenConfigCommand { get; }
         public ICommand DeleteRecordCommand { get; }
         public ICommand DeleteAllRecordsCommand { get; }
+        public ICommand ExportToExcelCommand { get; }
 
         private void LoadData()
         {
@@ -103,10 +108,23 @@ namespace PautaDinamicaApp.ViewModels
 
         private void OpenConfiguration()
         {
-            var win = new ConfigWindow();
+            var hasRecords = Records.Any();
+            var win = new ConfigWindow(hasRecords);
             win.Owner = Application.Current.MainWindow;
+
             if (win.ShowDialog() == true)
             {
+                if (win.DataContext is EditorViewModel editorVm && editorVm.ShouldClearRecords)
+                {
+                    // Respaldar antes de borrar (obligatorio)
+                    ExportRecordsToExcel(Records, $"Respaldo_Pauta_Anterior_{DateTime.Now:yyyyMMdd_HHmm}");
+
+                    // Borrar registros
+                    Records.Clear();
+                    _storageService.SaveRecords(Records.ToList());
+                    CreateNewRecord();
+                }
+
                 RefreshFields();
             }
         }
@@ -226,6 +244,79 @@ namespace PautaDinamicaApp.ViewModels
                 Records.Clear();
                 _storageService.SaveRecords(Records.ToList());
                 CreateNewRecord();
+            }
+        }
+
+        public void ExportRecordsToExcel(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null)
+        {
+            var data = recordsToExport ?? Records;
+            if (!data.Any())
+            {
+                MessageBox.Show("No hay registros para exportar.", "Exportar a Excel", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var sfd = new SaveFileDialog
+            {
+                Filter = "Excel Files (*.xlsx)|*.xlsx",
+                FileName = customTitle ?? $"Auditoria_{DateTime.Now:yyyyMMdd_HHmm}"
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+                try
+                {
+                    using (var workbook = new XLWorkbook())
+                    {
+                        var worksheet = workbook.Worksheets.Add("Auditoría");
+
+                        // Headers
+                        worksheet.Cell(1, 1).Value = "Fecha";
+                        int col = 2;
+
+                        // Get all fields that have values in the records, or all current fields
+                        var fields = CurrentFields.ToList();
+                        foreach (var field in fields)
+                        {
+                            worksheet.Cell(1, col++).Value = field.Label;
+                        }
+
+                        // Styling headers
+                        var headerRange = worksheet.Range(1, 1, 1, col - 1);
+                        headerRange.Style.Font.Bold = true;
+                        headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#007bff");
+                        headerRange.Style.Font.FontColor = XLColor.White;
+
+                        // Data
+                        int row = 2;
+                        foreach (var entry in data)
+                        {
+                            worksheet.Cell(row, 1).Value = entry.Timestamp.ToString("g");
+                            int c = 2;
+                            foreach (var field in fields)
+                            {
+                                if (entry.Values.TryGetValue(field.Id, out var val))
+                                {
+                                    worksheet.Cell(row, c).Value = val?.ToString() ?? "";
+                                }
+                                c++;
+                            }
+                            row++;
+                        }
+
+                        worksheet.Columns().AdjustToContents();
+                        workbook.SaveAs(sfd.FileName);
+                    }
+
+                    if (customTitle == null) // Only show success if it's a manual export, not a background backup
+                    {
+                        MessageBox.Show("Archivo Excel generado con éxito.", "Exportar a Excel", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al generar el Excel: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
     }

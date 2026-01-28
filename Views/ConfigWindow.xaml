@@ -8,9 +8,7 @@
         WindowStartupLocation="CenterOwner"
         Background="#12151c" Foreground="#e1e1e1">
     
-    <Window.DataContext>
-        <vm:EditorViewModel/>
-    </Window.DataContext>
+
 
     <Window.Resources>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>

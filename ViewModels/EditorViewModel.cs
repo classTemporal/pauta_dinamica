@@ -14,8 +14,12 @@ namespace PautaDinamicaApp.ViewModels
         private readonly StorageService _storageService;
         private ObservableCollection<FieldDefinition> _fields;
 
-        public EditorViewModel()
+        private bool _hasExistingRecords;
+        public bool ShouldClearRecords { get; private set; }
+
+        public EditorViewModel(bool hasExistingRecords = false)
         {
+            _hasExistingRecords = hasExistingRecords;
             _storageService = new StorageService();
             var config = _storageService.LoadConfiguration()
                             .OrderBy(f => f.Order);
@@ -198,6 +202,24 @@ namespace PautaDinamicaApp.ViewModels
                     field.Category = currentBoxName;
                     field.EnsureDefaultOptions();
                 }
+            }
+
+            if (_hasExistingRecords)
+            {
+                var result = MessageBox.Show(
+                    "Se han detectado cambios en la configuración y existen registros actuales.\r\n\r\n" +
+                    "Al guardar estos cambios, se debe limpiar la base de datos actual para evitar errores de compatibilidad.\r\n" +
+                    "Se procederá a generar un respaldo en EXCEL de todos sus registros actuales de forma obligatoria.\r\n\r\n" +
+                    "¿Desea continuar con el guardado y el respaldo?",
+                    "Advertencia de Reconfiguración",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+                ShouldClearRecords = true;
             }
 
             _storageService.SaveConfiguration(list);

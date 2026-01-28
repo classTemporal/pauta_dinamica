@@ -4,9 +4,10 @@ namespace PautaDinamicaApp
 {
     public partial class ConfigWindow : Window
     {
-        public ConfigWindow()
+        public ConfigWindow(bool hasRecords = false)
         {
             InitializeComponent();
+            this.DataContext = new ViewModels.EditorViewModel(hasRecords);
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
