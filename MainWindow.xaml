@@ -134,10 +134,24 @@
             <!-- Left: Dynamic Form with grouping -->
             <DockPanel Grid.Column="0" Margin="0,0,10,0">
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,15,0,0">
-                    <Button Content="➕ Agregar Registro" Command="{Binding SaveRecordCommand}" 
-                            Height="40" Padding="20,0" Style="{StaticResource SuccessButton}" Margin="0,0,10,0"/>
+                    <Button Command="{Binding SaveRecordCommand}" 
+                            Height="40" Padding="20,0" Margin="0,0,10,0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource SuccessButton}">
+                                <Setter Property="Content" Value="➕ Agregar Registro"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                                        <Setter Property="Content" Value="💾 Actualizar Registro"/>
+                                        <Setter Property="Background" Value="#ffc107"/>
+                                        <Setter Property="Foreground" Value="Black"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button Content="📧 Enviar Correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
-                    <Button Content="🗑️ Borrar Todos" Height="40" Padding="20,0" Style="{StaticResource DangerButton}"/>
+                    <Button Content="🗑️ Borrar Todos" Command="{Binding DeleteAllRecordsCommand}" 
+                            Height="40" Padding="20,0" Style="{StaticResource DangerButton}"/>
                 </StackPanel>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -179,7 +193,7 @@
                         <Button Content="📊 Exportar a Excel" Padding="15,8" Style="{StaticResource ExcelButton}"/>
                     </StackPanel>
                     
-                    <DataGrid ItemsSource="{Binding Records}" 
+                    <DataGrid x:Name="RecordsGrid" ItemsSource="{Binding Records}" 
                                SelectedItem="{Binding SelectedRecord}"
                                AutoGenerateColumns="False"
                                IsReadOnly="True"
@@ -190,7 +204,42 @@
                                AlternatingRowBackground="#262b38"
                                GridLinesVisibility="None"
                                HeadersVisibility="Column"
-                               CanUserAddRows="False">
+                               CanUserAddRows="False"
+                               HorizontalScrollBarVisibility="Visible"
+                               Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                        
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                                <Setter Property="ContextMenu">
+                                    <Setter.Value>
+                                        <ContextMenu>
+                                            <MenuItem Header="📝 Editar Registro" 
+                                                      Command="{Binding PlacementTarget.Tag.SelectRecordCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="📝"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <Separator/>
+                                            <MenuItem Header="🗑️ Eliminar Registro" 
+                                                      Command="{Binding PlacementTarget.Tag.DeleteRecordCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="🗑️"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#3d4456"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader">
@@ -208,16 +257,18 @@
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
                                             <Button Content="📧" Style="{StaticResource SecondaryButton}" Width="30" Height="25" Margin="2" Padding="0"/>
-                                            <Button Content="📝" Style="{StaticResource ModernButtonBase}" Background="#ffc107" Foreground="Black" Width="30" Height="25" Margin="2" Padding="0"/>
-                                            <Button Content="🗑️" Style="{StaticResource DangerButton}" Width="30" Height="25" Margin="2" Padding="0"/>
+                                            <Button Content="📝" Command="{Binding Tag.SelectRecordCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource ModernButtonBase}" Background="#ffc107" Foreground="Black" Width="30" Height="25" Margin="2" Padding="0">
+                                                <Button.ToolTip>Cargar en formulario para editar</Button.ToolTip>
+                                            </Button>
+                                            <Button Content="🗑️" Command="{Binding Tag.DeleteRecordCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource DangerButton}" Width="30" Height="25" Margin="2" Padding="0"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Ticket" Binding="{Binding Values, Converter={StaticResource DictConverter}, ConverterParameter=f_01}" Width="*"/>
-                            <DataGridTextColumn Header="Servicio" Binding="{Binding Values, Converter={StaticResource DictConverter}, ConverterParameter=f_02}" Width="*"/>
-                            <DataGridTextColumn Header="Analista" Binding="{Binding Values, Converter={StaticResource DictConverter}, ConverterParameter=f_03}" Width="*"/>
-                            <DataGridTextColumn Header="Fecha" Binding="{Binding Timestamp, StringFormat=d}" Width="100"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </DockPanel>

@@ -12,6 +12,7 @@ namespace PautaDinamicaApp.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
+        public event Action? FieldsRefreshed;
         private readonly StorageService _storageService;
         private ObservableCollection<DynamicFieldVM> _currentFields = new();
         private ICollectionView? _groupedFields;
@@ -24,8 +25,11 @@ namespace PautaDinamicaApp.ViewModels
             LoadData();
 
             SaveRecordCommand = new RelayCommand(_ => SaveCurrentRecord(), _ => CanSaveRecord());
-            NewRecordCommand = new RelayCommand(_ => CreateNewRecord());
+            ClearFormCommand = new RelayCommand(_ => CreateNewRecord());
+            SelectRecordCommand = new RelayCommand(p => EditRecord(p as AuditEntry));
             OpenConfigCommand = new RelayCommand(_ => OpenConfiguration());
+            DeleteRecordCommand = new RelayCommand(p => DeleteRecord(p as AuditEntry));
+            DeleteAllRecordsCommand = new RelayCommand(_ => DeleteAllRecords());
         }
 
         public ObservableCollection<DynamicFieldVM> CurrentFields
@@ -55,14 +59,19 @@ namespace PautaDinamicaApp.ViewModels
             {
                 if (SetProperty(ref _selectedRecord, value))
                 {
-                    LoadRecordToForm(value);
+                    OnPropertyChanged(nameof(IsEditMode));
                 }
             }
         }
 
+        public bool IsEditMode => SelectedRecord != null;
+
         public ICommand SaveRecordCommand { get; }
-        public ICommand NewRecordCommand { get; }
+        public ICommand ClearFormCommand { get; }
+        public ICommand SelectRecordCommand { get; }
         public ICommand OpenConfigCommand { get; }
+        public ICommand DeleteRecordCommand { get; }
+        public ICommand DeleteAllRecordsCommand { get; }
 
         private void LoadData()
         {
@@ -70,12 +79,14 @@ namespace PautaDinamicaApp.ViewModels
 
             var savedRecords = _storageService.LoadRecords();
             Records = new ObservableCollection<AuditEntry>(savedRecords);
+
+            FieldsRefreshed?.Invoke();
         }
 
         public void RefreshFields()
         {
             var config = _storageService.LoadConfiguration()
-                            .OrderBy(f => f.Order);
+                            .OrderBy(f => f.Order).ToList();
 
             var fields = config
                             .Where(c => c.Type != FieldType.Separator)
@@ -86,6 +97,8 @@ namespace PautaDinamicaApp.ViewModels
             _groupedFields = CollectionViewSource.GetDefaultView(CurrentFields);
             _groupedFields.GroupDescriptions.Add(new PropertyGroupDescription(nameof(DynamicFieldVM.Category)));
             OnPropertyChanged(nameof(GroupedFields));
+
+            FieldsRefreshed?.Invoke();
         }
 
         private void OpenConfiguration()
@@ -105,6 +118,7 @@ namespace PautaDinamicaApp.ViewModels
             {
                 field.Reset();
             }
+            OnPropertyChanged(nameof(IsEditMode));
         }
 
         private void LoadRecordToForm(AuditEntry? record)
@@ -158,6 +172,9 @@ namespace PautaDinamicaApp.ViewModels
                 SelectedRecord = entry;
             }
 
+            // Notificar que los datos han cambiado para que la tabla se actualice
+            entry.NotifyUpdate();
+
             _storageService.SaveRecords(Records.ToList());
 
             // Success! Reset the fields and clear styles
@@ -168,6 +185,48 @@ namespace PautaDinamicaApp.ViewModels
             SelectedRecord = null;
 
             MessageBox.Show("Registro guardado correctamente.");
+        }
+
+        private void EditRecord(AuditEntry? entry)
+        {
+            if (entry == null) return;
+            SelectedRecord = entry;
+            LoadRecordToForm(entry);
+        }
+
+        private void DeleteRecord(AuditEntry? entry)
+        {
+            if (entry == null) return;
+
+            var result = MessageBox.Show("¿Realmente desea eliminar este registro?", "Confirmar eliminación",
+                                       MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                Records.Remove(entry);
+                _storageService.SaveRecords(Records.ToList());
+
+                if (SelectedRecord == entry)
+                {
+                    CreateNewRecord();
+                }
+            }
+        }
+
+        private void DeleteAllRecords()
+        {
+            if (!Records.Any()) return;
+
+            var result = MessageBox.Show("¿Realmente desea eliminar TODOS los registros? Esta acción no se puede deshacer.",
+                                       "Confirmar eliminación MASIVA",
+                                       MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                Records.Clear();
+                _storageService.SaveRecords(Records.ToList());
+                CreateNewRecord();
+            }
         }
     }
 }

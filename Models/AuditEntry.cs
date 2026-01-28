@@ -1,12 +1,27 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace PautaDinamicaApp.Models
 {
-    public class AuditEntry
+    public class AuditEntry : INotifyPropertyChanged
     {
         public string RecordId { get; set; } = Guid.NewGuid().ToString();
         public DateTime Timestamp { get; set; } = DateTime.Now;
         public Dictionary<string, object> Values { get; set; } = new Dictionary<string, object>();
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public void NotifyUpdate()
+        {
+            OnPropertyChanged(nameof(Values));
+            OnPropertyChanged(nameof(Timestamp));
+        }
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }

@@ -1,23 +1,55 @@
-﻿using System.Text;
+﻿using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using PautaDinamicaApp.ViewModels;
 
-namespace PautaDinamicaApp;
-
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
-public partial class MainWindow : Window
+namespace PautaDinamicaApp
 {
-    public MainWindow()
+    public partial class MainWindow : Window
     {
-        InitializeComponent();
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            this.Loaded += (s, e) =>
+            {
+                if (DataContext is MainViewModel vm)
+                {
+                    vm.FieldsRefreshed += RebuildColumns;
+                    RebuildColumns();
+                }
+            };
+        }
+
+        private void RebuildColumns()
+        {
+            if (DataContext is not MainViewModel vm) return;
+            if (RecordsGrid == null) return;
+
+            // Limpiar todas las columnas excepto la primera (Acciones)
+            while (RecordsGrid.Columns.Count > 1)
+            {
+                RecordsGrid.Columns.RemoveAt(1);
+            }
+
+            // Crear columnas dinámicas basadas en la configuración actual
+            foreach (var field in vm.CurrentFields)
+            {
+                var column = new DataGridTextColumn
+                {
+                    Header = field.Label,
+                    Binding = new Binding($"Values")
+                    {
+                        Converter = (IValueConverter)Resources["DictConverter"],
+                        ConverterParameter = field.Id
+                    },
+                    Width = DataGridLength.Auto,
+                    MinWidth = 180 // Suficiente espacio para que no se vea apretado
+                };
+
+                RecordsGrid.Columns.Add(column);
+            }
+        }
     }
 }
