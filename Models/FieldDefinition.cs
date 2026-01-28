@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Linq;
 
 namespace PautaDinamicaApp.Models
 {
@@ -13,7 +16,7 @@ namespace PautaDinamicaApp.Models
         Separator
     }
 
-    public class FieldDefinition
+    public class FieldDefinition : INotifyPropertyChanged
     {
         public string Id { get; set; } = string.Empty;
         public string Label { get; set; } = string.Empty;
@@ -22,6 +25,21 @@ namespace PautaDinamicaApp.Models
         public FieldType Type { get; set; } = FieldType.Text;
         public bool IsRequired { get; set; }
         public List<string> Options { get; set; } = new List<string>();
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (_isSelected != value)
+                {
+                    _isSelected = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        private bool _isSelected;
 
         [System.Text.Json.Serialization.JsonIgnore]
         public string OptionsString
@@ -40,6 +58,13 @@ namespace PautaDinamicaApp.Models
                                    .ToList();
                 }
             }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         public void EnsureDefaultOptions()

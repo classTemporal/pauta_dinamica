@@ -5,6 +5,8 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Data;
 using System.ComponentModel;
+using System.Text.Json;
+using System.IO;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using ClosedXML.Excel;
@@ -34,6 +36,7 @@ namespace PautaDinamicaApp.ViewModels
             DeleteRecordCommand = new RelayCommand(p => DeleteRecord(p as AuditEntry));
             DeleteAllRecordsCommand = new RelayCommand(_ => DeleteAllRecords());
             ExportToExcelCommand = new RelayCommand(_ => ExportRecordsToExcel());
+            ExportToJsonCommand = new RelayCommand(_ => ExportRecordsToJson());
             ToggleMultiSelectCommand = new RelayCommand(_ => ToggleMultiSelect());
             SelectAllCommand = new RelayCommand(_ => ExecuteSelectAll());
             DeleteSelectedCommand = new RelayCommand(_ => DeleteSelectedRecords());
@@ -81,6 +84,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand DeleteRecordCommand { get; }
         public ICommand DeleteAllRecordsCommand { get; }
         public ICommand ExportToExcelCommand { get; }
+        public ICommand ExportToJsonCommand { get; }
         public ICommand ToggleMultiSelectCommand { get; }
         public ICommand SelectAllCommand { get; }
         public ICommand DeleteSelectedCommand { get; }
@@ -131,8 +135,14 @@ namespace PautaDinamicaApp.ViewModels
             {
                 if (win.DataContext is EditorViewModel editorVm && editorVm.ShouldClearRecords)
                 {
-                    // Respaldar antes de borrar (obligatorio)
-                    ExportRecordsToExcel(Records, $"Respaldo_Pauta_Anterior_{DateTime.Now:yyyyMMdd_HHmm}");
+                    MessageBox.Show("Se requiere realizar respaldos de seguridad antes de aplicar los cambios estructurales. Por favor, asigne una ubicación para el Excel y luego para el JSON de respaldo.",
+                                    "Respaldo Obligatorio", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    // Respaldar antes de borrar (obligatorio - EXCEL)
+                    ExportRecordsToExcel(Records, $"Respaldo_Excel_Pauta_Anterior_{DateTime.Now:yyyyMMdd_HHmm}");
+
+                    // Respaldar antes de borrar (obligatorio - JSON)
+                    ExportRecordsToJson(Records, $"Respaldo_JSON_Pauta_Anterior_{DateTime.Now:yyyyMMdd_HHmm}");
 
                     // Borrar registros
                     Records.Clear();
@@ -334,6 +344,44 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
         }
+
+        public void ExportRecordsToJson(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null)
+        {
+            // Si no nos pasan datos y hay selección múltiple activa, priorizamos los seleccionados
+            var data = recordsToExport?.ToList() ??
+                       (IsMultiSelectMode ? Records.Where(r => r.IsSelected).ToList() : Records.ToList());
+
+            if (!data.Any())
+            {
+                MessageBox.Show("No hay registros para exportar. Asegúrese de seleccionar elementos si está en modo selección.", "Exportar a JSON", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var sfd = new SaveFileDialog
+            {
+                Filter = "JSON Files (*.json)|*.json",
+                FileName = customTitle ?? $"Auditoria_Datos_{DateTime.Now:yyyyMMdd_HHmm}"
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+                try
+                {
+                    string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(sfd.FileName, json);
+
+                    if (customTitle == null)
+                    {
+                        MessageBox.Show("Datos exportados a JSON correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al exportar a JSON: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
         private void ToggleMultiSelect()
         {
             IsMultiSelectMode = !IsMultiSelectMode;

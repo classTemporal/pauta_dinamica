@@ -37,6 +37,46 @@ namespace PautaDinamicaApp.Services
             File.WriteAllText(_configPath, json);
         }
 
+        public void BackupConfiguration()
+        {
+            if (!File.Exists(_configPath)) return;
+
+            try
+            {
+                string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
+                if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
+
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string backupPath = Path.Combine(backupDir, $"config_backup_{timestamp}.json");
+
+                File.Copy(_configPath, backupPath, true);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error creating backup: {ex.Message}");
+            }
+        }
+
+        public void BackupRecords()
+        {
+            if (!File.Exists(_dataPath)) return;
+
+            try
+            {
+                string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
+                if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
+
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string backupPath = Path.Combine(backupDir, $"records_backup_{timestamp}.json");
+
+                File.Copy(_dataPath, backupPath, true);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error creating record backup: {ex.Message}");
+            }
+        }
+
         public List<AuditEntry> LoadRecords()
         {
             if (!File.Exists(_dataPath)) return new List<AuditEntry>();
