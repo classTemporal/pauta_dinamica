@@ -46,13 +46,7 @@ namespace PautaDinamicaApp.ViewModels
         public ObservableCollection<DynamicFieldVM> CurrentFields
         {
             get => _currentFields;
-            set
-            {
-                if (SetProperty(ref _currentFields, value))
-                {
-                    OnPropertyChanged(nameof(GroupedFields));
-                }
-            }
+            set => SetProperty(ref _currentFields, value);
         }
 
         public ICollectionView GroupedFields => _groupedFields ?? CollectionViewSource.GetDefaultView(CurrentFields);
@@ -66,13 +60,7 @@ namespace PautaDinamicaApp.ViewModels
         public AuditEntry? SelectedRecord
         {
             get => _selectedRecord;
-            set
-            {
-                if (SetProperty(ref _selectedRecord, value))
-                {
-                    OnPropertyChanged(nameof(IsEditMode));
-                }
-            }
+            set { if (SetProperty(ref _selectedRecord, value)) OnPropertyChanged(nameof(IsEditMode)); }
         }
 
         public bool IsEditMode => SelectedRecord != null;
@@ -91,38 +79,122 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ExportSelectedCommand { get; }
 
         private bool _isMultiSelectMode;
-        public bool IsMultiSelectMode
-        {
-            get => _isMultiSelectMode;
-            set => SetProperty(ref _isMultiSelectMode, value);
-        }
+        public bool IsMultiSelectMode { get => _isMultiSelectMode; set => SetProperty(ref _isMultiSelectMode, value); }
 
         private void LoadData()
         {
             RefreshFields();
-
             var savedRecords = _storageService.LoadRecords();
             Records = new ObservableCollection<AuditEntry>(savedRecords);
-
             FieldsRefreshed?.Invoke();
         }
 
         public void RefreshFields()
         {
-            var config = _storageService.LoadConfiguration()
-                            .OrderBy(f => f.Order).ToList();
+            var config = _storageService.LoadConfiguration().OrderBy(f => f.Order).ToList();
+            var fields = config.Where(c => c.Type != FieldType.Separator).Select(c => new DynamicFieldVM(c)).ToList();
 
-            var fields = config
-                            .Where(c => c.Type != FieldType.Separator)
-                            .Select(c => new DynamicFieldVM(c)).ToList();
+            foreach (var f in fields)
+            {
+                f.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(DynamicFieldVM.Value) && !_isCalculating)
+                    {
+                        RefreshCalculations();
+                    }
+                };
+            }
 
             CurrentFields = new ObservableCollection<DynamicFieldVM>(fields);
-
             _groupedFields = CollectionViewSource.GetDefaultView(CurrentFields);
             _groupedFields.GroupDescriptions.Add(new PropertyGroupDescription(nameof(DynamicFieldVM.Category)));
             OnPropertyChanged(nameof(GroupedFields));
 
+            RefreshCalculations();
             FieldsRefreshed?.Invoke();
+        }
+
+        private bool _isCalculating;
+        private void RefreshCalculations()
+        {
+            if (_isCalculating) return;
+            _isCalculating = true;
+            try
+            {
+                // 1. CÁLCULO DE PORCENTAJES (Lógica de Unidades de Auditoría)
+                foreach (var calcField in CurrentFields.Where(f => f.Type == FieldType.Calculation))
+                {
+                    double totalPossibleWeights = 0;
+                    double totalEarnedWeights = 0;
+                    var rules = calcField.Definition.ScoringRules;
+
+                    // Si hay reglas configuradas, solo evaluamos esos campos. 
+                    // Si no hay reglas, evaluamos todos los Dropdowns y Checkboxes (Modo Auto).
+                    bool useManualRules = rules.Any();
+
+                    var candidates = CurrentFields.Where(f => f.Id != calcField.Id && (f.Type == FieldType.Dropdown || f.Type == FieldType.Boolean));
+
+                    foreach (var source in candidates)
+                    {
+                        var rule = rules.FirstOrDefault(r => r.FieldId == source.Id);
+                        if (useManualRules && rule == null) continue;
+
+                        string currentVal = source.Value?.ToString() ?? "";
+                        if (string.IsNullOrWhiteSpace(currentVal)) continue;
+
+                        // Manejo de N/A: Se saca el campo COMPLETAMENTE de la pauta.
+                        string naText = rule?.NaValue ?? "N/A";
+                        if (currentVal.Equals(naText, StringComparison.OrdinalIgnoreCase)) continue;
+
+                        double weight = calcField.Definition.UseCustomWeights ? (rule?.Weight ?? 1.0) : 1.0;
+                        double earnedNormalized = 0; // Escala 0.0 a 1.0 (unidad)
+
+                        if (rule != null && rule.Mappings.Any())
+                        {
+                            // Comparar el valor seleccionado con los mapeos.
+                            // Nota: Para Booleans, currentVal será "True" o "False".
+                            var mapping = rule.Mappings.FirstOrDefault(m =>
+                                m.Value.Equals(currentVal, StringComparison.OrdinalIgnoreCase) ||
+                                (source.Type == FieldType.Boolean && m.Value.Split(' ')[0].Equals(currentVal, StringComparison.OrdinalIgnoreCase))
+                            );
+
+                            if (mapping != null) earnedNormalized = mapping.Score;
+                        }
+                        else
+                        {
+                            // Modo automático: Solo "Cumple" o "True" suman el punto completo.
+                            if (currentVal.Equals("Cumple", StringComparison.OrdinalIgnoreCase) ||
+                               (source.Type == FieldType.Boolean && source.Value is bool b && b))
+                            {
+                                earnedNormalized = 1.0;
+                            }
+                        }
+
+                        // CADA CAMPO ES UNA UNIDAD (1.0). El porcentaje se basa en qué fracción de esa unidad se obtuvo.
+                        totalEarnedWeights += earnedNormalized * weight;
+                        totalPossibleWeights += 1.0 * weight;
+                    }
+
+                    calcField.Value = totalPossibleWeights > 0
+                        ? $"{(totalEarnedWeights / totalPossibleWeights * 100):F2}%"
+                        : "0.00%";
+                }
+
+                // 2. CÁLCULO DE PROMEDIOS (AVERAGE)
+                foreach (var avgField in CurrentFields.Where(f => f.Type == FieldType.Average))
+                {
+                    var targets = CurrentFields.Where(f => avgField.Definition.TargetIds.Contains(f.Id)).ToList();
+                    double sum = 0;
+                    int count = 0;
+                    foreach (var t in targets)
+                    {
+                        string valText = t.Value?.ToString()?.Replace("%", "") ?? "";
+                        if (double.TryParse(valText, out double d)) { sum += d; count++; }
+                    }
+                    avgField.Value = count > 0 ? $"{(sum / count):F2}%" : "0.00%";
+                }
+            }
+            finally { _isCalculating = false; }
         }
 
         private void OpenConfiguration()
@@ -130,72 +202,31 @@ namespace PautaDinamicaApp.ViewModels
             var hasRecords = Records.Any();
             var win = new ConfigWindow(hasRecords);
             win.Owner = Application.Current.MainWindow;
-
-            if (win.ShowDialog() == true)
-            {
-                if (win.DataContext is EditorViewModel editorVm && editorVm.ShouldClearRecords)
-                {
-                    MessageBox.Show("Se requiere realizar respaldos de seguridad antes de aplicar los cambios estructurales. Por favor, asigne una ubicación para el Excel y luego para el JSON de respaldo.",
-                                    "Respaldo Obligatorio", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                    // Respaldar antes de borrar (obligatorio - EXCEL)
-                    ExportRecordsToExcel(Records, $"Respaldo_Excel_Pauta_Anterior_{DateTime.Now:yyyyMMdd_HHmm}");
-
-                    // Respaldar antes de borrar (obligatorio - JSON)
-                    ExportRecordsToJson(Records, $"Respaldo_JSON_Pauta_Anterior_{DateTime.Now:yyyyMMdd_HHmm}");
-
-                    // Borrar registros
-                    Records.Clear();
-                    _storageService.SaveRecords(Records.ToList());
-                    CreateNewRecord();
-                }
-
-                RefreshFields();
-            }
+            if (win.ShowDialog() == true) RefreshFields();
         }
 
         private void CreateNewRecord()
         {
             SelectedRecord = null;
-            foreach (var field in CurrentFields)
-            {
-                field.Reset();
-            }
+            foreach (var field in CurrentFields) field.Reset();
             OnPropertyChanged(nameof(IsEditMode));
         }
 
         private void LoadRecordToForm(AuditEntry? record)
         {
             if (record == null) return;
-
             foreach (var field in CurrentFields)
             {
-                if (record.Values.TryGetValue(field.Id, out var value))
-                {
-                    field.Value = value;
-                }
-                else
-                {
-                    field.Value = null;
-                }
+                if (record.Values.TryGetValue(field.Id, out var value)) field.Value = value;
+                else field.Value = null;
             }
         }
 
-        private bool CanSaveRecord()
-        {
-            // We always return true to allow the user to click "Save" 
-            // and see the validation errors if they haven't filled everything.
-            return true;
-        }
+        private bool CanSaveRecord() => true;
 
         private void SaveCurrentRecord()
         {
-            // Trigger validation for all fields
-            foreach (var field in CurrentFields)
-            {
-                field.Validate();
-            }
-
+            foreach (var field in CurrentFields) field.Validate();
             if (CurrentFields.Any(f => !f.IsValid))
             {
                 MessageBox.Show("Por favor, completa todos los campos obligatorios.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -203,30 +234,16 @@ namespace PautaDinamicaApp.ViewModels
             }
 
             var entry = SelectedRecord ?? new AuditEntry();
-
             foreach (var field in CurrentFields.Where(f => f.Type != FieldType.Separator))
             {
                 entry.Values[field.Id] = field.Value ?? "";
             }
 
-            if (SelectedRecord == null)
-            {
-                Records.Add(entry);
-                SelectedRecord = entry;
-            }
-
-            // Notificar que los datos han cambiado para que la tabla se actualice
+            if (SelectedRecord == null) Records.Add(entry);
             entry.NotifyUpdate();
-
             _storageService.SaveRecords(Records.ToList());
-
-            // Success! Reset the fields and clear styles
-            foreach (var field in CurrentFields)
-            {
-                field.Reset();
-            }
+            foreach (var field in CurrentFields) field.Reset();
             SelectedRecord = null;
-
             MessageBox.Show("Registro guardado correctamente.");
         }
 
@@ -240,31 +257,17 @@ namespace PautaDinamicaApp.ViewModels
         private void DeleteRecord(AuditEntry? entry)
         {
             if (entry == null) return;
-
-            var result = MessageBox.Show("¿Realmente desea eliminar este registro?", "Confirmar eliminación",
-                                       MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
+            if (MessageBox.Show("¿Eliminar registro?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 Records.Remove(entry);
                 _storageService.SaveRecords(Records.ToList());
-
-                if (SelectedRecord == entry)
-                {
-                    CreateNewRecord();
-                }
+                if (SelectedRecord == entry) CreateNewRecord();
             }
         }
 
         private void DeleteAllRecords()
         {
-            if (!Records.Any()) return;
-
-            var result = MessageBox.Show("¿Realmente desea eliminar TODOS los registros? Esta acción no se puede deshacer.",
-                                       "Confirmar eliminación MASIVA",
-                                       MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
-            if (result == MessageBoxResult.Yes)
+            if (MessageBox.Show("¿Eliminar TODOS?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 Records.Clear();
                 _storageService.SaveRecords(Records.ToList());
@@ -275,18 +278,8 @@ namespace PautaDinamicaApp.ViewModels
         public void ExportRecordsToExcel(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null)
         {
             var data = recordsToExport ?? Records;
-            if (!data.Any())
-            {
-                MessageBox.Show("No hay registros para exportar.", "Exportar a Excel", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var sfd = new SaveFileDialog
-            {
-                Filter = "Excel Files (*.xlsx)|*.xlsx",
-                FileName = customTitle ?? $"Auditoria_{DateTime.Now:yyyyMMdd_HHmm}"
-            };
-
+            if (!data.Any()) return;
+            var sfd = new SaveFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx", FileName = customTitle ?? $"Auditoria_{DateTime.Now:yyyyMMdd_HHmm}" };
             if (sfd.ShowDialog() == true)
             {
                 try
@@ -294,132 +287,60 @@ namespace PautaDinamicaApp.ViewModels
                     using (var workbook = new XLWorkbook())
                     {
                         var worksheet = workbook.Worksheets.Add("Auditoría");
-
-                        // Headers
                         worksheet.Cell(1, 1).Value = "Fecha";
-                        int col = 2;
-
-                        // Get all fields that have values in the records, or all current fields
                         var fields = CurrentFields.ToList();
-                        foreach (var field in fields)
-                        {
-                            worksheet.Cell(1, col++).Value = field.Label;
-                        }
-
-                        // Styling headers
-                        var headerRange = worksheet.Range(1, 1, 1, col - 1);
-                        headerRange.Style.Font.Bold = true;
-                        headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#007bff");
-                        headerRange.Style.Font.FontColor = XLColor.White;
-
-                        // Data
+                        for (int i = 0; i < fields.Count; i++) worksheet.Cell(1, i + 2).Value = fields[i].Label;
                         int row = 2;
                         foreach (var entry in data)
                         {
                             worksheet.Cell(row, 1).Value = entry.Timestamp.ToString("g");
-                            int c = 2;
-                            foreach (var field in fields)
+                            for (int i = 0; i < fields.Count; i++)
                             {
-                                if (entry.Values.TryGetValue(field.Id, out var val))
-                                {
-                                    worksheet.Cell(row, c).Value = val?.ToString() ?? "";
-                                }
-                                c++;
+                                if (entry.Values.TryGetValue(fields[i].Id, out var val)) worksheet.Cell(row, i + 2).Value = val?.ToString() ?? "";
                             }
                             row++;
                         }
-
                         worksheet.Columns().AdjustToContents();
                         workbook.SaveAs(sfd.FileName);
                     }
-
-                    if (customTitle == null) // Only show success if it's a manual export, not a background backup
-                    {
-                        MessageBox.Show("Archivo Excel generado con éxito.", "Exportar a Excel", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error al generar el Excel: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
             }
         }
 
         public void ExportRecordsToJson(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null)
         {
-            // Si no nos pasan datos y hay selección múltiple activa, priorizamos los seleccionados
-            var data = recordsToExport?.ToList() ??
-                       (IsMultiSelectMode ? Records.Where(r => r.IsSelected).ToList() : Records.ToList());
-
-            if (!data.Any())
-            {
-                MessageBox.Show("No hay registros para exportar. Asegúrese de seleccionar elementos si está en modo selección.", "Exportar a JSON", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var sfd = new SaveFileDialog
-            {
-                Filter = "JSON Files (*.json)|*.json",
-                FileName = customTitle ?? $"Auditoria_Datos_{DateTime.Now:yyyyMMdd_HHmm}"
-            };
-
+            var data = recordsToExport ?? Records;
+            if (!data.Any()) return;
+            var sfd = new SaveFileDialog { Filter = "JSON Files (*.json)|*.json", FileName = customTitle ?? $"Auditoria_JSON_{DateTime.Now:yyyyMMdd_HHmm}" };
             if (sfd.ShowDialog() == true)
             {
-                try
-                {
-                    string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(sfd.FileName, json);
-
-                    if (customTitle == null)
-                    {
-                        MessageBox.Show("Datos exportados a JSON correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error al exportar a JSON: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                try { File.WriteAllText(sfd.FileName, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true })); }
+                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
             }
         }
 
         private void ToggleMultiSelect()
         {
             IsMultiSelectMode = !IsMultiSelectMode;
-            // Clear selection when exiting mode
-            if (!IsMultiSelectMode)
-            {
-                foreach (var rec in Records) rec.IsSelected = false;
-            }
+            if (!IsMultiSelectMode) foreach (var rec in Records) rec.IsSelected = false;
         }
 
         private void ExecuteSelectAll()
         {
-            // Toggle all based on whether all are currently selected
-            bool allSelected = Records.All(r => r.IsSelected);
-            foreach (var rec in Records)
-            {
-                rec.IsSelected = !allSelected;
-            }
+            bool all = Records.All(r => r.IsSelected);
+            foreach (var rec in Records) rec.IsSelected = !all;
         }
 
         private void DeleteSelectedRecords()
         {
             var selected = Records.Where(r => r.IsSelected).ToList();
             if (!selected.Any()) return;
-
-            var result = MessageBox.Show($"¿Eliminar {selected.Count} registros seleccionados?",
-                                       "Confirmar Eliminación Múltiple",
-                                       MessageBoxButton.YesNo,
-                                       MessageBoxImage.Warning);
-
-            if (result == MessageBoxResult.Yes)
+            if (MessageBox.Show($"¿Eliminar {selected.Count}?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
-                foreach (var rec in selected)
-                {
-                    Records.Remove(rec);
-                }
+                foreach (var rec in selected) Records.Remove(rec);
                 _storageService.SaveRecords(Records.ToList());
-                CreateNewRecord(); // Reset form just in case
+                CreateNewRecord();
             }
         }
     }

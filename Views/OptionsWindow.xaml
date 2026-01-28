@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
-        Title="Configurar Dropdown" Height="500" Width="450"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Title="Gestor de Configuraciones" Height="650" Width="600"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
         Background="#12151c" Foreground="#e1e1e1">
     
     <Window.Resources>
@@ -11,199 +11,182 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Resources/FieldTemplates.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-
-            <!-- ESTILO BASE PARA BOTONES MODERNOS -->
-            <Style x:Key="ModernButtonBase" TargetType="Button">
-                <Setter Property="Foreground" Value="White"/>
-                <Setter Property="FontWeight" Value="Bold"/>
-                <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="SnapsToDevicePixels" Value="True"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="border" 
-                                    Background="{TemplateBinding Background}" 
-                                    CornerRadius="6" 
-                                    BorderThickness="{TemplateBinding BorderThickness}" 
-                                    BorderBrush="{TemplateBinding BorderBrush}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="border" Property="Opacity" Value="0.85"/>
-                                </Trigger>
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="border" Property="Opacity" Value="0.7"/>
-                                    <Setter TargetName="border" Property="RenderTransform">
-                                        <Setter.Value>
-                                            <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Trigger>
-                                <Trigger Property="IsEnabled" Value="False">
-                                    <Setter TargetName="border" Property="Background" Value="#2d3446"/>
-                                    <Setter Property="Foreground" Value="#666666"/>
-                                    <Setter Property="Opacity" Value="0.5"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-
-            <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                <Setter Property="Background" Value="#007bff"/>
-            </Style>
-
-            <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                <Setter Property="Background" Value="#28a745"/>
-            </Style>
-
-            <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                <Setter Property="Background" Value="#dc3545"/>
-            </Style>
-
-            <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="Foreground" Value="#94a3b8"/>
-            </Style>
+            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <conv:DictConverter x:Key="DictConverter"/>
         </ResourceDictionary>
     </Window.Resources>
 
-    <Grid Margin="25">
+    <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Titulo y Toggle -->
-        <!-- Titulo y Toggle -->
-        <!-- Titulo y Toggle Area -->
-        <Grid Grid.Row="0" Margin="0,0,0,15">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-
-            <!-- Row 0: Title and Info -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                <TextBlock Text="Configurar Opciones" FontSize="20" FontWeight="Bold" Foreground="White"/>
-                <TextBlock Text="Añade o elimina los elementos de la lista." FontSize="12" Foreground="#94a3b8" Margin="0,4,0,0"/>
+        <!-- Cabecera -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
+            <TextBlock Text="Configuración Avanzada" FontSize="20" FontWeight="Bold" Foreground="White"/>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock Text="Campo: " FontSize="12" Foreground="#94a3b8"/>
+                <TextBlock Text="{Binding OriginalField.Label}" FontSize="12" Foreground="#007bff" FontWeight="Bold"/>
+                <TextBlock Text=" (" FontSize="12" Foreground="#94a3b8"/>
+                <TextBlock Text="{Binding OriginalField.Type}" FontSize="12" Foreground="#94a3b8"/>
+                <TextBlock Text=")" FontSize="12" Foreground="#94a3b8"/>
             </StackPanel>
+        </StackPanel>
+
+        <!-- Contenido segun el tipo -->
+        <Grid Grid.Row="1">
             
-            <!-- Row 1: Actions Area -->
-            <Grid Grid.Row="1">
-                <!-- Normal Actions Area -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
-                            Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
-                    <Button Content="📊 Exportar" Command="{Binding ExportOptionsCommand}" 
-                            Style="{StaticResource ExcelButton}" Padding="10,5" FontSize="11" Margin="0,0,5,0"/>
-                    <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" 
-                            Style="{StaticResource SecondaryButton}" Padding="10,5" FontSize="11"/>
-                </StackPanel>
-
-                <!-- MultiSelect Actions Area -->
-                <Border Background="#3d4456" CornerRadius="4" Padding="5" HorizontalAlignment="Stretch"
-                        Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="✔️ Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,5,0" Padding="8,4" FontSize="11"/>
-                        <Button Content="🗑️ Borrar" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,0,5,0" Padding="8,4" FontSize="11"/>
-                        <Button Content="📊 Exportar" Command="{Binding ExportSelectedOptionsCommand}" Style="{StaticResource ExcelButton}" Margin="0,0,5,0" Padding="8,4" FontSize="11"/>
-                        <Button Content="❌ Cancelar" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Padding="8,4" FontSize="11"/>
-                    </WrapPanel>
-                </Border>
-            </Grid>
-        </Grid>
-
-        <!-- Lista de Opciones -->
-        <Border Grid.Row="1" Background="#1e222d" CornerRadius="12" Padding="8" BorderBrush="#2d3446" BorderThickness="1">
-            <ListBox ItemsSource="{Binding Options}" Background="Transparent" BorderThickness="0" Foreground="White"
-                     HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     SelectionMode="Multiple">
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Setter Property="Background" Value="Transparent"/>
-                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#2d3446"/>
-                        <Setter Property="Padding" Value="5,8"/>
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-                        <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#262b38"/>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#3d4456"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </ListBox.ItemContainerStyle>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
+            <!-- VISTA A: LISTADO (DROPDOWN) -->
+            <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Dropdown:Visible|Default:Collapsed'}">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                    Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                            <Button Content="📊 Exportar" Command="{Binding ExportOptionsCommand}" Style="{StaticResource ExcelButton}" Padding="10,5" FontSize="11" Margin="0,0,5,0"/>
+                            <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource SecondaryButton}" Padding="10,5" FontSize="11"/>
+                        </StackPanel>
+                        <Border Background="#3d4456" CornerRadius="4" Padding="5" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="✔️ Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,5,0" Padding="8,4" FontSize="11"/>
+                                <Button Content="🗑️ Borrar" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,0,5,0" Padding="8,4" FontSize="11"/>
+                                <Button Content="❌ Cancelar" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Padding="8,4" FontSize="11"/>
+                            </WrapPanel>
+                        </Border>
+                    </Grid>
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,15,0,0">
+                        <TextBlock Text="Agregar Nueva Opción" FontSize="11" Foreground="#94a3b8" Margin="0,0,0,5"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            
-                            <!-- Checkbox (MultiSelect Mode) -->
-                            <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,10,0" VerticalAlignment="Center">
-                                <CheckBox.Visibility>
-                                    <Binding Path="DataContext.IsMultiSelectMode" RelativeSource="{RelativeSource AncestorType=Window}" Converter="{StaticResource BooleanToVisibilityConverter}"/>
-                                </CheckBox.Visibility>
-                            </CheckBox>
-
-                            <TextBlock Grid.Column="1" Text="{Binding Text}" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" Margin="0,0,10,0"/>
-                            
-                            <!-- Single Delete (Hidden in MultiSelect Mode to avoid confusion) -->
-                            <Button Grid.Column="2" Content="ELIMINAR" 
-                                    Command="{Binding DataContext.RemoveOptionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    CommandParameter="{Binding}" 
-                                    Style="{StaticResource DangerButton}"
-                                    Padding="10,5" FontSize="10">
-                                <Button.Visibility>
-                                    <Binding Path="DataContext.IsMultiSelectMode" RelativeSource="{RelativeSource AncestorType=Window}" Converter="{StaticResource BooleanToVisibilityConverter}" ConverterParameter="Inverse"/>
-                                </Button.Visibility>
-                            </Button>
+                            <TextBox Text="{Binding NewOptionText, UpdateSourceTrigger=PropertyChanged}" Height="40" Background="#262b38" BorderBrush="#3d4456" Padding="12,0" VerticalContentAlignment="Center"/>
+                            <Button Grid.Column="1" Content="AGREGAR" Command="{Binding AddOptionCommand}" Style="{StaticResource PrimaryButton}" Margin="10,0,0,0" Padding="20,0"/>
                         </Grid>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </Border>
-
-        <!-- Input para nueva opcion -->
-        <StackPanel Grid.Row="2" Margin="0,20,0,0">
-            <TextBlock Text="Nueva Opción" FontSize="11" FontWeight="Bold" Foreground="#94a3b8" Margin="0,0,0,8"/>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Text="{Binding NewOptionText, UpdateSourceTrigger=PropertyChanged}" 
-                         Height="40" Padding="12,0" VerticalContentAlignment="Center" FontSize="14"
-                         Background="#2d3446" Foreground="White" BorderBrush="#3d4456" BorderThickness="1">
-                    <TextBox.InputBindings>
-                        <KeyBinding Key="Enter" Command="{Binding AddOptionCommand}"/>
-                    </TextBox.InputBindings>
-                </TextBox>
-                <Button Grid.Column="1" Content="AGREGAR" Command="{Binding AddOptionCommand}"
-                        Style="{StaticResource PrimaryButton}"
-                        Margin="12,0,0,0" Padding="20,0" Height="40"/>
+                    </StackPanel>
+                    <Border Background="#1e222d" CornerRadius="8" Padding="10" BorderBrush="#2d3446" BorderThickness="1">
+                        <ListBox ItemsSource="{Binding Options}" Background="Transparent" BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox IsChecked="{Binding IsSelected}" Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Text}" Foreground="White" VerticalAlignment="Center" FontSize="14"/>
+                                        <Button Grid.Column="2" Content="ELIMINAR" Command="{Binding DataContext.RemoveOptionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource DangerButton}" Padding="10,4" FontSize="10"
+                                                Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </DockPanel>
             </Grid>
-        </StackPanel>
 
-        <!-- Footer -->
-        <Grid Grid.Row="3" Margin="0,25,0,0">
+            <!-- VISTA B: REGLAS COMPLEJAS (CALCULATION) -->
+            <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Calculation:Visible|Default:Collapsed'}">
+                <DockPanel>
+                    <!-- Alerta de Error de Porcentaje -->
+                    <Border DockPanel.Dock="Top" Background="#ff4d4d" CornerRadius="4" Padding="10" Margin="0,0,0,10"
+                            Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{Binding ValidationError}" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    </Border>
+
+                    <Border DockPanel.Dock="Top" Background="#262b38" CornerRadius="6" Padding="12" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="REGLAS DE EVALUACIÓN" FontWeight="Bold" Foreground="#28a745" Margin="0,0,0,8"/>
+                            <CheckBox IsChecked="{Binding UseCustomWeights}" Content="Activar Porcentajes Personalizados (Distribución sobre 100%)" Foreground="#94a3b8" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding CalculationRules}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#1e222d" CornerRadius="8" Padding="12" Margin="0,0,0,10" BorderBrush="#3d4456" BorderThickness="1">
+                                        <StackPanel>
+                                            <Grid Margin="0,0,0,10">
+                                                <CheckBox IsChecked="{Binding IsActive}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding FieldLabel}" Foreground="White" FontWeight="Bold" FontSize="13"/>
+                                                </CheckBox>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="N/A:" Foreground="#94a3b8" VerticalAlignment="Center" FontSize="11" Margin="0,0,5,0"/>
+                                                    <TextBox Text="{Binding NaValue, UpdateSourceTrigger=PropertyChanged}" Width="60" Height="25" FontSize="10" Padding="5,0" VerticalContentAlignment="Center"/>
+                                                    <TextBlock Text="Contribución %:" Foreground="#94a3b8" VerticalAlignment="Center" FontSize="11" Margin="10,0,5,0" IsEnabled="{Binding DataContext.UseCustomWeights, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                    <TextBox Text="{Binding PercentageText, UpdateSourceTrigger=PropertyChanged}" Width="40" Height="25" FontSize="10" Padding="5,0" VerticalContentAlignment="Center" IsEnabled="{Binding DataContext.UseCustomWeights, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <ItemsControl ItemsSource="{Binding Mappings}" Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border CornerRadius="4" Padding="8,4" Margin="0,0,8,8">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Background" Value="#2d3446"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsDisabled}" Value="True">
+                                                                            <Setter Property="Background" Value="#1a1d26"/>
+                                                                            <Setter Property="Opacity" Value="0.5"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Value}" Foreground="White" FontSize="11" VerticalAlignment="Center" MaxWidth="120" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text=" → " Foreground="#94a3b8" VerticalAlignment="Center"/>
+                                                                <TextBox Text="{Binding ScoreText, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsDisabled, Converter={StaticResource DictConverter}, ConverterParameter='True:False|False:True'}"
+                                                                         Width="40" Height="22" FontSize="10" Background="#12151c" BorderThickness="0" Padding="3,0" VerticalContentAlignment="Center" Foreground="#007bff" FontWeight="Bold"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Grid>
+
+            <!-- VISTA C: PROMEDIO (AVERAGE) -->
+            <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Average:Visible|Default:Collapsed'}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="SELECCIONAR CÁLCULOS PARA PROMEDIAR" FontWeight="Bold" Foreground="#6f42c1" Margin="0,0,0,15"/>
+                    <Border Background="#1e222d" CornerRadius="8" Padding="15">
+                        <ListBox ItemsSource="{Binding AverageTargets}" Background="Transparent" BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsSelected}" Margin="0,8">
+                                        <TextBlock Text="{Binding Text}" Foreground="White" FontSize="14"/>
+                                    </CheckBox>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </DockPanel>
+            </Grid>
+        </Grid>
+
+        <!-- Pie de Pagina -->
+        <Grid Grid.Row="2" Margin="0,20,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="2*"/>
             </Grid.ColumnDefinitions>
             <Button Content="CANCELAR" IsCancel="True" Height="45" Margin="0,0,10,0" Style="{StaticResource GhostButton}"/>
-            <Button Grid.Column="1" Content="LISTO - GUARDAR" Click="OkButton_Click" 
-                    Height="45" Style="{StaticResource SuccessButton}"/>
+            <Button Grid.Column="1" Content="LISTO - GUARDAR" Click="OkButton_Click" Height="45" Style="{StaticResource SuccessButton}"
+                    IsEnabled="{Binding HasError, Converter={StaticResource DictConverter}, ConverterParameter='True:False|False:True'}"/>
         </Grid>
     </Grid>
 </Window>

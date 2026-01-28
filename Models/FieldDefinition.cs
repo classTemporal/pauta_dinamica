@@ -13,31 +13,56 @@ namespace PautaDinamicaApp.Models
         Date,
         Boolean,
         Dropdown,
-        Separator
+        Separator,
+        Calculation,
+        Average
+    }
+
+    public class ScoringRule
+    {
+        public string FieldId { get; set; } = string.Empty;
+        public List<ValueScoreMapping> Mappings { get; set; } = new();
+        public double Weight { get; set; } = 1.0;
+        public string NaValue { get; set; } = "N/A";
+    }
+
+    public class ValueScoreMapping
+    {
+        public string Value { get; set; } = string.Empty;
+        public double Score { get; set; } = 1.0;
     }
 
     public class FieldDefinition : INotifyPropertyChanged
     {
-        public string Id { get; set; } = string.Empty;
-        public string Label { get; set; } = string.Empty;
-        public string Category { get; set; } = "General"; // To group fields like in the image
-        public int Order { get; set; } // To maintain layout order
-        public FieldType Type { get; set; } = FieldType.Text;
-        public bool IsRequired { get; set; }
-        public List<string> Options { get; set; } = new List<string>();
+        private string _id = Guid.NewGuid().ToString();
+        private string _label = string.Empty;
+        private string _category = "General";
+        private int _order;
+        private FieldType _type = FieldType.Text;
+        private bool _isRequired;
+        private List<string> _options = new();
+        private List<ScoringRule> _scoringRules = new();
+        private List<string> _targetIds = new();
+        private bool _useCustomWeights;
+
+        public string Id { get => _id; set { _id = value; OnPropertyChanged(); } }
+        public string Label { get => _label; set { _label = value; OnPropertyChanged(); } }
+        public string Category { get => _category; set { _category = value; OnPropertyChanged(); } }
+        public int Order { get => _order; set { _order = value; OnPropertyChanged(); } }
+        public FieldType Type { get => _type; set { _type = value; OnPropertyChanged(); } }
+        public bool IsRequired { get => _isRequired; set { _isRequired = value; OnPropertyChanged(); } }
+        public List<string> Options { get => _options; set { _options = value; OnPropertyChanged(); } }
+
+        // --- LÓGICA DE CÁLCULO ---
+        public List<ScoringRule> ScoringRules { get => _scoringRules; set { _scoringRules = value; OnPropertyChanged(); } }
+        public List<string> TargetIds { get => _targetIds; set { _targetIds = value; OnPropertyChanged(); } }
+        public bool UseCustomWeights { get => _useCustomWeights; set { _useCustomWeights = value; OnPropertyChanged(); } }
 
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsSelected
         {
             get => _isSelected;
-            set
-            {
-                if (_isSelected != value)
-                {
-                    _isSelected = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { _isSelected = value; OnPropertyChanged(); }
         }
         private bool _isSelected;
 
@@ -47,32 +72,20 @@ namespace PautaDinamicaApp.Models
             get => string.Join(", ", Options);
             set
             {
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    Options = new List<string>();
-                }
-                else
-                {
-                    Options = value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                                   .Select(s => s.Trim())
-                                   .ToList();
-                }
+                Options = (value ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                       .Select(s => s.Trim()).ToList();
+                OnPropertyChanged();
             }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected virtual void OnPropertyChanged([CallerMemberName] string? name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         public void EnsureDefaultOptions()
         {
             if (Type == FieldType.Dropdown && (Options == null || Options.Count == 0))
-            {
                 Options = new List<string> { "Cumple", "No Cumple", "N/A" };
-            }
         }
     }
 }

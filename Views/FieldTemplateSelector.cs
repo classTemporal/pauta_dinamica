@@ -13,6 +13,8 @@ namespace PautaDinamicaApp.Views
         public DataTemplate? DropdownTemplate { get; set; }
         public DataTemplate? DateTemplate { get; set; }
         public DataTemplate? SeparatorTemplate { get; set; }
+        public DataTemplate? CalculationTemplate { get; set; }
+        public DataTemplate? AverageTemplate { get; set; }
 
         public override DataTemplate? SelectTemplate(object item, DependencyObject container)
         {
@@ -26,6 +28,8 @@ namespace PautaDinamicaApp.Views
                     FieldType.Dropdown => DropdownTemplate,
                     FieldType.Date => DateTemplate,
                     FieldType.Separator => SeparatorTemplate,
+                    FieldType.Calculation => CalculationTemplate,
+                    FieldType.Average => AverageTemplate,
                     _ => TextTemplate
                 };
             }

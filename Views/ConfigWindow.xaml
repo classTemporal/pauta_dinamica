@@ -273,21 +273,31 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <!-- Opciones (BOTÓN) -->
-                    <DataGridTemplateColumn Header="Opciones" Width="*">
+                    <!-- Configuración / Opciones -->
+                    <DataGridTemplateColumn Header="Configuración" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Content="⚙️ CONFIGURAR OPCIONES" 
+                                <Button Content="⚙️ CONFIGURAR" 
                                         Command="{Binding DataContext.ConfigureOptionsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                         CommandParameter="{Binding}"
                                         Background="#3d4456" Padding="10,5" Height="30" FontSize="11"
                                         VerticalAlignment="Center">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <!-- Mostrar botón para campos que requieren configuración extra -->
+                                            <Setter Property="Visibility" Value="Visible"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Type}" Value="Dropdown">
-                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                <DataTrigger Binding="{Binding Type}" Value="Text">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="Numeric">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="Date">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="Separator">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>

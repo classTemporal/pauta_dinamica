@@ -167,9 +167,13 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ConfigureOptions(FieldDefinition? field)
         {
-            if (field == null || field.Type != FieldType.Dropdown) return;
+            if (field == null) return;
 
-            var vm = new OptionsEditorViewModel(field.Options);
+            // Tipos que necesitan configuración extra
+            var configurableTypes = new[] { FieldType.Dropdown, FieldType.Boolean, FieldType.Calculation, FieldType.Average };
+            if (!configurableTypes.Contains(field.Type)) return;
+
+            var vm = new OptionsEditorViewModel(field, Fields.ToList());
             var win = new OptionsWindow
             {
                 DataContext = vm,
@@ -178,9 +182,24 @@ namespace PautaDinamicaApp.ViewModels
 
             if (win.ShowDialog() == true)
             {
-                field.Options = vm.ResultOptions;
-                // Notificar cambio en OptionsString para que se vea si fuera necesario (aunque ya no usaremos el campo de texto)
+                // Sincronizar resultados según el tipo
+                field.UseCustomWeights = vm.UseCustomWeights;
+
+                if (field.Type == FieldType.Dropdown)
+                {
+                    field.Options = vm.ResultOptions;
+                }
+                else if (field.Type == FieldType.Calculation)
+                {
+                    field.ScoringRules = vm.ResultRules;
+                }
+                else if (field.Type == FieldType.Average)
+                {
+                    field.TargetIds = vm.ResultAverageIds;
+                }
+
                 OnPropertyChanged(nameof(Fields));
+                OnPropertyChanged(nameof(IsSaveSuccessful));
             }
         }
 

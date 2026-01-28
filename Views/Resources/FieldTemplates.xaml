@@ -283,4 +283,24 @@
         </StackPanel>
     </DataTemplate>
 
+    <!-- Template para Cálculo / Porcentaje (Solo Lectura) -->
+    <DataTemplate x:Key="CalculationTemplate" DataType="{x:Type vm:DynamicFieldVM}">
+        <StackPanel Margin="0,5">
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
+            <Border Background="#1a1f2b" CornerRadius="4" Padding="10,8" BorderBrush="#007bff" BorderThickness="1,1,1,2">
+                <TextBlock Text="{Binding Value, TargetNullValue='0.00%'}" Foreground="#007bff" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
+            </Border>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Template para Promedio (Solo Lectura) -->
+    <DataTemplate x:Key="AverageTemplate" DataType="{x:Type vm:DynamicFieldVM}">
+        <StackPanel Margin="0,5">
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
+            <Border Background="#1a1f2b" CornerRadius="4" Padding="10,8" BorderBrush="#6f42c1" BorderThickness="1,1,1,2">
+                <TextBlock Text="{Binding Value, TargetNullValue='0.00%'}" Foreground="#6f42c1" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
+            </Border>
+        </StackPanel>
+    </DataTemplate>
+
 </ResourceDictionary>
