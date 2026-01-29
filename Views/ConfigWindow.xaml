@@ -158,8 +158,12 @@
 
         <!-- Editor Table -->
         <Border Grid.Row="2" Background="{StaticResource CardBackground}" CornerRadius="12" Padding="10" BorderBrush="#2d3446" BorderThickness="1">
-            <DataGrid ItemsSource="{Binding Fields}" AutoGenerateColumns="False" 
-                      CanUserAddRows="False" SelectionMode="Single" RowHeight="45">
+            <DataGrid x:Name="EditorGrid" ItemsSource="{Binding Fields}" AutoGenerateColumns="False" 
+                      CanUserAddRows="False" SelectionMode="Single" RowHeight="45"
+                      AllowDrop="True"
+                      PreviewMouseLeftButtonDown="EditorGrid_PreviewMouseLeftButtonDown"
+                      MouseMove="EditorGrid_MouseMove"
+                      Drop="EditorGrid_Drop">
                 <DataGrid.Columns>
                     
                     <!-- Checkbox for MultiSelect -->
@@ -252,6 +256,15 @@
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding Type}" Value="Separator">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="Boolean">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="Date">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="Time">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
                                             </Style.Triggers>

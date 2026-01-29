@@ -41,6 +41,8 @@ namespace PautaDinamicaApp.ViewModels
             SelectAllCommand = new RelayCommand(_ => ExecuteSelectAll());
             DeleteSelectedCommand = new RelayCommand(_ => DeleteSelectedRecords());
             ExportSelectedCommand = new RelayCommand(_ => ExportRecordsToExcel(Records.Where(r => r.IsSelected).ToList(), "Export_Parcial_Auditoria"));
+            ImportFromExcelCommand = new RelayCommand(_ => ImportRecordsFromExcel());
+            SendEmailsCommand = new RelayCommand(_ => SendEmails());
         }
 
         public ObservableCollection<DynamicFieldVM> CurrentFields
@@ -77,6 +79,8 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand SelectAllCommand { get; }
         public ICommand DeleteSelectedCommand { get; }
         public ICommand ExportSelectedCommand { get; }
+        public ICommand ImportFromExcelCommand { get; }
+        public ICommand SendEmailsCommand { get; }
 
         private bool _isMultiSelectMode;
         public bool IsMultiSelectMode { get => _isMultiSelectMode; set => SetProperty(ref _isMultiSelectMode, value); }
@@ -218,7 +222,10 @@ namespace PautaDinamicaApp.ViewModels
 
                     if (excelSaved && jsonSaved)
                     {
-                        // Solo limpiamos si el usuario guardó ambos (o podemos ser más flexibles, pero esto es lo más seguro)
+                        // 3. Aplicar los cambios diferidos (ahora sí guardamos la configuración)
+                        _storageService.SaveConfiguration(editorVm.Fields.ToList());
+
+                        // Solo limpiamos si el usuario guardó ambos
                         Records.Clear();
                         _storageService.SaveRecords(Records.ToList());
                         MessageBox.Show("Estructura actualizada y registros respaldados correctamente.", "Éxito");
@@ -421,6 +428,113 @@ namespace PautaDinamicaApp.ViewModels
                 _storageService.SaveRecords(Records.ToList());
                 CreateNewRecord();
             }
+        }
+
+        private void ImportRecordsFromExcel()
+        {
+            var ofd = new OpenFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx" };
+            if (ofd.ShowDialog() == true)
+            {
+                try
+                {
+                    using (var workbook = new XLWorkbook(ofd.FileName))
+                    {
+                        var worksheet = workbook.Worksheets.FirstOrDefault();
+                        if (worksheet == null) return;
+
+                        var rows = worksheet.RowsUsed().Skip(1); // Saltar encabezado
+                        var headers = worksheet.Row(1).CellsUsed().ToDictionary(c => c.Address.ColumnNumber, c => c.Value.ToString().Trim());
+                        var fields = CurrentFields.ToList();
+
+                        // VALIDACIÓN DE ESTRUCTURA
+                        var excelHeaderNames = headers.Values.ToList();
+                        var appFieldNames = fields.Select(f => f.Label).ToList();
+
+                        var commonFields = appFieldNames.Intersect(excelHeaderNames, StringComparer.OrdinalIgnoreCase).ToList();
+                        var missingInExcel = appFieldNames.Except(excelHeaderNames, StringComparer.OrdinalIgnoreCase).ToList();
+                        var extraInExcel = excelHeaderNames.Except(appFieldNames, StringComparer.OrdinalIgnoreCase)
+                                            .Where(h => !h.Equals("Fecha", StringComparison.OrdinalIgnoreCase)).ToList();
+
+                        // Si no hay ninguna coincidencia, abortar
+                        if (!commonFields.Any())
+                        {
+                            MessageBox.Show("El archivo Excel no es compatible con la pauta actual. Ninguna columna coincide con las etiquetas de los campos.",
+                                "Error de Compatibilidad", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+
+                        // Si hay discrepancias, informar al usuario
+                        if (missingInExcel.Any() || extraInExcel.Any())
+                        {
+                            string msg = "Se detectaron diferencias en la estructura:\n\n";
+                            if (commonFields.Any()) msg += $"✅ Campos coincidentes: {commonFields.Count}\n";
+                            if (missingInExcel.Any()) msg += $"❌ Faltan en Excel (quedarán vacíos): {string.Join(", ", missingInExcel.Take(5))}{(missingInExcel.Count > 5 ? "..." : "")}\n";
+                            if (extraInExcel.Any()) msg += $"⚠️ Sobran en Excel (se ignorarán): {string.Join(", ", extraInExcel.Take(5))}{(extraInExcel.Count > 5 ? "..." : "")}\n";
+
+                            msg += "\n¿Deseas proceder con la importación de los campos coincidentes?";
+
+                            var result = MessageBox.Show(msg, "Validación de Formato", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                            if (result == MessageBoxResult.No) return;
+                        }
+
+                        int importedCount = 0;
+
+                        foreach (var row in rows)
+                        {
+                            var entry = new AuditEntry();
+                            bool rowHasData = false;
+
+                            if (headers.TryGetValue(1, out var firstHeader) && firstHeader.Equals("Fecha", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (DateTime.TryParse(row.Cell(1).Value.ToString(), out var dt))
+                                    entry.Timestamp = dt;
+                            }
+
+                            foreach (var header in headers)
+                            {
+                                string headerName = header.Value;
+                                var field = fields.FirstOrDefault(f => f.Label.Equals(headerName, StringComparison.OrdinalIgnoreCase));
+                                if (field != null)
+                                {
+                                    entry.Values[field.Id] = row.Cell(header.Key).Value.ToString();
+                                    rowHasData = true;
+                                }
+                            }
+
+                            if (rowHasData)
+                            {
+                                Records.Add(entry);
+                                importedCount++;
+                            }
+                        }
+
+                        if (importedCount > 0)
+                        {
+                            _storageService.SaveRecords(Records.ToList());
+                            MessageBox.Show($"Se importaron {importedCount} registros correctamente.", "Éxito");
+                            RefreshCalculations();
+                        }
+                        else
+                        {
+                            MessageBox.Show("No se encontraron datos válidos para importar.", "Aviso");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al importar: {ex.Message}");
+                }
+            }
+        }
+
+        private void SendEmails()
+        {
+            var selected = Records.Where(r => r.IsSelected).ToList();
+            int count = selected.Any() ? selected.Count : Records.Count;
+            string target = selected.Any() ? "seleccionados" : "todos";
+
+            MessageBox.Show($"Lógica de envío de correos para {count} registros ({target}).\n(Funcionalidad en desarrollo)",
+                "Próximamente", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }

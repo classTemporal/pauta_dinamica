@@ -218,6 +218,7 @@ namespace PautaDinamicaApp.ViewModels
             SelectAllCommand = new RelayCommand(_ => SelectAll());
             DeleteSelectedCommand = new RelayCommand(_ => DeleteSelected());
             ExportOptionsCommand = new RelayCommand(_ => ExportToExcel(Options, "Opciones"));
+            ImportOptionsCommand = new RelayCommand(_ => ImportFromExcel());
         }
 
         private bool needsInitialRedistribution(FieldDefinition f)
@@ -310,6 +311,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand SelectAllCommand { get; }
         public ICommand DeleteSelectedCommand { get; }
         public ICommand ExportOptionsCommand { get; }
+        public ICommand ImportOptionsCommand { get; }
 
         private void ExportToExcel(IEnumerable<SelectableOptionVM> list, string baseName)
         {
@@ -333,6 +335,60 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        private void ImportFromExcel()
+        {
+            var ofd = new OpenFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx" };
+            if (ofd.ShowDialog() == true)
+            {
+                try
+                {
+                    using (var workbook = new XLWorkbook(ofd.FileName))
+                    {
+                        var worksheet = workbook.Worksheets.FirstOrDefault();
+                        if (worksheet == null) return;
+
+                        var newOptions = new List<string>();
+                        // Empezamos desde la fila 2 asumiendo encabezado (como en la exportacion)
+                        // Si no hay encabezado o el usuario quiere todo, podriamos revisar fila 1
+                        var rows = worksheet.RowsUsed();
+                        foreach (var row in rows)
+                        {
+                            var val = row.Cell(1).Value.ToString().Trim();
+                            if (string.IsNullOrWhiteSpace(val) || val == "Opción") continue;
+
+                            if (!Options.Any(o => o.Text.Equals(val, StringComparison.OrdinalIgnoreCase)) &&
+                                !newOptions.Any(o => o.Equals(val, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                newOptions.Add(val);
+                            }
+                        }
+
+                        if (newOptions.Any())
+                        {
+                            var result = MessageBox.Show($"Se encontraron {newOptions.Count} nuevas opciones. ¿Desea agregarlas?",
+                                "Importar Opciones", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                            if (result == MessageBoxResult.Yes)
+                            {
+                                foreach (var opt in newOptions)
+                                {
+                                    Options.Add(new SelectableOptionVM(opt));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show("No se encontraron nuevas opciones válidas para importar.", "Importar", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error al importar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
         private void AddOption()
         {
             if (string.IsNullOrWhiteSpace(NewOptionText)) return;
@@ -340,9 +396,30 @@ namespace PautaDinamicaApp.ViewModels
             if (!Options.Any(o => o.Text.Equals(cleaned, StringComparison.OrdinalIgnoreCase))) Options.Add(new SelectableOptionVM(cleaned));
             NewOptionText = string.Empty;
         }
-        private void RemoveOption(SelectableOptionVM? o) { if (o != null) Options.Remove(o); }
+        private void RemoveOption(SelectableOptionVM? o)
+        {
+            if (o != null)
+            {
+                var result = MessageBox.Show($"¿Estás seguro de que deseas eliminar la opción '{o.Text}'?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (result == MessageBoxResult.Yes)
+                {
+                    Options.Remove(o);
+                }
+            }
+        }
         private void ToggleMultiSelect() { IsMultiSelectMode = !IsMultiSelectMode; if (!IsMultiSelectMode) foreach (var o in Options) o.IsSelected = false; }
         private void SelectAll() { bool all = Options.All(o => o.IsSelected); foreach (var o in Options) o.IsSelected = !all; }
-        private void DeleteSelected() { var sel = Options.Where(o => o.IsSelected).ToList(); foreach (var s in sel) Options.Remove(s); }
+        private void DeleteSelected()
+        {
+            var sel = Options.Where(o => o.IsSelected).ToList();
+            if (sel.Any())
+            {
+                var result = MessageBox.Show($"¿Estás seguro de que deseas eliminar las {sel.Count} opciones seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (result == MessageBoxResult.Yes)
+                {
+                    foreach (var s in sel) Options.Remove(s);
+                }
+            }
+        }
     }
 }

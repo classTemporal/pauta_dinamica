@@ -104,9 +104,8 @@
                             </Style>
                         </Button.Style>
                     </Button>
-                    <Button Content="📧 Enviar Correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
-                    <Button Content="🗑️ Borrar Todos" Command="{Binding DeleteAllRecordsCommand}" 
-                            Height="40" Padding="20,0" Style="{StaticResource DangerButton}"/>
+                    <Button Command="{Binding SendEmailsCommand}" 
+                            Content="📧 Enviar Correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}"/>
                 </StackPanel>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -146,12 +145,12 @@
                     <TextBlock DockPanel.Dock="Top" Text="Registros de Llamadas" Foreground="{StaticResource TextBrush}" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
                     
                     <StackPanel DockPanel.Dock="Bottom" Margin="0,15,0,0">
-                         <!-- Normal Actions -->
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                     Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
-                            <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Padding="15,8" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
-                            <Button Content="📊 Exportar a Excel" Command="{Binding ExportToExcelCommand}" Padding="15,8" Style="{StaticResource ExcelButton}"/>
-                        </StackPanel>
+                            <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                            <Button Content="📥 Importar Excel" Command="{Binding ImportFromExcelCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5" Background="#6f42c1"/>
+                            <Button Content="📊 Exportar a Excel" Command="{Binding ExportToExcelCommand}" Padding="10,8" Style="{StaticResource ExcelButton}" Margin="0,5,0,5"/>
+                        </WrapPanel>
 
                         <!-- MultiSelect Actions -->
                         <Border Background="#3d4456" CornerRadius="4" Padding="5" Margin="0,5,0,0"
@@ -159,6 +158,7 @@
                             <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                 <TextBlock Text="MODO SELECCIÓN" VerticalAlignment="Center" FontWeight="Bold" Foreground="#ffc107" Margin="10,5,20,5"/>
                                 <Button Content="✔️ Seleccionar Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                                <Button Content="📧 Enviar Seleccionados" Command="{Binding SendEmailsCommand}" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
                                 <Button Content="🗑️ Borrar Seleccionados" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,5,10,5"/>
                                 <Button Content="📊 Exportar Seleccionados" Command="{Binding ExportSelectedCommand}" Style="{StaticResource ExcelButton}" Margin="0,5,10,5"/>
                                 <Button Content="❌ Cancelar" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Margin="10,5,0,5" Padding="12,8"/>

@@ -51,8 +51,10 @@ namespace PautaDinamicaApp.ViewModels
             PickDateCommand = new RelayCommand(p => PickDate(p as FieldDefinition));
             PickTimeCommand = new RelayCommand(p => PickTime(p as FieldDefinition));
 
-            // Tipos disponibles para el Combo
-            AvailableTypes = Enum.GetValues(typeof(FieldType)).Cast<FieldType>().ToList();
+            // Tipos disponibles para el Combo (Excluyendo Separator ya que tiene su propio botón)
+            AvailableTypes = Enum.GetValues(typeof(FieldType)).Cast<FieldType>()
+                                .Where(t => t != FieldType.Separator)
+                                .ToList();
         }
 
         public bool IsSaveSuccessful { get; private set; }
@@ -460,8 +462,8 @@ namespace PautaDinamicaApp.ViewModels
                 ShouldClearRecords = true;
             }
 
-            // Guardar configuración solo si hubo cambios o si es necesario limpiar registros
-            if (hasStructuralChanges)
+            // Guardar configuración solo si hubo cambios y NO requiere limpieza diferida (el Main lo hará tras el backup)
+            if (hasStructuralChanges && !ShouldClearRecords)
             {
                 _storageService.BackupConfiguration();
                 _storageService.SaveConfiguration(list);
