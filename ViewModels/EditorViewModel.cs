@@ -115,7 +115,8 @@ namespace PautaDinamicaApp.ViewModels
                 // El nuevo campo hereda la categoría o sección actual
                 Category = lastField?.Category ?? "General",
                 Type = FieldType.Text,
-                Order = (lastField?.Order ?? 0) + 1
+                Order = (lastField?.Order ?? 0) + 1,
+                MaxLength = 255
             });
         }
 
@@ -174,7 +175,12 @@ namespace PautaDinamicaApp.ViewModels
             if (field == null) return;
 
             // Tipos que necesitan configuración extra
-            var configurableTypes = new[] { FieldType.Dropdown, FieldType.Boolean, FieldType.Calculation, FieldType.Average, FieldType.Time };
+            var configurableTypes = new[] {
+                FieldType.Dropdown, FieldType.Boolean, FieldType.Calculation,
+                FieldType.Average, FieldType.Time,
+                // Ahora permitimos configurar longitud para texto
+                FieldType.Text, FieldType.TextArea, FieldType.Numeric
+            };
             if (!configurableTypes.Contains(field.Type)) return;
 
             var vm = new OptionsEditorViewModel(field, Fields.ToList());
@@ -186,8 +192,9 @@ namespace PautaDinamicaApp.ViewModels
 
             if (win.ShowDialog() == true)
             {
-                // Sincronizar resultados según el tipo
                 field.UseCustomWeights = vm.UseCustomWeights;
+                field.MaxLength = vm.ResultMaxLength;
+                field.TimeFormat = vm.TimeFormat;
 
                 if (field.Type == FieldType.Dropdown)
                 {
@@ -375,6 +382,38 @@ namespace PautaDinamicaApp.ViewModels
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 return;
+            }
+
+            // 4. Validar formato de valores predeterminados
+            foreach (var f in Fields)
+            {
+                if (!string.IsNullOrWhiteSpace(f.DefaultValue))
+                {
+                    if (f.Type == FieldType.Numeric && !double.TryParse(f.DefaultValue, out _))
+                    {
+                        MessageBox.Show($"El valor predeterminado para '{f.Label}' debe ser numérico.", "Error de validación", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+                    else if (f.Type == FieldType.Date && f.DefaultValue != "TODAY")
+                    {
+                        if (!DateTime.TryParseExact(f.DefaultValue, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out _) &&
+                            !DateTime.TryParse(f.DefaultValue, out _))
+                        {
+                            MessageBox.Show($"El valor predeterminado para '{f.Label}' debe ser una fecha válida (dd/MM/yyyy).", "Error de validación", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+                    }
+                    else if (f.Type == FieldType.Time && f.DefaultValue != "NOW")
+                    {
+                        string format = f.TimeFormat ?? "HH:mm";
+                        if (!DateTime.TryParseExact("01/01/2000 " + f.DefaultValue, "dd/MM/yyyy " + format, null, System.Globalization.DateTimeStyles.None, out _) &&
+                            !DateTime.TryParse(f.DefaultValue, out _))
+                        {
+                            MessageBox.Show($"El valor predeterminado para '{f.Label}' debe ser una hora válida ({format}).", "Error de validación", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+                    }
+                }
             }
 
             // El orden ahora es el de la colección visual

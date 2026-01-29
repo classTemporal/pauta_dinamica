@@ -16,6 +16,7 @@ namespace PautaDinamicaApp.Services
             if (!File.Exists(_configPath))
             {
                 var defaultSchema = GetDefaultSchema();
+                foreach (var f in defaultSchema) f.EnsureDefaultOptions();
                 SaveConfiguration(defaultSchema);
                 return defaultSchema;
             }
@@ -23,11 +24,15 @@ namespace PautaDinamicaApp.Services
             try
             {
                 string json = File.ReadAllText(_configPath);
-                return JsonSerializer.Deserialize<List<FieldDefinition>>(json) ?? GetDefaultSchema();
+                var config = JsonSerializer.Deserialize<List<FieldDefinition>>(json) ?? GetDefaultSchema();
+                foreach (var f in config) f.EnsureDefaultOptions();
+                return config;
             }
             catch
             {
-                return GetDefaultSchema();
+                var defaultSchema = GetDefaultSchema();
+                foreach (var f in defaultSchema) f.EnsureDefaultOptions();
+                return defaultSchema;
             }
         }
 

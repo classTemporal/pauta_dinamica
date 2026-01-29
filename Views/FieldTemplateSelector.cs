@@ -16,6 +16,7 @@ namespace PautaDinamicaApp.Views
         public DataTemplate? SeparatorTemplate { get; set; }
         public DataTemplate? CalculationTemplate { get; set; }
         public DataTemplate? AverageTemplate { get; set; }
+        public DataTemplate? TextAreaTemplate { get; set; }
 
         public override DataTemplate? SelectTemplate(object item, DependencyObject container)
         {
@@ -32,6 +33,7 @@ namespace PautaDinamicaApp.Views
                     FieldType.Separator => SeparatorTemplate,
                     FieldType.Calculation => CalculationTemplate,
                     FieldType.Average => AverageTemplate,
+                    FieldType.TextArea => TextAreaTemplate,
                     _ => TextTemplate
                 };
             }

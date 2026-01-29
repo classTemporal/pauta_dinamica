@@ -251,22 +251,7 @@
                                             <!-- Mostrar botón para campos que requieren configuración extra -->
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Type}" Value="Text">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Type}" Value="Numeric">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Type}" Value="Boolean">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Type}" Value="Date">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
                                                 <DataTrigger Binding="{Binding Type}" Value="Separator">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Type}" Value="Time">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
@@ -300,6 +285,9 @@
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Type}" Value="Time">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Type}" Value="TextArea">
+                                                        <Setter Property="Visibility" Value="Visible"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>

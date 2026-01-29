@@ -218,6 +218,42 @@
                     </Border>
                 </StackPanel>
             </Grid>
+
+            <!-- VISTA E: LÍMITES DE CARACTERES (TEXT, TEXTAREA, NUMERIC) -->
+            <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Text:Visible|TextArea:Visible|Numeric:Visible|Default:Collapsed'}">
+                <StackPanel Margin="0,20">
+                    <TextBlock Text="LÍMITE DE CARACTERES" FontWeight="Bold" Foreground="#ffd166" Margin="0,0,0,20"/>
+                    <Border Background="#1e222d" CornerRadius="8" Padding="20" BorderBrush="#2d3446" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Establece la cantidad máxima de caracteres que el usuario puede ingresar en este campo:" 
+                                     Foreground="#94a3b8" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider Minimum="1" Maximum="4000" Value="{Binding MaxLength}" TickFrequency="50" IsSnapToTickEnabled="True"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="15,0,0,0">
+                                    <TextBox Text="{Binding MaxLength, UpdateSourceTrigger=PropertyChanged}" Width="60" TextAlignment="Center" VerticalContentAlignment="Center"/>
+                                    <TextBlock Text=" caracteres" Foreground="#94a3b8" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <TextBlock Text="Sugerencias:" Foreground="#94a3b8" FontSize="11" FontWeight="Bold" Margin="0,20,0,8"/>
+                            <BulletDecorator Margin="0,0,0,5">
+                                <TextBlock Text="Texto corto (Nombre, ID): 100 - 255" Foreground="#94a3b8" FontSize="11"/>
+                            </BulletDecorator>
+                            <BulletDecorator Margin="0,0,0,5">
+                                <TextBlock Text="Numérico (RUT, Cantidades): 10 - 20" Foreground="#94a3b8" FontSize="11"/>
+                            </BulletDecorator>
+                            <BulletDecorator>
+                                <TextBlock Text="Área de Texto (Comentarios): 500 - 2000" Foreground="#94a3b8" FontSize="11"/>
+                            </BulletDecorator>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <!-- Pie de Pagina -->

@@ -37,7 +37,8 @@
                 TimeTemplate="{StaticResource TimeTemplate}"
                 SeparatorTemplate="{StaticResource SeparatorTemplate}"
                 CalculationTemplate="{StaticResource CalculationTemplate}"
-                AverageTemplate="{StaticResource AverageTemplate}"/>
+                AverageTemplate="{StaticResource AverageTemplate}"
+                TextAreaTemplate="{StaticResource TextAreaTemplate}"/>
 
             <!-- Group Style -->
             <Style x:Key="GroupHeaderStyle" TargetType="{x:Type GroupItem}">

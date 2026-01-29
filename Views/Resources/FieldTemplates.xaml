@@ -4,8 +4,6 @@
                     xmlns:models="clr-namespace:PautaDinamicaApp.Models"
                     xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters">
 
-    <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-
     <!-- Paleta de Colores Centralizada -->
     <SolidColorBrush x:Key="InputBackground" Color="#2d3446"/>
     <SolidColorBrush x:Key="InputForeground" Color="#e1e1e1"/>
@@ -13,6 +11,32 @@
     <SolidColorBrush x:Key="ErrorBrush" Color="#ff4d4d"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#007bff"/>
     <SolidColorBrush x:Key="SecondaryTextBrush" Color="#94a3b8"/>
+
+    <conv:DictConverter x:Key="DictConverter"/>
+    <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+    <!-- Template para el Contador de Caracteres -->
+    <DataTemplate x:Key="FieldCounterTemplate">
+        <TextBlock HorizontalAlignment="Right" FontSize="9" Margin="0,1,2,0" Foreground="{StaticResource SecondaryTextBrush}">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Text">
+                        <Setter.Value>
+                            <MultiBinding StringFormat="{}{0} / {1}">
+                                <Binding Path="CurrentLength"/>
+                                <Binding Path="MaxLength"/>
+                            </MultiBinding>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding MaxLength}" Value="0">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+    </DataTemplate>
 
     <!-- ESTILOS DE BOTONES MODERNOS -->
     <Style x:Key="ModernButtonBase" TargetType="Button">
@@ -230,8 +254,11 @@
     <DataTemplate x:Key="TextTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
-            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
-            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
+            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" MaxLength="{Binding MaxLength}"/>
+            <Grid>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldCounterTemplate}"/>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
+            </Grid>
         </StackPanel>
     </DataTemplate>
 
@@ -239,8 +266,11 @@
     <DataTemplate x:Key="NumericTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
-            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
-            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
+            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" MaxLength="{Binding MaxLength}"/>
+            <Grid>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldCounterTemplate}"/>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
+            </Grid>
         </StackPanel>
     </DataTemplate>
 
@@ -271,7 +301,7 @@
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
             <Grid>
-                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Padding="8,5,35,5"/>
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Padding="8,5,35,5" MaxLength="{Binding MaxLength}"/>
                 <Button Command="{Binding PickDateCommand}" 
                         Background="Transparent" BorderThickness="0"
                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" Width="30" Height="25"
@@ -288,7 +318,7 @@
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
             <Grid>
-                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Padding="8,5,35,5"/>
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Padding="8,5,35,5" MaxLength="{Binding MaxLength}"/>
                 <Button Command="{Binding PickTimeCommand}" 
                         Background="Transparent" BorderThickness="0"
                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" Width="30" Height="25"
@@ -325,6 +355,24 @@
             <Border Background="#1a1f2b" CornerRadius="4" Padding="10,8" BorderBrush="#6f42c1" BorderThickness="1,1,1,2">
                 <TextBlock Text="{Binding Value, TargetNullValue='0.00%'}" Foreground="#6f42c1" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
             </Border>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Template para TextArea -->
+    <DataTemplate x:Key="TextAreaTemplate" DataType="{x:Type vm:DynamicFieldVM}">
+        <StackPanel Margin="0,5">
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
+            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" 
+                     Height="80" 
+                     TextWrapping="Wrap" 
+                     AcceptsReturn="True" 
+                     VerticalContentAlignment="Top"
+                     VerticalScrollBarVisibility="Auto"
+                     MaxLength="{Binding MaxLength}"/>
+            <Grid>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldCounterTemplate}"/>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
+            </Grid>
         </StackPanel>
     </DataTemplate>
 

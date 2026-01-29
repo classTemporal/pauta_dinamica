@@ -261,7 +261,8 @@ namespace PautaDinamicaApp.ViewModels
             foreach (var field in CurrentFields) field.Validate();
             if (CurrentFields.Any(f => !f.IsValid))
             {
-                MessageBox.Show("Por favor, completa todos los campos obligatorios.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                string errors = string.Join("\n", CurrentFields.Where(f => !f.IsValid).Select(f => $"- {f.Label}: {f.ValidationError}"));
+                MessageBox.Show($"Por favor, corrija los siguientes errores:\n\n{errors}", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -342,12 +343,28 @@ namespace PautaDinamicaApp.ViewModels
                         int col = 2;
                         foreach (var f in fields)
                         {
-                            if (entry.Values.TryGetValue(f.Id, out var val)) worksheet.Cell(row, col).Value = val?.ToString() ?? "";
+                            if (entry.Values.TryGetValue(f.Id, out var val))
+                            {
+                                string strVal = val?.ToString() ?? "";
+                                var cell = worksheet.Cell(row, col);
+                                cell.Value = strVal;
+
+                                // Habilitar ajuste de texto si es un área de texto o tiene saltos de línea
+                                if (f.Type == FieldType.TextArea || strVal.Contains("\n"))
+                                {
+                                    cell.Style.Alignment.SetWrapText(true);
+                                }
+                            }
                             col++;
                         }
                         row++;
                     }
                     worksheet.Columns().AdjustToContents();
+                    // Limitar el ancho de columnas muy largas (especialmente para TextArea)
+                    foreach (var col in worksheet.Columns())
+                    {
+                        if (col.Width > 50) col.Width = 50;
+                    }
                     workbook.SaveAs(filePath);
                 }
                 if (!silent) MessageBox.Show("Exportación a Excel exitosa.");

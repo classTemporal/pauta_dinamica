@@ -151,6 +151,7 @@ namespace PautaDinamicaApp.ViewModels
             OriginalField = field;
             _useCustomWeights = field.UseCustomWeights;
             _timeFormat = field.TimeFormat;
+            _maxLength = field.MaxLength;
 
             var wrapped = (field.Options ?? new List<string>()).Select(s => new SelectableOptionVM(s));
             Options = new ObservableCollection<SelectableOptionVM>(wrapped);
@@ -252,6 +253,7 @@ namespace PautaDinamicaApp.ViewModels
 
         public string ValidationError { get => _validationError; set => SetProperty(ref _validationError, value); }
         public bool HasError => !string.IsNullOrEmpty(ValidationError);
+        public bool IsValid => !HasError;
 
         private void ValidatePercentages()
         {
@@ -288,6 +290,8 @@ namespace PautaDinamicaApp.ViewModels
         }
 
         public string TimeFormat { get => _timeFormat; set => SetProperty(ref _timeFormat, value); }
+        private int _maxLength;
+        public int MaxLength { get => _maxLength; set => SetProperty(ref _maxLength, value); }
 
         public List<string> ResultOptions => Options.Select(o => o.Text).ToList();
         public List<ScoringRule> ResultRules => CalculationRules.Where(r => r.IsActive).Select(r => new ScoringRule
@@ -297,6 +301,7 @@ namespace PautaDinamicaApp.ViewModels
             NaValue = r.NaValue,
             Mappings = r.Mappings.Select(m => new ValueScoreMapping { Value = m.Value.Contains("(") ? m.Value.Split(' ')[0] : m.Value, Score = m.Score }).ToList()
         }).ToList();
+        public int ResultMaxLength => MaxLength;
         public List<string> ResultAverageIds => AverageTargets.Where(t => t.IsSelected).Select(t => t.Tag?.ToString() ?? "").ToList();
 
         public ICommand AddOptionCommand { get; }

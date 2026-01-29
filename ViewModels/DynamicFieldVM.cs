@@ -105,6 +105,8 @@ namespace PautaDinamicaApp.ViewModels
         public FieldType Type => Definition.Type;
         public bool IsRequired => Definition.IsRequired;
         public List<string> Options => Definition.Options;
+        public int MaxLength => Definition.MaxLength;
+        public int CurrentLength => _value?.ToString()?.Length ?? 0;
 
         public object? Value
         {
@@ -113,6 +115,7 @@ namespace PautaDinamicaApp.ViewModels
             {
                 if (SetProperty(ref _value, value))
                 {
+                    OnPropertyChanged(nameof(CurrentLength));
                     Validate();
                 }
             }
@@ -150,11 +153,65 @@ namespace PautaDinamicaApp.ViewModels
 
         public bool Validate()
         {
-            if (IsRequired && (Value == null || string.IsNullOrWhiteSpace(Value.ToString())))
+            string strValue = Value?.ToString() ?? "";
+
+            if (IsRequired && string.IsNullOrWhiteSpace(strValue))
             {
                 IsValid = false;
                 ValidationError = "Este campo es obligatorio.";
                 return false;
+            }
+
+            if (strValue.Length > MaxLength && MaxLength > 0)
+            {
+                IsValid = false;
+                ValidationError = $"El valor no puede exceder los {MaxLength} caracteres.";
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(strValue))
+            {
+                if (Type == FieldType.Numeric)
+                {
+                    if (!double.TryParse(strValue, out _))
+                    {
+                        IsValid = false;
+                        ValidationError = "Debe ser un número válido.";
+                        return false;
+                    }
+                }
+                else if (Type == FieldType.Date)
+                {
+                    if (!DateTime.TryParseExact(strValue, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out _))
+                    {
+                        // Intento fallback por si acaso, aunque el formato estricto es mejor
+                        if (!DateTime.TryParse(strValue, out _))
+                        {
+                            IsValid = false;
+                            ValidationError = "Formato inválido (dd/MM/yyyy).";
+                            return false;
+                        }
+                    }
+                }
+                else if (Type == FieldType.Time)
+                {
+                    // Intentar parsear con el formato definido, pero ser flexible si el usuario escribe
+                    string format = Definition.TimeFormat ?? "HH:mm";
+                    // Para validar hora, usamos un dummy date
+                    string dummyDate = DateTime.Now.ToString("dd/MM/yyyy");
+                    string combined = $"{dummyDate} {strValue}";
+
+                    if (!DateTime.TryParseExact(combined, $"dd/MM/yyyy {format}", null, System.Globalization.DateTimeStyles.None, out _))
+                    {
+                        // Fallback simple por si acaso
+                        if (!DateTime.TryParse(strValue, out _))
+                        {
+                            IsValid = false;
+                            ValidationError = $"Formato inválido ({format}).";
+                            return false;
+                        }
+                    }
+                }
             }
 
             IsValid = true;
