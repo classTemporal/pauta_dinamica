@@ -33,7 +33,7 @@ namespace PautaDinamicaApp.ViewModels
 
             string currentVal = Value?.ToString() ?? "";
             var selector = new PautaDinamicaApp.Views.TimeSelectorWindow(currentVal, Definition.TimeFormat ?? "HH:mm");
-            selector.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+            selector.Owner = System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
 
             if (selector.ShowDialog() == true)
             {
@@ -52,7 +52,7 @@ namespace PautaDinamicaApp.ViewModels
 
             string currentVal = Value?.ToString() ?? "";
             var selector = new PautaDinamicaApp.Views.DateSelectorWindow(currentVal);
-            selector.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+            selector.Owner = System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
 
             if (selector.ShowDialog() == true)
             {

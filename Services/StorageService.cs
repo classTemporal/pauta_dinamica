@@ -12,14 +12,37 @@ namespace PautaDinamicaApp.Services
         private readonly string _basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data");
         private readonly string _pautasIndexPath;
         private readonly string _lastPautaPath;
+        private readonly string _settingsPath; // Path for global settings
 
         public StorageService()
         {
             if (!Directory.Exists(_basePath)) Directory.CreateDirectory(_basePath);
             _pautasIndexPath = Path.Combine(_basePath, "pautas_index.json");
             _lastPautaPath = Path.Combine(_basePath, "last_pauta.txt");
+            _settingsPath = Path.Combine(_basePath, "app_settings.json");
 
             EnsureDefaultPautaExists();
+        }
+
+        public AppSettings LoadSettings()
+        {
+            if (!File.Exists(_settingsPath)) return new AppSettings();
+            try
+            {
+                string json = File.ReadAllText(_settingsPath);
+                return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+            }
+            catch { return new AppSettings(); }
+        }
+
+        public void SaveSettings(AppSettings settings)
+        {
+            try
+            {
+                string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(_settingsPath, json);
+            }
+            catch { }
         }
 
         private void EnsureDefaultPautaExists()

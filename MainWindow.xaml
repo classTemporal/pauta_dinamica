@@ -81,8 +81,12 @@
                     </StackPanel>
                 </StackPanel>
                 
-                <Button Content="⚙️ CONFIGURAR PAUTA" Command="{Binding OpenConfigCommand}" 
-                        HorizontalAlignment="Right" Style="{StaticResource GhostButton}" Padding="10,5"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="⚙️ CONFIG. GENERAL" Command="{Binding OpenSettingsCommand}" 
+                            Style="{StaticResource GhostButton}" Padding="10,5" Margin="0,0,10,0"/>
+                    <Button Content="✏️ CONFIG. PAUTA" Command="{Binding OpenConfigCommand}" 
+                            Style="{StaticResource GhostButton}" Padding="10,5"/>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -165,6 +169,7 @@
                                 <TextBlock Text="MODO SELECCIÓN" VerticalAlignment="Center" FontWeight="Bold" Foreground="#ffc107" Margin="10,5,20,5"/>
                                 <Button Content="✔️ Seleccionar Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
                                 <Button Content="📧 Enviar Seleccionados" Command="{Binding SendEmailsCommand}" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                                <Button Content="📄 Generar PDF" Command="{Binding GenerateSelectedPdfCommand}" Style="{StaticResource SecondaryButton}" Background="#DC3545" Margin="0,5,10,5"/>
                                 <Button Content="🗑️ Borrar Seleccionados" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,5,10,5"/>
                                 <Button Content="📊 Exportar Seleccionados" Command="{Binding ExportSelectedCommand}" Style="{StaticResource ExcelButton}" Margin="0,5,10,5"/>
                                 <Button Content="❌ Cancelar" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Margin="10,5,0,5" Padding="12,8"/>
@@ -204,6 +209,13 @@
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                                                 <MenuItem.Icon>
                                                     <TextBlock Text="📝"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="📄 Generar PDF" 
+                                                      Command="{Binding PlacementTarget.Tag.GeneratePdfCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="📄"/>
                                                 </MenuItem.Icon>
                                             </MenuItem>
                                             <Separator/>
@@ -254,11 +266,15 @@
                                 </DataGridTemplateColumn.Visibility>
                             </DataGridTemplateColumn>
 
-                            <DataGridTemplateColumn Header="Acciones" Width="125">
+                            <DataGridTemplateColumn Header="Acciones" Width="160">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
                                             <Button Content="📧" Style="{StaticResource SecondaryButton}" Width="30" Height="25" Margin="2" Padding="0"/>
+                                            <Button Content="📄" Command="{Binding Tag.GeneratePdfCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource SecondaryButton}" Background="#DC3545" Width="30" Height="25" Margin="2" Padding="0"
+                                                    ToolTip="Generar PDF"/>
                                             <Button Content="📝" Command="{Binding Tag.SelectRecordCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                     CommandParameter="{Binding}"
                                                     Style="{StaticResource ModernButtonBase}" Background="#ffc107" Foreground="Black" Width="30" Height="25" Margin="2" Padding="0">

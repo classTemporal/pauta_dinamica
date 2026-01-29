@@ -12,6 +12,12 @@ using PautaDinamicaApp.Services;
 using ClosedXML.Excel;
 using Microsoft.Win32;
 using System.Collections.Generic;
+using MessageBox = System.Windows.MessageBox;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxResult = System.Windows.MessageBoxResult;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
+using OpenFolderDialog = Microsoft.Win32.OpenFolderDialog;
 
 namespace PautaDinamicaApp.ViewModels
 {
@@ -19,6 +25,7 @@ namespace PautaDinamicaApp.ViewModels
     {
         public event Action? FieldsRefreshed;
         private readonly StorageService _storageService;
+        private readonly PdfService _pdfService; // Nuevo servicio
         private ObservableCollection<DynamicFieldVM> _currentFields = new();
         private ICollectionView? _groupedFields;
         private ObservableCollection<AuditEntry> _records = new();
@@ -26,9 +33,13 @@ namespace PautaDinamicaApp.ViewModels
         private ObservableCollection<PautaSchema> _pautas = new();
         private PautaSchema? _currentPauta;
 
+        public ICommand OpenSettingsCommand { get; }
+
+
         public MainViewModel()
         {
             _storageService = new StorageService();
+            _pdfService = new PdfService();
             LoadPautas();
             LoadData();
 
@@ -46,6 +57,237 @@ namespace PautaDinamicaApp.ViewModels
             ExportSelectedCommand = new RelayCommand(_ => ExportRecordsToExcel(Records.Where(r => r.IsSelected).ToList(), "Export_Parcial_Auditoria"));
             ImportFromExcelCommand = new RelayCommand(_ => ImportRecordsFromExcel());
             SendEmailsCommand = new RelayCommand(_ => SendEmails());
+            OpenSettingsCommand = new RelayCommand(_ => OpenSettings());
+
+            // Comandos PDF
+            GeneratePdfCommand = new RelayCommand(p => GeneratePdfForRecord(p as AuditEntry));
+            GenerateSelectedPdfCommand = new RelayCommand(_ => GeneratePdfForSelected());
+        }
+
+        private void OpenSettings()
+        {
+            var vm = new SettingsViewModel();
+            var win = new Views.SettingsWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
+            vm.RequestClose += () => win.Close();
+            win.ShowDialog();
+        }
+
+        public bool ExportRecordsToExcel(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null, bool silent = false)
+        {
+            var data = (recordsToExport ?? Records).ToList();
+            if (!data.Any()) return false;
+
+            string filePath;
+            if (silent)
+            {
+                string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
+                if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
+                filePath = Path.Combine(backupDir, $"{customTitle ?? "Backup"}.xlsx");
+            }
+            else
+            {
+                var settings = _storageService.LoadSettings();
+                string exportDir = settings.ExcelExportPath;
+                if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
+
+                string fileName = (customTitle ?? $"Auditoria_{DateTime.Now:yyyyMMdd_HHmm}") + ".xlsx";
+                filePath = Path.Combine(exportDir, fileName);
+            }
+
+            try
+            {
+                using (var workbook = new XLWorkbook())
+                {
+                    var worksheet = workbook.Worksheets.Add("Auditoría");
+                    worksheet.Cell(1, 1).Value = "Fecha";
+                    var fields = CurrentFields.ToList();
+                    for (int i = 0; i < fields.Count; i++) worksheet.Cell(1, i + 2).Value = fields[i].Label;
+
+                    int row = 2;
+                    foreach (var entry in data)
+                    {
+                        worksheet.Cell(row, 1).Value = entry.Timestamp.ToString("g");
+                        int col = 2;
+                        foreach (var f in fields)
+                        {
+                            if (entry.Values.TryGetValue(f.Id, out var val))
+                            {
+                                string strVal = val?.ToString() ?? "";
+                                var cell = worksheet.Cell(row, col);
+                                cell.Value = strVal;
+
+                                if (f.Type == FieldType.TextArea || strVal.Contains("\n"))
+                                {
+                                    cell.Style.Alignment.SetWrapText(true);
+                                }
+                            }
+                            col++;
+                        }
+                        row++;
+                    }
+                    worksheet.Columns().AdjustToContents();
+                    foreach (var col in worksheet.Columns())
+                    {
+                        if (col.Width > 50) col.Width = 50;
+                    }
+                    workbook.SaveAs(filePath);
+                }
+                if (!silent) MessageBox.Show("Exportación a Excel exitosa.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al exportar Excel: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool ExportRecordsToJson(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null)
+        {
+            var data = (recordsToExport ?? Records).ToList();
+            if (!data.Any()) return false;
+
+            var settings = _storageService.LoadSettings();
+            string exportDir = settings.JsonBackupPath;
+            if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
+
+            string fileName = (customTitle ?? $"Respaldo_{DateTime.Now:yyyyMMdd_HHmm}") + ".json";
+            string filePath = Path.Combine(exportDir, fileName);
+
+            try
+            {
+                string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(filePath, json);
+                MessageBox.Show($"Exportación a JSON exitosa.\n\nArchivo guardado en:\n{filePath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al exportar JSON: {ex.Message}");
+                return false;
+            }
+        }
+
+        private void ImportRecordsFromExcel()
+        {
+            var settings = _storageService.LoadSettings();
+            var ofd = new OpenFileDialog
+            {
+                Filter = "Excel Files (*.xlsx)|*.xlsx",
+                InitialDirectory = settings.ExcelExportPath
+            };
+
+            if (ofd.ShowDialog() == true)
+            {
+                try
+                {
+                    using (var workbook = new XLWorkbook(ofd.FileName))
+                    {
+                        var worksheet = workbook.Worksheets.FirstOrDefault();
+                        if (worksheet == null) return;
+
+                        var rows = worksheet.RowsUsed().Skip(1);
+                        var headers = worksheet.Row(1).CellsUsed().ToDictionary(c => c.Address.ColumnNumber, c => c.Value.ToString().Trim());
+                        var fields = CurrentFields.ToList();
+
+                        var excelHeaderNames = headers.Values.ToList();
+                        var appFieldNames = fields.Select(f => f.Label).ToList();
+                        var commonFields = appFieldNames.Intersect(excelHeaderNames, StringComparer.OrdinalIgnoreCase).ToList();
+
+                        if (!commonFields.Any())
+                        {
+                            MessageBox.Show("El archivo Excel no es compatible con la pauta actual.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+
+                        foreach (var row in rows)
+                        {
+                            var entry = new AuditEntry();
+                            bool rowHasData = false;
+                            if (headers.TryGetValue(1, out var firstHeader) && firstHeader.Equals("Fecha", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (DateTime.TryParse(row.Cell(1).Value.ToString(), out var dt)) entry.Timestamp = dt;
+                            }
+                            foreach (var header in headers)
+                            {
+                                var field = fields.FirstOrDefault(f => f.Label.Equals(header.Value, StringComparison.OrdinalIgnoreCase));
+                                if (field != null)
+                                {
+                                    entry.Values[field.Id] = row.Cell(header.Key).Value.ToString();
+                                    rowHasData = true;
+                                }
+                            }
+                            if (rowHasData) Records.Add(entry);
+                        }
+                        if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
+                        MessageBox.Show("Importación exitosa.");
+                        RefreshCalculations();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al importar: {ex.Message}");
+                }
+            }
+        }
+
+        private void GenerateBatchPdfs(List<AuditEntry> records)
+        {
+            try
+            {
+                var settings = _storageService.LoadSettings();
+                string folderPath = settings.PdfReportPath;
+                if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+                string pautaName = CurrentPauta?.Name ?? "Auditoria";
+                string safePautaName = string.Join("_", pautaName.Split(Path.GetInvalidFileNameChars()));
+                var definitions = CurrentFields.Select(f => f.Definition).ToList();
+                int count = 0;
+
+                foreach (var record in records)
+                {
+                    string timestamp = record.Timestamp.ToString("yyyyMMdd_HHmmss");
+                    string filename = $"Reporte_{safePautaName}_{timestamp}_{count + 1}.pdf";
+                    string fullPath = Path.Combine(folderPath, filename);
+
+                    _pdfService.GenerateAuditPdf(new List<AuditEntry> { record }, definitions, pautaName, fullPath);
+                    count++;
+                }
+
+                if (MessageBox.Show($"Se generaron {count} PDFs en:\n{folderPath}\n\n¿Abrir carpeta?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                {
+                    System.Diagnostics.Process.Start("explorer.exe", folderPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al generar PDFs: {ex.Message}");
+            }
+        }
+
+        private void GeneratePdfCommon(List<AuditEntry> records)
+        {
+            try
+            {
+                string pautaName = CurrentPauta?.Name ?? "Auditoria";
+                var definitions = CurrentFields.Select(f => f.Definition).ToList();
+                var settings = _storageService.LoadSettings();
+                string exportDir = settings.PdfReportPath;
+                if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
+
+                string fileName = $"Reporte_{pautaName}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                string filePath = Path.Combine(exportDir, fileName);
+
+                _pdfService.GenerateAuditPdf(records, definitions, pautaName, filePath);
+
+                if (MessageBox.Show($"PDF Generado con éxito en:\n{filePath}\n\n¿Abrir ahora?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                {
+                    new System.Diagnostics.Process { StartInfo = new System.Diagnostics.ProcessStartInfo(filePath) { UseShellExecute = true } }.Start();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}");
+            }
         }
 
         public ObservableCollection<DynamicFieldVM> CurrentFields
@@ -103,6 +345,8 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ExportSelectedCommand { get; }
         public ICommand ImportFromExcelCommand { get; }
         public ICommand SendEmailsCommand { get; }
+        public ICommand GeneratePdfCommand { get; }
+        public ICommand GenerateSelectedPdfCommand { get; }
 
         private bool _isMultiSelectMode;
         public bool IsMultiSelectMode { get => _isMultiSelectMode; set => SetProperty(ref _isMultiSelectMode, value); }
@@ -240,7 +484,7 @@ namespace PautaDinamicaApp.ViewModels
             if (CurrentPauta == null) return;
             var hasRecords = Records.Any();
             var win = new ConfigWindow(CurrentPauta.Id);
-            win.Owner = Application.Current.MainWindow;
+            win.Owner = System.Windows.Application.Current.MainWindow;
 
             if (win.ShowDialog() == true)
             {
@@ -367,96 +611,32 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
-        public bool ExportRecordsToExcel(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null, bool silent = false)
+        private void GeneratePdfForRecord(AuditEntry? entry)
         {
-            var data = recordsToExport ?? Records;
-            if (!data.Any()) return false;
-
-            string filePath;
-            if (silent)
-            {
-                string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
-                if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
-                filePath = Path.Combine(backupDir, $"{customTitle ?? "Backup"}.xlsx");
-            }
-            else
-            {
-                var sfd = new SaveFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx", FileName = customTitle ?? $"Auditoria_{DateTime.Now:yyyyMMdd_HHmm}" };
-                if (sfd.ShowDialog() != true) return false;
-                filePath = sfd.FileName;
-            }
-
-            try
-            {
-                using (var workbook = new XLWorkbook())
-                {
-                    var worksheet = workbook.Worksheets.Add("Auditoría");
-                    worksheet.Cell(1, 1).Value = "Fecha";
-                    var fields = CurrentFields.ToList();
-                    for (int i = 0; i < fields.Count; i++) worksheet.Cell(1, i + 2).Value = fields[i].Label;
-
-                    int row = 2;
-                    foreach (var entry in data)
-                    {
-                        worksheet.Cell(row, 1).Value = entry.Timestamp.ToString("g");
-                        int col = 2;
-                        foreach (var f in fields)
-                        {
-                            if (entry.Values.TryGetValue(f.Id, out var val))
-                            {
-                                string strVal = val?.ToString() ?? "";
-                                var cell = worksheet.Cell(row, col);
-                                cell.Value = strVal;
-
-                                // Habilitar ajuste de texto si es un área de texto o tiene saltos de línea
-                                if (f.Type == FieldType.TextArea || strVal.Contains("\n"))
-                                {
-                                    cell.Style.Alignment.SetWrapText(true);
-                                }
-                            }
-                            col++;
-                        }
-                        row++;
-                    }
-                    worksheet.Columns().AdjustToContents();
-                    // Limitar el ancho de columnas muy largas (especialmente para TextArea)
-                    foreach (var col in worksheet.Columns())
-                    {
-                        if (col.Width > 50) col.Width = 50;
-                    }
-                    workbook.SaveAs(filePath);
-                }
-                if (!silent) MessageBox.Show("Exportación a Excel exitosa.");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error al exportar Excel: {ex.Message}");
-                return false;
-            }
+            if (entry == null) return;
+            GeneratePdfCommon(new List<AuditEntry> { entry });
         }
 
-        public bool ExportRecordsToJson(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null)
+        private void GeneratePdfForSelected()
         {
-            var data = (recordsToExport ?? Records).ToList();
-            if (!data.Any()) return false;
-
-            var sfd = new SaveFileDialog { Filter = "JSON Files (*.json)|*.json", FileName = customTitle ?? $"Respaldo_{DateTime.Now:yyyyMMdd_HHmm}" };
-            if (sfd.ShowDialog() != true) return false;
-
-            try
+            var selected = Records.Where(r => r.IsSelected).ToList();
+            if (!selected.Any())
             {
-                string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(sfd.FileName, json);
-                MessageBox.Show("Exportación a JSON exitosa.");
-                return true;
+                MessageBox.Show("No hay registros seleccionados.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error al exportar JSON: {ex.Message}");
-                return false;
-            }
+
+            if (selected.Count == 1) GeneratePdfCommon(selected);
+            else GenerateBatchPdfs(selected);
         }
+
+        private void SendEmails()
+        {
+            MessageBox.Show("Funcionalidad de correo electrónico próximamente.", "En Desarrollo");
+        }
+
+
+
 
         private void ToggleMultiSelect()
         {
@@ -482,111 +662,6 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
-        private void ImportRecordsFromExcel()
-        {
-            var ofd = new OpenFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx" };
-            if (ofd.ShowDialog() == true)
-            {
-                try
-                {
-                    using (var workbook = new XLWorkbook(ofd.FileName))
-                    {
-                        var worksheet = workbook.Worksheets.FirstOrDefault();
-                        if (worksheet == null) return;
-
-                        var rows = worksheet.RowsUsed().Skip(1); // Saltar encabezado
-                        var headers = worksheet.Row(1).CellsUsed().ToDictionary(c => c.Address.ColumnNumber, c => c.Value.ToString().Trim());
-                        var fields = CurrentFields.ToList();
-
-                        // VALIDACIÓN DE ESTRUCTURA
-                        var excelHeaderNames = headers.Values.ToList();
-                        var appFieldNames = fields.Select(f => f.Label).ToList();
-
-                        var commonFields = appFieldNames.Intersect(excelHeaderNames, StringComparer.OrdinalIgnoreCase).ToList();
-                        var missingInExcel = appFieldNames.Except(excelHeaderNames, StringComparer.OrdinalIgnoreCase).ToList();
-                        var extraInExcel = excelHeaderNames.Except(appFieldNames, StringComparer.OrdinalIgnoreCase)
-                                            .Where(h => !h.Equals("Fecha", StringComparison.OrdinalIgnoreCase)).ToList();
-
-                        // Si no hay ninguna coincidencia, abortar
-                        if (!commonFields.Any())
-                        {
-                            MessageBox.Show("El archivo Excel no es compatible con la pauta actual. Ninguna columna coincide con las etiquetas de los campos.",
-                                "Error de Compatibilidad", MessageBoxButton.OK, MessageBoxImage.Error);
-                            return;
-                        }
-
-                        // Si hay discrepancias, informar al usuario
-                        if (missingInExcel.Any() || extraInExcel.Any())
-                        {
-                            string msg = "Se detectaron diferencias en la estructura:\n\n";
-                            if (commonFields.Any()) msg += $"✅ Campos coincidentes: {commonFields.Count}\n";
-                            if (missingInExcel.Any()) msg += $"❌ Faltan en Excel (quedarán vacíos): {string.Join(", ", missingInExcel.Take(5))}{(missingInExcel.Count > 5 ? "..." : "")}\n";
-                            if (extraInExcel.Any()) msg += $"⚠️ Sobran en Excel (se ignorarán): {string.Join(", ", extraInExcel.Take(5))}{(extraInExcel.Count > 5 ? "..." : "")}\n";
-
-                            msg += "\n¿Deseas proceder con la importación de los campos coincidentes?";
-
-                            var result = MessageBox.Show(msg, "Validación de Formato", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                            if (result == MessageBoxResult.No) return;
-                        }
-
-                        int importedCount = 0;
-
-                        foreach (var row in rows)
-                        {
-                            var entry = new AuditEntry();
-                            bool rowHasData = false;
-
-                            if (headers.TryGetValue(1, out var firstHeader) && firstHeader.Equals("Fecha", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (DateTime.TryParse(row.Cell(1).Value.ToString(), out var dt))
-                                    entry.Timestamp = dt;
-                            }
-
-                            foreach (var header in headers)
-                            {
-                                string headerName = header.Value;
-                                var field = fields.FirstOrDefault(f => f.Label.Equals(headerName, StringComparison.OrdinalIgnoreCase));
-                                if (field != null)
-                                {
-                                    entry.Values[field.Id] = row.Cell(header.Key).Value.ToString();
-                                    rowHasData = true;
-                                }
-                            }
-
-                            if (rowHasData)
-                            {
-                                Records.Add(entry);
-                                importedCount++;
-                            }
-                        }
-
-                        if (importedCount > 0)
-                        {
-                            if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
-                            MessageBox.Show($"Se importaron {importedCount} registros correctamente.", "Éxito");
-                            RefreshCalculations();
-                        }
-                        else
-                        {
-                            MessageBox.Show("No se encontraron datos válidos para importar.", "Aviso");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error al importar: {ex.Message}");
-                }
-            }
-        }
-
-        private void SendEmails()
-        {
-            var selected = Records.Where(r => r.IsSelected).ToList();
-            int count = selected.Any() ? selected.Count : Records.Count;
-            string target = selected.Any() ? "seleccionados" : "todos";
-
-            MessageBox.Show($"Lógica de envío de correos para {count} registros ({target}).\n(Funcionalidad en desarrollo)",
-                "Próximamente", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+        // End of MainViewModel
     }
 }

@@ -4,12 +4,22 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using PautaDinamicaApp.Models;
+using MessageBox = System.Windows.MessageBox;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxImage = System.Windows.MessageBoxImage;
+using MessageBoxResult = System.Windows.MessageBoxResult;
+using DragDropEffects = System.Windows.DragDropEffects;
+using DragEventArgs = System.Windows.DragEventArgs;
+using DataObject = System.Windows.DataObject;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
 namespace PautaDinamicaApp
 {
     public partial class ConfigWindow : Window
     {
-        private Point _startPoint;
+        private System.Windows.Point _startPoint;
 
         public ConfigWindow(string activePautaId = "")
         {
@@ -46,7 +56,7 @@ namespace PautaDinamicaApp
             {
                 if (vm.HasPendingChanges())
                 {
-                    var result = MessageBox.Show(
+                    var result = System.Windows.MessageBox.Show(
                         "Se han detectado cambios sin guardar. Si sale ahora, perderá todos los cambios realizados.\r\n\r\n¿Desea salir de todos modos?",
                         "Cambios sin guardar",
                         MessageBoxButton.YesNo,
@@ -72,7 +82,7 @@ namespace PautaDinamicaApp
         {
             if (e.LeftButton == MouseButtonState.Pressed)
             {
-                Point mousePos = e.GetPosition(null);
+                System.Windows.Point mousePos = e.GetPosition(null);
                 Vector diff = _startPoint - mousePos;
 
                 if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||

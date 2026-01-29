@@ -8,6 +8,12 @@ using System.Globalization;
 using ClosedXML.Excel;
 using Microsoft.Win32;
 using PautaDinamicaApp.Models;
+using MessageBox = System.Windows.MessageBox;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxImage = System.Windows.MessageBoxImage;
+using MessageBoxResult = System.Windows.MessageBoxResult;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
 namespace PautaDinamicaApp.ViewModels
 {

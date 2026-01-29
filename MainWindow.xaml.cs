@@ -39,9 +39,9 @@ namespace PautaDinamicaApp
                 var column = new DataGridTextColumn
                 {
                     Header = field.Label,
-                    Binding = new Binding($"Values")
+                    Binding = new System.Windows.Data.Binding($"Values")
                     {
-                        Converter = (IValueConverter)Application.Current.Resources["DictionaryValueConverter"],
+                        Converter = (IValueConverter)System.Windows.Application.Current.Resources["DictionaryValueConverter"],
                         ConverterParameter = field.Id
                     },
                     Width = DataGridLength.Auto,

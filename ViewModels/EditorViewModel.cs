@@ -11,6 +11,12 @@ using System.Text.Json;
 using System.IO;
 using ClosedXML.Excel;
 using System.Collections.Generic;
+using MessageBox = System.Windows.MessageBox;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxResult = System.Windows.MessageBoxResult;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
+using OpenFolderDialog = Microsoft.Win32.OpenFolderDialog;
 
 namespace PautaDinamicaApp.ViewModels
 {
@@ -243,7 +249,8 @@ namespace PautaDinamicaApp.ViewModels
             if (!configurableTypes.Contains(field.Type)) return;
 
             var vm = new OptionsEditorViewModel(field, Fields.ToList());
-            var win = new OptionsWindow { DataContext = vm, Owner = Application.Current.MainWindow };
+            var win = new OptionsWindow { DataContext = vm };
+            win.Owner = System.Windows.Application.Current.MainWindow;
             if (win.ShowDialog() == true)
             {
                 field.UseCustomWeights = vm.UseCustomWeights;
@@ -260,7 +267,7 @@ namespace PautaDinamicaApp.ViewModels
         private void PickDate(FieldDefinition? field)
         {
             if (field == null) return;
-            var selector = new DateSelectorWindow(field.DefaultValue) { Owner = Application.Current.MainWindow };
+            var selector = new DateSelectorWindow(field.DefaultValue) { Owner = System.Windows.Application.Current.MainWindow };
             if (selector.ShowDialog() == true)
             {
                 field.DefaultValue = selector.SelectedValue == "TODAY" ? DateTime.Now.ToString("dd/MM/yyyy") : selector.SelectedValue;
@@ -270,7 +277,7 @@ namespace PautaDinamicaApp.ViewModels
         private void PickTime(FieldDefinition? field)
         {
             if (field == null) return;
-            var selector = new TimeSelectorWindow(field.DefaultValue, field.TimeFormat) { Owner = Application.Current.MainWindow };
+            var selector = new TimeSelectorWindow(field.DefaultValue, field.TimeFormat) { Owner = System.Windows.Application.Current.MainWindow };
             if (selector.ShowDialog() == true)
             {
                 field.DefaultValue = selector.SelectedValue == "NOW" ? DateTime.Now.ToString(field.TimeFormat ?? "HH:mm") : selector.SelectedValue;
@@ -279,17 +286,20 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ExportConfig()
         {
-            var sfd = new SaveFileDialog { Filter = "JSON Files (*.json)|*.json", FileName = $"Config_{EditingPauta?.Name}_{DateTime.Now:yyyyMMdd}.json" };
-            if (sfd.ShowDialog() == true)
+            var settings = _storageService.LoadSettings();
+            string exportDir = settings.JsonBackupPath;
+            if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
+
+            string fileName = $"Config_{EditingPauta?.Name}_{DateTime.Now:yyyyMMdd_HHmm}.json";
+            string filePath = Path.Combine(exportDir, fileName);
+
+            try
             {
-                try
-                {
-                    string json = JsonSerializer.Serialize(Fields, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(sfd.FileName, json);
-                    MessageBox.Show("Configuración exportada.");
-                }
-                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+                string json = JsonSerializer.Serialize(Fields, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(filePath, json);
+                MessageBox.Show($"Configuración exportada con éxito en:\n{filePath}");
             }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
         }
 
         private void ImportConfig()
@@ -376,17 +386,20 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ExportAllDatabase()
         {
-            var sfd = new SaveFileDialog { Filter = "Database JSON (*.json)|*.json", FileName = $"System_Backup_{DateTime.Now:yyyyMMdd}.json" };
-            if (sfd.ShowDialog() == true)
+            var settings = _storageService.LoadSettings();
+            string exportDir = settings.JsonBackupPath;
+            if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
+
+            string fileName = $"System_Backup_{DateTime.Now:yyyyMMdd_HHmm}.json";
+            string filePath = Path.Combine(exportDir, fileName);
+
+            try
             {
-                try
-                {
-                    var fullData = new { Pautas = Pautas.ToList(), Configs = Pautas.ToDictionary(p => p.Id, p => _storageService.LoadConfiguration(p.Id)), Records = Pautas.ToDictionary(p => p.Id, p => _storageService.LoadRecords(p.Id)) };
-                    File.WriteAllText(sfd.FileName, JsonSerializer.Serialize(fullData, new JsonSerializerOptions { WriteIndented = true }));
-                    MessageBox.Show("Respaldo completo exportado.");
-                }
-                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+                var fullData = new { Pautas = Pautas.ToList(), Configs = Pautas.ToDictionary(p => p.Id, p => _storageService.LoadConfiguration(p.Id)), Records = Pautas.ToDictionary(p => p.Id, p => _storageService.LoadRecords(p.Id)) };
+                File.WriteAllText(filePath, JsonSerializer.Serialize(fullData, new JsonSerializerOptions { WriteIndented = true }));
+                MessageBox.Show($"Respaldo completo exportado con éxito en:\n{filePath}");
             }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
         }
 
         private void ImportAllDatabase()
@@ -421,6 +434,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             IsSaveSuccessful = false;
             ShouldClearRecords = false;
+            var settings = _storageService.LoadSettings();
 
             // 1. Validaciones
             if (Fields.Any(f => string.IsNullOrWhiteSpace(f.Label)))
@@ -459,30 +473,40 @@ namespace PautaDinamicaApp.ViewModels
                         if (res == MessageBoxResult.Cancel) return;
                         if (res == MessageBoxResult.Yes)
                         {
-                            var sfd = new SaveFileDialog { Filter = "Excel (*.xlsx)|*.xlsx", FileName = $"Resp_{EditingPauta.Name}_{DateTime.Now:yyyyMMdd}.xlsx" };
-                            if (sfd.ShowDialog() == true)
+                            string exportDir = settings.ExcelExportPath;
+                            if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
+
+                            string fileName = $"Resp_{EditingPauta.Name}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                            string filePath = Path.Combine(exportDir, fileName);
+
+                            try
                             {
-                                try
-                                {
-                                    // Backup usando config ANTERIOR (la de disco)
-                                    var oldConfig = _storageService.LoadConfiguration(EditingPauta.Id);
-                                    ExportToExcelInternal(sfd.FileName, records, oldConfig);
+                                // 1. Backup Excel de registros
+                                var oldConfig = _storageService.LoadConfiguration(EditingPauta.Id);
+                                ExportToExcelInternal(filePath, records, oldConfig);
 
-                                    // Limpiar registros en disco
-                                    _storageService.SaveRecords(EditingPauta.Id, new List<AuditEntry>());
+                                // 2. Backup JSON de configuración (la que corresponde a esos registros)
+                                string jsonDir = settings.JsonBackupPath;
+                                if (!Directory.Exists(jsonDir)) Directory.CreateDirectory(jsonDir);
+                                string jsonPath = Path.Combine(jsonDir, $"Config_Resp_{EditingPauta.Name}_{DateTime.Now:yyyyMMdd_HHmm}.json");
+                                File.WriteAllText(jsonPath, JsonSerializer.Serialize(oldConfig, new JsonSerializerOptions { WriteIndented = true }));
 
-                                    // Si es la pauta activa en Main, avisar para limpiar UI
-                                    if (EditingPauta.Id == _activePautaIdInMain) ShouldClearRecords = true;
-                                }
-                                catch (Exception ex) { MessageBox.Show("Error respaldo: " + ex.Message); return; }
+                                MessageBox.Show($"Respaldos realizados con éxito:\n- Excel: {filePath}\n- JSON: {jsonPath}");
+
+                                // Limpiar registros en disco
+                                _storageService.SaveRecords(EditingPauta.Id, new List<AuditEntry>());
+
+                                // Si es la pauta activa en Main, avisar para limpiar UI
+                                if (EditingPauta.Id == _activePautaIdInMain) ShouldClearRecords = true;
                             }
-                            else return;
+                            catch (Exception ex) { MessageBox.Show("Error al realizar respaldos: " + ex.Message); return; }
                         }
+                        else return;
                     }
-                    _storageService.BackupConfiguration(EditingPauta.Id);
-                    _storageService.SaveConfiguration(EditingPauta.Id, list);
-                    _initialFieldsJson = currentFieldsJson;
                 }
+                _storageService.BackupConfiguration(EditingPauta.Id);
+                _storageService.SaveConfiguration(EditingPauta.Id, list);
+                _initialFieldsJson = currentFieldsJson;
             }
 
             // 4. Procesar eliminaciones
@@ -491,20 +515,34 @@ namespace PautaDinamicaApp.ViewModels
                 var records = _storageService.LoadRecords(p.Id);
                 if (records.Any() && MessageBox.Show($"La pauta '{p.Name}' tiene registros. ¿Respaldar a Excel antes de borrar?", "Eliminación", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                 {
-                    var sfd = new SaveFileDialog { Filter = "Excel (*.xlsx)|*.xlsx", FileName = $"Final_{p.Name}.xlsx" };
-                    if (sfd.ShowDialog() == true)
+                    string exportDir = settings.ExcelExportPath;
+                    if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
+                    string filePath = Path.Combine(exportDir, $"Final_{p.Name}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+
+                    try
                     {
-                        try { ExportToExcelInternal(sfd.FileName, records, _storageService.LoadConfiguration(p.Id)); } catch { }
+                        ExportToExcelInternal(filePath, records, _storageService.LoadConfiguration(p.Id));
+                        MessageBox.Show($"Respaldo final guardado en:\n{filePath}");
                     }
+                    catch (Exception ex) { MessageBox.Show("Error al respaldar pauta borrada: " + ex.Message); }
                 }
 
-                // Solo pedir backup JSON si el archivo EXISTE (no es una pauta nueva sin guardar)
-                if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", $"pauta_{p.Id}_config.json")))
+                // Respaldo JSON si el archivo existe
+                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", $"pauta_{p.Id}_config.json");
+                if (File.Exists(configPath))
                 {
                     if (MessageBox.Show($"¿Respaldar JSON de '{p.Name}' antes de borrar?", "Borrar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                     {
-                        var sfd = new SaveFileDialog { Filter = "JSON (*.json)|*.json", FileName = $"Backup_{p.Name}.json" };
-                        if (sfd.ShowDialog() == true) File.WriteAllText(sfd.FileName, JsonSerializer.Serialize(_storageService.LoadConfiguration(p.Id)));
+                        string jsonDir = settings.JsonBackupPath;
+                        if (!Directory.Exists(jsonDir)) Directory.CreateDirectory(jsonDir);
+                        string jsonPath = Path.Combine(jsonDir, $"Backup_{p.Name}_{DateTime.Now:yyyyMMdd_HHmm}.json");
+
+                        try
+                        {
+                            File.WriteAllText(jsonPath, JsonSerializer.Serialize(_storageService.LoadConfiguration(p.Id), new JsonSerializerOptions { WriteIndented = true }));
+                            MessageBox.Show($"Configuración respaldada en:\n{jsonPath}");
+                        }
+                        catch (Exception ex) { MessageBox.Show("Error respaldo JSON: " + ex.Message); }
                     }
                 }
 
