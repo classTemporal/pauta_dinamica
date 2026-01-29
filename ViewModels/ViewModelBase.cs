@@ -19,5 +19,8 @@ namespace PautaDinamicaApp.ViewModels
             OnPropertyChanged(propertyName);
             return true;
         }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public virtual bool IsValid { get; protected set; } = true;
     }
 }

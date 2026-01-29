@@ -23,10 +23,13 @@ namespace PautaDinamicaApp.ViewModels
         private ICollectionView? _groupedFields;
         private ObservableCollection<AuditEntry> _records = new();
         private AuditEntry? _selectedRecord;
+        private ObservableCollection<PautaSchema> _pautas = new();
+        private PautaSchema? _currentPauta;
 
         public MainViewModel()
         {
             _storageService = new StorageService();
+            LoadPautas();
             LoadData();
 
             SaveRecordCommand = new RelayCommand(_ => SaveCurrentRecord(), _ => CanSaveRecord());
@@ -67,6 +70,25 @@ namespace PautaDinamicaApp.ViewModels
 
         public bool IsEditMode => SelectedRecord != null;
 
+        public ObservableCollection<PautaSchema> Pautas
+        {
+            get => _pautas;
+            set => SetProperty(ref _pautas, value);
+        }
+
+        public PautaSchema? CurrentPauta
+        {
+            get => _currentPauta;
+            set
+            {
+                if (SetProperty(ref _currentPauta, value) && value != null)
+                {
+                    _storageService.SetLastPautaId(value.Id);
+                    LoadData();
+                }
+            }
+        }
+
         public ICommand SaveRecordCommand { get; }
         public ICommand ClearFormCommand { get; }
         public ICommand SelectRecordCommand { get; }
@@ -85,17 +107,29 @@ namespace PautaDinamicaApp.ViewModels
         private bool _isMultiSelectMode;
         public bool IsMultiSelectMode { get => _isMultiSelectMode; set => SetProperty(ref _isMultiSelectMode, value); }
 
+        private void LoadPautas()
+        {
+            var pautas = _storageService.LoadPautas();
+            string lastId = _storageService.GetLastPautaId();
+
+            Pautas = new ObservableCollection<PautaSchema>(pautas);
+            CurrentPauta = Pautas.FirstOrDefault(p => p.Id == lastId) ?? Pautas.FirstOrDefault();
+        }
+
         private void LoadData()
         {
+            if (CurrentPauta == null) return;
             RefreshFields();
-            var savedRecords = _storageService.LoadRecords();
+            var savedRecords = _storageService.LoadRecords(CurrentPauta.Id);
             Records = new ObservableCollection<AuditEntry>(savedRecords);
             FieldsRefreshed?.Invoke();
+            CreateNewRecord();
         }
 
         public void RefreshFields()
         {
-            var config = _storageService.LoadConfiguration().OrderBy(f => f.Order).ToList();
+            if (CurrentPauta == null) return;
+            var config = _storageService.LoadConfiguration(CurrentPauta.Id).OrderBy(f => f.Order).ToList();
             var fields = config.Where(c => c.Type != FieldType.Separator).Select(c => new DynamicFieldVM(c)).ToList();
 
             foreach (var f in fields)
@@ -180,8 +214,8 @@ namespace PautaDinamicaApp.ViewModels
                     }
 
                     calcField.Value = totalPossibleWeights > 0
-                        ? $"{(totalEarnedWeights / totalPossibleWeights * 100):F2}%"
-                        : "0.00%";
+                        ? $"{(totalEarnedWeights / totalPossibleWeights * 100):F1}%"
+                        : "0.0%";
                 }
 
                 // 2. CÁLCULO DE PROMEDIOS (AVERAGE)
@@ -195,7 +229,7 @@ namespace PautaDinamicaApp.ViewModels
                         string valText = t.Value?.ToString()?.Replace("%", "") ?? "";
                         if (double.TryParse(valText, out double d)) { sum += d; count++; }
                     }
-                    avgField.Value = count > 0 ? $"{(sum / count):F2}%" : "0.00%";
+                    avgField.Value = count > 0 ? $"{(sum / count):F1}%" : "0.0%";
                 }
             }
             finally { _isCalculating = false; }
@@ -203,46 +237,31 @@ namespace PautaDinamicaApp.ViewModels
 
         private void OpenConfiguration()
         {
+            if (CurrentPauta == null) return;
             var hasRecords = Records.Any();
-            var win = new ConfigWindow(hasRecords);
+            var win = new ConfigWindow(CurrentPauta.Id);
             win.Owner = Application.Current.MainWindow;
 
             if (win.ShowDialog() == true)
             {
+                LoadPautas(); // Recargar lista por si se agregaron/eliminaron pautas
                 if (win.DataContext is EditorViewModel editorVm && editorVm.ShouldClearRecords)
                 {
-                    MessageBox.Show("Se requiere realizar un respaldo de sus datos actuales antes de aplicar los cambios estructurales.",
-                        "Respaldo Requerido", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                    // 1. Guardar Excel
-                    bool excelSaved = ExportRecordsToExcel(null, $"RESPALDO_EXCEL_{DateTime.Now:yyyyMMdd_HHmm}", silent: false);
-
-                    // 2. Guardar JSON
-                    bool jsonSaved = ExportRecordsToJson(null, $"RESPALDO_JSON_{DateTime.Now:yyyyMMdd_HHmm}");
-
-                    if (excelSaved && jsonSaved)
-                    {
-                        // 3. Aplicar los cambios diferidos (ahora sí guardamos la configuración)
-                        _storageService.SaveConfiguration(editorVm.Fields.ToList());
-
-                        // Solo limpiamos si el usuario guardó ambos
-                        Records.Clear();
-                        _storageService.SaveRecords(Records.ToList());
-                        MessageBox.Show("Estructura actualizada y registros respaldados correctamente.", "Éxito");
-                    }
-                    else
-                    {
-                        MessageBox.Show("No se han aplicado los cambios porque no se completaron los respaldos. La pauta anterior se mantendrá para evitar pérdida de datos.",
-                            "Cambios Cancelados", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        // Recargar pauta anterior
-                        RefreshFields();
-                        return;
-                    }
+                    // Los respaldos ya se hicieron dentro del ConfigWindow.
+                    // Aquí solo limpiamos y refrescamos la vista actual del MainViewModel.
+                    Records.Clear();
+                    RefreshFields();
+                    MessageBox.Show("La vista se ha refrescado debido a cambios estructurales.");
                 }
-
-                RefreshFields();
+                else
+                {
+                    RefreshFields();
+                }
             }
+
+
         }
+
 
         private void CreateNewRecord()
         {
@@ -273,6 +292,39 @@ namespace PautaDinamicaApp.ViewModels
                 return;
             }
 
+            // --- VALIDACIÓN DE DUPLICADOS ---
+            foreach (var field in CurrentFields)
+            {
+                // Solo validamos si está activada la opción y hay un valor ingresado
+                // Y si el tipo es Texto, Numérico o Área de Texto (evitar validar Dropdowns por defecto)
+                var def = field.Definition;
+                bool checkType = def.Type == FieldType.Text || def.Type == FieldType.Numeric || def.Type == FieldType.TextArea;
+
+                if (checkType && def.WarnOnDuplicate && field.Value != null && !string.IsNullOrWhiteSpace(field.Value.ToString()))
+                {
+                    string currentValue = field.Value.ToString()!.Trim();
+
+                    // Buscamos si existe algun otro registro con este valor en este campo
+                    // Excluimos el registro actual si estamos en modo edición
+                    bool isDuplicate = Records.Any(r =>
+                        r != SelectedRecord && // No compararse consigo mismo
+                        r.Values.TryGetValue(field.Definition.Id, out var val) && // Obtener valor del campo
+                        val != null &&
+                        string.Equals(val.ToString()!.Trim(), currentValue, StringComparison.OrdinalIgnoreCase)); // Comparar
+
+                    if (isDuplicate)
+                    {
+                        var result = MessageBox.Show(
+                            $"El valor '{currentValue}' en el campo '{field.Label}' ya existe en otro registro.\n\n¿Desea agregarlo de todas formas?",
+                            "Valor Duplicado Detectado",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Warning);
+
+                        if (result == MessageBoxResult.No) return;
+                    }
+                }
+            }
+
             var entry = SelectedRecord ?? new AuditEntry();
             foreach (var field in CurrentFields.Where(f => f.Type != FieldType.Separator))
             {
@@ -281,7 +333,7 @@ namespace PautaDinamicaApp.ViewModels
 
             if (SelectedRecord == null) Records.Add(entry);
             entry.NotifyUpdate();
-            _storageService.SaveRecords(Records.ToList());
+            if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
             foreach (var field in CurrentFields) field.Reset();
             SelectedRecord = null;
             MessageBox.Show("Registro guardado correctamente.");
@@ -300,17 +352,17 @@ namespace PautaDinamicaApp.ViewModels
             if (MessageBox.Show("¿Eliminar registro?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 Records.Remove(entry);
-                _storageService.SaveRecords(Records.ToList());
+                if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
                 if (SelectedRecord == entry) CreateNewRecord();
             }
         }
 
         private void DeleteAllRecords()
         {
-            if (MessageBox.Show("¿Eliminar TODOS?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBox.Show("¿Eliminar TODOS los registros de esta pauta?", "Confirmar Eliminación Total", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 Records.Clear();
-                _storageService.SaveRecords(Records.ToList());
+                if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
                 CreateNewRecord();
             }
         }
@@ -425,7 +477,7 @@ namespace PautaDinamicaApp.ViewModels
             if (MessageBox.Show($"¿Eliminar {selected.Count}?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 foreach (var rec in selected) Records.Remove(rec);
-                _storageService.SaveRecords(Records.ToList());
+                if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
                 CreateNewRecord();
             }
         }
@@ -510,7 +562,7 @@ namespace PautaDinamicaApp.ViewModels
 
                         if (importedCount > 0)
                         {
-                            _storageService.SaveRecords(Records.ToList());
+                            if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
                             MessageBox.Show($"Se importaron {importedCount} registros correctamente.", "Éxito");
                             RefreshCalculations();
                         }

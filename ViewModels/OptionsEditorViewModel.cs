@@ -31,7 +31,7 @@ namespace PautaDinamicaApp.ViewModels
 
         public string Value { get => _value; set => SetProperty(ref _value, value); }
         public bool IsDisabled { get => _isDisabled; set => SetProperty(ref _isDisabled, value); }
-        public bool IsValid => true;
+        public override bool IsValid => true;
 
         public double Score
         {
@@ -77,7 +77,7 @@ namespace PautaDinamicaApp.ViewModels
 
         public string FieldId { get; set; } = "";
         public string FieldLabel { get; set; } = "";
-        public bool IsValid => true;
+        public override bool IsValid => true;
 
         public bool IsActive
         {
@@ -152,6 +152,7 @@ namespace PautaDinamicaApp.ViewModels
             _useCustomWeights = field.UseCustomWeights;
             _timeFormat = field.TimeFormat;
             _maxLength = field.MaxLength;
+            WarnOnDuplicate = field.WarnOnDuplicate;
 
             var wrapped = (field.Options ?? new List<string>()).Select(s => new SelectableOptionVM(s));
             Options = new ObservableCollection<SelectableOptionVM>(wrapped);
@@ -254,7 +255,7 @@ namespace PautaDinamicaApp.ViewModels
 
         public string ValidationError { get => _validationError; set => SetProperty(ref _validationError, value); }
         public bool HasError => !string.IsNullOrEmpty(ValidationError);
-        public bool IsValid => !HasError;
+        public override bool IsValid => !HasError;
 
         private void ValidatePercentages()
         {
@@ -293,6 +294,9 @@ namespace PautaDinamicaApp.ViewModels
         public string TimeFormat { get => _timeFormat; set => SetProperty(ref _timeFormat, value); }
         private int _maxLength;
         public int MaxLength { get => _maxLength; set => SetProperty(ref _maxLength, value); }
+
+        private bool _warnOnDuplicate;
+        public bool WarnOnDuplicate { get => _warnOnDuplicate; set => SetProperty(ref _warnOnDuplicate, value); }
 
         public List<string> ResultOptions => Options.Select(o => o.Text).ToList();
         public List<ScoringRule> ResultRules => CalculationRules.Where(r => r.IsActive).Select(r => new ScoringRule

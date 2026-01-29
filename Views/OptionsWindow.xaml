@@ -7,13 +7,6 @@
         Background="#12151c" Foreground="#e1e1e1">
     
     <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Resources/FieldTemplates.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-            <conv:DictConverter x:Key="DictConverter"/>
-        </ResourceDictionary>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -229,6 +222,9 @@
                             <TextBlock Text="Establece la cantidad máxima de caracteres que el usuario puede ingresar en este campo:" 
                                      Foreground="#94a3b8" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
                             
+                            <CheckBox IsChecked="{Binding WarnOnDuplicate}" Content="⚠️ Advertir si el valor está duplicado en otro registro" 
+                                      Foreground="White" Margin="0,0,0,15" FontWeight="Bold"/>
+
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>

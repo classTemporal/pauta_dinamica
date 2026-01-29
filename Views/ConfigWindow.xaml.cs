@@ -11,10 +11,10 @@ namespace PautaDinamicaApp
     {
         private Point _startPoint;
 
-        public ConfigWindow(bool hasRecords = false)
+        public ConfigWindow(string activePautaId = "")
         {
             InitializeComponent();
-            this.DataContext = new ViewModels.EditorViewModel(hasRecords);
+            this.DataContext = new ViewModels.EditorViewModel(activePautaId);
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -32,6 +32,33 @@ namespace PautaDinamicaApp
                     this.Close();
                 }
             }
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.DialogResult = false;
+            this.Close();
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            if (this.DialogResult != true && this.DataContext is ViewModels.EditorViewModel vm)
+            {
+                if (vm.HasPendingChanges())
+                {
+                    var result = MessageBox.Show(
+                        "Se han detectado cambios sin guardar. Si sale ahora, perderá todos los cambios realizados.\r\n\r\n¿Desea salir de todos modos?",
+                        "Cambios sin guardar",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (result == MessageBoxResult.No)
+                    {
+                        e.Cancel = true;
+                    }
+                }
+            }
+            base.OnClosing(e);
         }
 
         // --- Lógica de Drag & Drop para Reordenar Filas ---

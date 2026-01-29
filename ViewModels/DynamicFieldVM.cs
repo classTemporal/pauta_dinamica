@@ -128,10 +128,17 @@ namespace PautaDinamicaApp.ViewModels
         }
 
         // IsValid is now a settable property
-        public bool IsValid
+        public override bool IsValid
         {
             get => _isValid;
-            private set => SetProperty(ref _isValid, value);
+            protected set
+            {
+                if (_isValid != value)
+                {
+                    _isValid = value;
+                    OnPropertyChanged();
+                }
+            }
         }
 
         public void Reset()

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using PautaDinamicaApp.Models;
 
@@ -8,22 +9,87 @@ namespace PautaDinamicaApp.Services
 {
     public class StorageService
     {
-        private readonly string _configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
-        private readonly string _dataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audit_records.json");
+        private readonly string _basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data");
+        private readonly string _pautasIndexPath;
+        private readonly string _lastPautaPath;
 
-        public List<FieldDefinition> LoadConfiguration()
+        public StorageService()
         {
-            if (!File.Exists(_configPath))
+            if (!Directory.Exists(_basePath)) Directory.CreateDirectory(_basePath);
+            _pautasIndexPath = Path.Combine(_basePath, "pautas_index.json");
+            _lastPautaPath = Path.Combine(_basePath, "last_pauta.txt");
+
+            EnsureDefaultPautaExists();
+        }
+
+        private void EnsureDefaultPautaExists()
+        {
+            var pautas = LoadPautas();
+            if (!pautas.Any())
+            {
+                var defaultPauta = new PautaSchema { Name = "Pauta General" };
+                SavePautas(new List<PautaSchema> { defaultPauta });
+                SetLastPautaId(defaultPauta.Id);
+
+                // Migración: si existe config.json viejo, moverlo a la nueva estructura
+                string oldConfig = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+                string oldRecords = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audit_records.json");
+
+                if (File.Exists(oldConfig))
+                {
+                    try { File.Move(oldConfig, GetConfigPath(defaultPauta.Id), true); } catch { }
+                }
+                if (File.Exists(oldRecords))
+                {
+                    try { File.Move(oldRecords, GetDataPath(defaultPauta.Id), true); } catch { }
+                }
+            }
+        }
+
+        public List<PautaSchema> LoadPautas()
+        {
+            if (!File.Exists(_pautasIndexPath)) return new List<PautaSchema>();
+            try
+            {
+                string json = File.ReadAllText(_pautasIndexPath);
+                return JsonSerializer.Deserialize<List<PautaSchema>>(json) ?? new List<PautaSchema>();
+            }
+            catch { return new List<PautaSchema>(); }
+        }
+
+        public void SavePautas(List<PautaSchema> pautas)
+        {
+            string json = JsonSerializer.Serialize(pautas, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_pautasIndexPath, json);
+        }
+
+        public string GetLastPautaId()
+        {
+            if (File.Exists(_lastPautaPath)) return File.ReadAllText(_lastPautaPath);
+            return LoadPautas().FirstOrDefault()?.Id ?? "";
+        }
+
+        public void SetLastPautaId(string id)
+        {
+            File.WriteAllText(_lastPautaPath, id);
+        }
+
+        private string GetConfigPath(string pautaId) => Path.Combine(_basePath, $"pauta_{pautaId}_config.json");
+        private string GetDataPath(string pautaId) => Path.Combine(_basePath, $"pauta_{pautaId}_records.json");
+
+        public List<FieldDefinition> LoadConfiguration(string pautaId)
+        {
+            string path = GetConfigPath(pautaId);
+            if (!File.Exists(path))
             {
                 var defaultSchema = GetDefaultSchema();
                 foreach (var f in defaultSchema) f.EnsureDefaultOptions();
-                SaveConfiguration(defaultSchema);
                 return defaultSchema;
             }
 
             try
             {
-                string json = File.ReadAllText(_configPath);
+                string json = File.ReadAllText(path);
                 var config = JsonSerializer.Deserialize<List<FieldDefinition>>(json) ?? GetDefaultSchema();
                 foreach (var f in config) f.EnsureDefaultOptions();
                 return config;
@@ -36,90 +102,64 @@ namespace PautaDinamicaApp.Services
             }
         }
 
-        public void SaveConfiguration(List<FieldDefinition> config)
+        public void SaveConfiguration(string pautaId, List<FieldDefinition> config)
         {
             string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_configPath, json);
+            File.WriteAllText(GetConfigPath(pautaId), json);
         }
 
-        public void BackupConfiguration()
+        public void DeletePautaFiles(string pautaId)
         {
-            if (!File.Exists(_configPath)) return;
+            try
+            {
+                if (File.Exists(GetConfigPath(pautaId))) File.Delete(GetConfigPath(pautaId));
+                if (File.Exists(GetDataPath(pautaId))) File.Delete(GetDataPath(pautaId));
+            }
+            catch { }
+        }
+
+        public List<AuditEntry> LoadRecords(string pautaId)
+        {
+            string path = GetDataPath(pautaId);
+            if (!File.Exists(path)) return new List<AuditEntry>();
 
             try
             {
-                string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
-                if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
-
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string backupPath = Path.Combine(backupDir, $"config_backup_{timestamp}.json");
-
-                File.Copy(_configPath, backupPath, true);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error creating backup: {ex.Message}");
-            }
-        }
-
-        public void BackupRecords()
-        {
-            if (!File.Exists(_dataPath)) return;
-
-            try
-            {
-                string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
-                if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
-
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string backupPath = Path.Combine(backupDir, $"records_backup_{timestamp}.json");
-
-                File.Copy(_dataPath, backupPath, true);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error creating record backup: {ex.Message}");
-            }
-        }
-
-        public List<AuditEntry> LoadRecords()
-        {
-            if (!File.Exists(_dataPath)) return new List<AuditEntry>();
-
-            try
-            {
-                string json = File.ReadAllText(_dataPath);
+                string json = File.ReadAllText(path);
                 return JsonSerializer.Deserialize<List<AuditEntry>>(json) ?? new List<AuditEntry>();
             }
-            catch
-            {
-                return new List<AuditEntry>();
-            }
+            catch { return new List<AuditEntry>(); }
         }
 
-        public void SaveRecords(List<AuditEntry> records)
+        public void SaveRecords(string pautaId, List<AuditEntry> records)
         {
             string json = JsonSerializer.Serialize(records, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_dataPath, json);
+            File.WriteAllText(GetDataPath(pautaId), json);
+        }
+
+        public void BackupConfiguration(string pautaId)
+        {
+            string path = GetConfigPath(pautaId);
+            if (!File.Exists(path)) return;
+
+            try
+            {
+                string backupDir = Path.Combine(_basePath, "backups");
+                if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
+
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string backupPath = Path.Combine(backupDir, $"config_{pautaId}_{timestamp}.json");
+
+                File.Copy(path, backupPath, true);
+            }
+            catch { }
         }
 
         private List<FieldDefinition> GetDefaultSchema()
         {
             return new List<FieldDefinition>
             {
-                // Datos del Ticket
-                new FieldDefinition { Id = "f_01", Label = "Ticket", Category = "Datos del Ticket", Type = FieldType.Text, IsRequired = false, Order = 1 },
-                new FieldDefinition { Id = "f_02", Label = "Servicio", Category = "Datos del Ticket", Type = FieldType.Dropdown, Options = new List<string> { "Mexico", "USA", "Other" }, IsRequired = false, Order = 2 },
-                new FieldDefinition { Id = "f_03", Label = "Analista", Category = "Datos del Ticket", Type = FieldType.Dropdown, Options = new List<string> { "Analista 1", "Analista 2" }, IsRequired = false, Order = 3 },
-                
-                // Evaluación de llamada (PENC)
-                new FieldDefinition { Id = "p_01", Label = "Bienvenida e identificación", Category = "Evaluación de llamada (PENC)", Type = FieldType.Dropdown, Options = new List<string> { "1", "0", "N/A" }, IsRequired = false, Order = 4 },
-                new FieldDefinition { Id = "p_02", Label = "Indagar", Category = "Evaluación de llamada (PENC)", Type = FieldType.Dropdown, Options = new List<string> { "1", "0", "N/A" }, IsRequired = false, Order = 5 },
-                new FieldDefinition { Id = "p_03", Label = "Personalización", Category = "Evaluación de llamada (PENC)", Type = FieldType.Dropdown, Options = new List<string> { "1", "0", "N/A" }, IsRequired = false, Order = 6 },
-                
-                // Evaluación PEC
-                new FieldDefinition { Id = "pec_01", Label = "No corta llamada", Category = "Evaluación PEC (Alto riesgo)", Type = FieldType.Dropdown, Options = new List<string> { "1", "0", "N/A" }, IsRequired = false, Order = 7 },
-                new FieldDefinition { Id = "pec_02", Label = "Cumple con políticas", Category = "Evaluación PEC (Alto riesgo)", Type = FieldType.Dropdown, Options = new List<string> { "1", "0", "N/A" }, IsRequired = false, Order = 8 }
+                new FieldDefinition { Id = Guid.NewGuid().ToString(), Label = "Nuevo Campo", Type = FieldType.Text, Order = 1 }
             };
         }
     }

@@ -14,20 +14,6 @@
 
     <Window.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Views/Resources/FieldTemplates.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-
-            <!-- Colors -->
-            <SolidColorBrush x:Key="BackgroundBrush" Color="#12151c"/>
-            <SolidColorBrush x:Key="CardBackgroundBrush" Color="#1e222d"/>
-            <SolidColorBrush x:Key="BorderBrush" Color="#2d3446"/>
-            <SolidColorBrush x:Key="AccentBrush" Color="#007bff"/>
-            <SolidColorBrush x:Key="TextBrush" Color="#e1e1e1"/>
-
-            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-            <conv:DictionaryValueConverter x:Key="DictConverter"/>
-
             <views:FieldTemplateSelector x:Key="FieldTemplateSelector"
                 TextTemplate="{StaticResource TextTemplate}"
                 NumericTemplate="{StaticResource NumericTemplate}"
@@ -74,7 +60,27 @@
         <!-- Header -->
         <Border Grid.Row="0" Padding="20,15" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
             <Grid>
-                <TextBlock Text="Sistema de Registro de Llamadas" Foreground="{StaticResource TextBrush}" FontSize="22" FontWeight="Bold"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Sistema de Registro de Llamadas" Foreground="{StaticResource TextBrush}" FontSize="22" FontWeight="Bold" Margin="0,0,30,0"/>
+                    
+                    <!-- Pauta Selector -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Pauta actual:" Foreground="#888" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="12"/>
+                        <ComboBox ItemsSource="{Binding Pautas}" 
+                                  SelectedItem="{Binding CurrentPauta}"
+                                  DisplayMemberPath="Name"
+                                  Width="200" Height="32"
+                                  Background="#2d3446" Foreground="White" BorderBrush="#3d4456">
+                            <ComboBox.Resources>
+                                <Style TargetType="ComboBoxItem">
+                                    <Setter Property="Background" Value="#2d3446"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Style>
+                            </ComboBox.Resources>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+                
                 <Button Content="⚙️ CONFIGURAR PAUTA" Command="{Binding OpenConfigCommand}" 
                         HorizontalAlignment="Right" Style="{StaticResource GhostButton}" Padding="10,5"/>
             </Grid>

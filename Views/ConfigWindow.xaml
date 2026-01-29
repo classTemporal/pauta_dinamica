@@ -5,25 +5,20 @@
         xmlns:models="clr-namespace:PautaDinamicaApp.Models"
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
-        Title="Diseñador de Pauta" Height="610" Width="1050"
+        Title="Diseñador de Pauta" Height="700" Width="1150"
         WindowStartupLocation="CenterOwner"
+        MinWidth="900" MinHeight="600"
         Background="#12151c" Foreground="#e1e1e1">
     
 
 
     <Window.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Resources/FieldTemplates.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-
             <conv:PrependOptionConverter x:Key="PrependOptionConverter"/>
             <x:Array x:Key="BooleanOptions" Type="{x:Type sys:String}">
                 <sys:String>True</sys:String>
                 <sys:String>False</sys:String>
             </x:Array>
-            <conv:DictConverter x:Key="DictConverter"/>
-
             <SolidColorBrush x:Key="SeparatorBackground" Color="#003566"/>
             <SolidColorBrush x:Key="CardBackground" Color="#1e222d"/>
             <SolidColorBrush x:Key="RowAlternatingBackground" Color="#262b38"/>
@@ -91,28 +86,128 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Header -->
-            <RowDefinition Height="Auto"/> <!-- MultiSelect Bar -->
-            <RowDefinition Height="*"/>    <!-- DataGrid -->
-            <RowDefinition Height="Auto"/> <!-- Footer -->
-        </Grid.RowDefinitions>
+    <Grid Background="{StaticResource BackgroundBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300" MinWidth="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Side Management (Pautas) -->
+        <Border Grid.Column="0" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0" Padding="15">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Gestión de Pautas" FontSize="20" FontWeight="Bold" Foreground="White" Margin="0,0,0,20"/>
+
+                <!-- Actions for Pautas -->
+                <StackPanel DockPanel.Dock="Bottom" Margin="0,15,0,0">
+                    <Button Content="+ Nueva Pauta" Command="{Binding AddPautaCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,10" Height="40"/>
+                    <Grid Margin="0,0,0,15">
+                        <Button Content="☑️ Selección Múltiple" Command="{Binding TogglePautaMultiSelectCommand}" 
+                                Style="{StaticResource GhostButton}" HorizontalAlignment="Left"
+                                Visibility="{Binding IsPautaMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                        
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{Binding IsPautaMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Button Content="✔️ Todo" Command="{Binding SelectAllPautasCommand}" Style="{StaticResource GhostButton}" Margin="0,0,10,0"/>
+                            <Button Content="🗑️ Borrar" Command="{Binding DeleteSelectedPautasCommand}" Style="{StaticResource DangerButton}"/>
+                            <Button Content="❌" Command="{Binding TogglePautaMultiSelectCommand}" Style="{StaticResource GhostButton}" Margin="10,0,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Base de Datos (Sistema) -->
+                    <Border Background="#1a1d26" CornerRadius="8" Padding="12" BorderBrush="#2d3446" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="BASE DE DATOS (SISTEMA)" Foreground="#64748b" FontSize="9" FontWeight="Bold" Margin="0,0,0,10" HorizontalAlignment="Center"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="📥 Importar" Command="{Binding ImportAllDatabaseCommand}" 
+                                        Style="{StaticResource GhostButton}" Margin="0,0,5,0" Padding="0,5" FontSize="11" Height="32"/>
+                                <Button Grid.Column="1" Content="📤 Exportar" Command="{Binding ExportAllDatabaseCommand}" 
+                                        Style="{StaticResource SecondaryButton}" Padding="0,5" FontSize="11" Height="32"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Pauta List -->
+                <ListBox ItemsSource="{Binding Pautas}" SelectedItem="{Binding EditingPauta}" 
+                         Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Border" Background="#262b38" CornerRadius="8" Margin="0,0,0,10" Padding="12" BorderThickness="1" BorderBrush="Transparent">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" Margin="0,0,10,0" VerticalAlignment="Center"
+                                                          Visibility="{Binding DataContext.IsPautaMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
+                                                             Background="Transparent" BorderThickness="0" Foreground="White" FontWeight="Bold" FontSize="14"/>
+                                                     <TextBlock Text="{Binding CreatedAt, StringFormat='{}Creado: {0:dd/MM/yyyy}'}" Foreground="#64748b" FontSize="10" Margin="2,2,0,0"/>
+                                                </StackPanel>
+
+                                                <Button Grid.Column="2" Content="🗑️" 
+                                                        Command="{Binding DataContext.DeletePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                                        CommandParameter="{Binding}" 
+                                                        Style="{StaticResource DangerButton}" Padding="5" Width="30" Height="30" FontSize="12"
+                                                        Visibility="{Binding DataContext.IsPautaMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="#6f42c1"/>
+                                                <Setter TargetName="Border" Property="Background" Value="#2d3446"/>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Main Editor -->
+        <Grid Grid.Column="1" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="Auto"/> <!-- MultiSelect Bar -->
+                <RowDefinition Height="*"/>    <!-- DataGrid Container -->
+                <RowDefinition Height="Auto"/> <!-- Footer -->
+            </Grid.RowDefinitions>
 
         <!-- Header Area -->
         <Grid Grid.Row="0" Margin="0,0,0,15">
-            <StackPanel>
-                <TextBlock Text="Diseño de Estructura Dinámica" FontSize="22" FontWeight="Bold" Foreground="White"/>
-                <TextBlock Text="Usa 'Mover' para ordenar. Los campos de tipo Dropdown requieren configuración de opciones." FontSize="12" Foreground="#94a3b8"/>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="Diseño de Estructura Dinámica" FontSize="20" FontWeight="Bold" Foreground="White" TextWrapping="Wrap"/>
+                <TextBlock Text="Crea campos y secciones para tu pauta de auditoría." FontSize="11" Foreground="#94a3b8" TextWrapping="Wrap"/>
             </StackPanel>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <!-- CheckBox styled as a Toggle for better look -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <CheckBox Content="Selección Múltiple" IsChecked="{Binding IsMultiSelectMode}" 
-                          Foreground="White" VerticalAlignment="Center" Margin="0,0,20,0">
+                          Foreground="White" VerticalAlignment="Center" Margin="0,0,15,0">
                     <CheckBox.Template>
                         <ControlTemplate TargetType="CheckBox">
-                            <Border x:Name="border" Background="#2d3446" CornerRadius="15" Padding="12,6" BorderBrush="#3d4456" BorderThickness="1">
+                            <Border x:Name="border" Background="#2d3446" CornerRadius="15" Padding="10,5" BorderBrush="#3d4456" BorderThickness="1">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock x:Name="icon" Text="▢" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#94a3b8" FontWeight="Bold"/>
                                     <ContentPresenter VerticalAlignment="Center"/>
@@ -125,19 +220,16 @@
                                     <Setter TargetName="icon" Property="Text" Value="✅"/>
                                     <Setter TargetName="icon" Property="Foreground" Value="White"/>
                                 </Trigger>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="border" Property="Opacity" Value="0.9"/>
-                                </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </CheckBox.Template>
                 </CheckBox>
                 
                 <StackPanel Orientation="Horizontal" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
-                    <Button Content="+ AGREGAR CAMPO" Command="{Binding AddFieldCommand}" 
-                            Style="{StaticResource PrimaryButton}" Margin="0,0,10,0"/>
-                    <Button Content="📦 NUEVO CUADRO (BOX)" Command="{Binding AddSectionCommand}" 
-                            Style="{StaticResource SecondaryButton}"/>
+                    <Button Content="+ CAMPO" Command="{Binding AddFieldCommand}" 
+                            Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Padding="12,5"/>
+                    <Button Content="📦 BOX" Command="{Binding AddSectionCommand}" 
+                            Style="{StaticResource SecondaryButton}" Padding="12,5"/>
                 </StackPanel>
             </StackPanel>
         </Grid>
@@ -157,10 +249,13 @@
         </Border>
 
         <!-- Editor Table -->
-        <Border Grid.Row="2" Background="{StaticResource CardBackground}" CornerRadius="12" Padding="10" BorderBrush="#2d3446" BorderThickness="1">
+        <Border Grid.Row="2" Background="{StaticResource CardBackground}" CornerRadius="12" Padding="2" BorderBrush="#2d3446" BorderThickness="1">
             <DataGrid x:Name="EditorGrid" ItemsSource="{Binding Fields}" AutoGenerateColumns="False" 
                       CanUserAddRows="False" SelectionMode="Single" RowHeight="45"
                       AllowDrop="True"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      ScrollViewer.CanContentScroll="True"
                       PreviewMouseLeftButtonDown="EditorGrid_PreviewMouseLeftButtonDown"
                       MouseMove="EditorGrid_MouseMove"
                       Drop="EditorGrid_Drop">
@@ -242,7 +337,7 @@
                     </DataGridTemplateColumn>
 
                     <!-- Configuración / Opciones -->
-                    <DataGridTemplateColumn Header="Configuración" Width="*">
+                    <DataGridTemplateColumn Header="Configuración" Width="120">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Button Content="⚙️ CONFIGURAR" 
@@ -537,20 +632,29 @@
         </Border>
 
         <!-- Footer -->
-        <Grid Grid.Row="3" Margin="0,20,0,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Content="📥 IMPORTAR JSON" Command="{Binding ImportConfigCommand}" 
-                        Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Padding="15,0" Height="40"/>
-                <Button Content="📤 EXPORTAR JSON" Command="{Binding ExportConfigCommand}" 
-                        Style="{StaticResource ExcelButton}" Padding="15,0" Height="40"/>
-            </StackPanel>
+        <Border Grid.Row="3" Background="#1e222d" Margin="0,15,0,0" Padding="15" CornerRadius="8" BorderBrush="#2d3446" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="CANCELAR" IsCancel="True" Margin="0,0,15,0" Style="{StaticResource GhostButton}"/>
-                <Button Content="💾 GUARDAR CAMBIOS" 
-                        Click="SaveButton_Click" Height="45" Padding="30,0" 
-                        Style="{StaticResource SuccessButton}"/>
-            </StackPanel>
-        </Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Pauta Individual:" Foreground="#64748b" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="11"/>
+                    <Button Content="📥 Importar Config" Command="{Binding ImportConfigCommand}" 
+                            Style="{StaticResource GhostButton}" Margin="0,0,5,0" Padding="15,5" Height="32"/>
+                    <Button Content="📤 Exportar Config" Command="{Binding ExportConfigCommand}" 
+                            Style="{StaticResource SecondaryButton}" Margin="0,0,5,0" Padding="15,5" Height="32"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="15,0,0,0">
+                    <Button Content="CANCELAR" Click="CancelButton_Click" Margin="0,0,15,0" Style="{StaticResource GhostButton}" Padding="15,8"/>
+                    <Button Content="💾 GUARDAR CAMBIOS" 
+                            Click="SaveButton_Click" Height="40" Padding="25,0" 
+                            Style="{StaticResource SuccessButton}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
+</Grid>
 </Window>

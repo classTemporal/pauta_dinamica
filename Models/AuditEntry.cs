@@ -26,6 +26,9 @@ namespace PautaDinamicaApp.Models
         }
         private bool _isSelected;
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsValid => true;
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public void NotifyUpdate()

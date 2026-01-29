@@ -4,17 +4,6 @@
                     xmlns:models="clr-namespace:PautaDinamicaApp.Models"
                     xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters">
 
-    <!-- Paleta de Colores Centralizada -->
-    <SolidColorBrush x:Key="InputBackground" Color="#2d3446"/>
-    <SolidColorBrush x:Key="InputForeground" Color="#e1e1e1"/>
-    <SolidColorBrush x:Key="InputBorder" Color="#3d4456"/>
-    <SolidColorBrush x:Key="ErrorBrush" Color="#ff4d4d"/>
-    <SolidColorBrush x:Key="AccentBrush" Color="#007bff"/>
-    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#94a3b8"/>
-
-    <conv:DictConverter x:Key="DictConverter"/>
-    <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-
     <!-- Template para el Contador de Caracteres -->
     <DataTemplate x:Key="FieldCounterTemplate">
         <TextBlock HorizontalAlignment="Right" FontSize="9" Margin="0,1,2,0" Foreground="{StaticResource SecondaryTextBrush}">
@@ -37,60 +26,6 @@
             </TextBlock.Style>
         </TextBlock>
     </DataTemplate>
-
-    <!-- ESTILOS DE BOTONES MODERNOS -->
-    <Style x:Key="ModernButtonBase" TargetType="Button">
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="Padding" Value="15,8"/>
-        <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="SnapsToDevicePixels" Value="True"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="border" Property="Opacity" Value="0.85"/>
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="border" Property="Opacity" Value="0.7"/>
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="border" Property="Opacity" Value="0.4"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-        <Setter Property="Background" Value="#007bff"/>
-    </Style>
-    <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-        <Setter Property="Background" Value="#28a745"/>
-    </Style>
-    <Style x:Key="ExcelButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-        <Setter Property="Background" Value="#217346"/>
-    </Style>
-    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-        <Setter Property="Background" Value="#dc3545"/>
-    </Style>
-    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-        <Setter Property="Background" Value="#6f42c1"/>
-    </Style>
-    <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="#e1e1e1"/>
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="#4a5568"/>
-            </Trigger>
-        </Style.Triggers>
-    </Style>
 
     <!-- Label Template with Required Asterisk -->
     <DataTemplate x:Key="FieldLabelTemplate">
@@ -343,7 +278,7 @@
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
             <Border Background="#1a1f2b" CornerRadius="4" Padding="10,8" BorderBrush="#007bff" BorderThickness="1,1,1,2">
-                <TextBlock Text="{Binding Value, TargetNullValue='0.00%'}" Foreground="#007bff" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
+                <TextBlock Text="{Binding Value, TargetNullValue='0.0%'}" Foreground="#007bff" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
             </Border>
         </StackPanel>
     </DataTemplate>
@@ -353,7 +288,7 @@
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
             <Border Background="#1a1f2b" CornerRadius="4" Padding="10,8" BorderBrush="#6f42c1" BorderThickness="1,1,1,2">
-                <TextBlock Text="{Binding Value, TargetNullValue='0.00%'}" Foreground="#6f42c1" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
+                <TextBlock Text="{Binding Value, TargetNullValue='0.0%'}" Foreground="#6f42c1" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
             </Border>
         </StackPanel>
     </DataTemplate>

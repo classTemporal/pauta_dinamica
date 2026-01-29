@@ -41,7 +41,7 @@ namespace PautaDinamicaApp
                     Header = field.Label,
                     Binding = new Binding($"Values")
                     {
-                        Converter = (IValueConverter)Resources["DictConverter"],
+                        Converter = (IValueConverter)Application.Current.Resources["DictionaryValueConverter"],
                         ConverterParameter = field.Id
                     },
                     Width = DataGridLength.Auto,

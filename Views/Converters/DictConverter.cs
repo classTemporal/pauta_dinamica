@@ -10,7 +10,7 @@ namespace PautaDinamicaApp.Views.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value == null || parameter == null) return DependencyProperty.UnsetValue;
+            if (value == null || parameter == null) return Binding.DoNothing;
 
             string input = value.ToString() ?? "";
             string param = parameter.ToString() ?? "";
@@ -34,7 +34,7 @@ namespace PautaDinamicaApp.Views.Converters
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is bool b && !b) return Binding.DoNothing;
-            if (parameter == null) return DependencyProperty.UnsetValue;
+            if (parameter == null) return Binding.DoNothing;
 
             string targetVal = value?.ToString() ?? "";
             string param = parameter.ToString() ?? "";

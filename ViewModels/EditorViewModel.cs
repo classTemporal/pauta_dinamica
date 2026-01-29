@@ -9,6 +9,8 @@ using PautaDinamicaApp.Views;
 using Microsoft.Win32;
 using System.Text.Json;
 using System.IO;
+using ClosedXML.Excel;
+using System.Collections.Generic;
 
 namespace PautaDinamicaApp.ViewModels
 {
@@ -16,26 +18,25 @@ namespace PautaDinamicaApp.ViewModels
     {
         private readonly StorageService _storageService;
         private ObservableCollection<FieldDefinition> _fields;
-
-        private bool _hasExistingRecords;
-        private bool _isMultiSelectMode;
         private string _initialFieldsJson = string.Empty;
-        public bool ShouldClearRecords { get; private set; }
+        private string _activePautaIdInMain; // Track which pauta is currently open in Main window
 
-        public EditorViewModel(bool hasExistingRecords = false)
+        private ObservableCollection<PautaSchema> _pautas = new();
+        private PautaSchema? _editingPauta;
+        private bool _isPautaMultiSelectMode;
+        private bool _isMultiSelectMode;
+        private readonly List<PautaSchema> _pautasToDelete = new();
+
+        public EditorViewModel(string activePautaId = "")
         {
-            _hasExistingRecords = hasExistingRecords;
+            _activePautaIdInMain = activePautaId;
             _storageService = new StorageService();
-            var config = _storageService.LoadConfiguration()
-                            .OrderBy(f => f.Order);
+            _fields = new ObservableCollection<FieldDefinition>();
+            _initialFieldsJson = "[]";
 
-            var list = config.ToList();
-            foreach (var f in list) f.EnsureDefaultOptions();
-            _fields = new ObservableCollection<FieldDefinition>(list);
+            LoadPautaList();
 
-            // Guardar estado inicial para detectar cambios estructurales
-            _initialFieldsJson = JsonSerializer.Serialize(_fields);
-
+            // Comandos de Campos
             AddFieldCommand = new RelayCommand(_ => AddField());
             AddSectionCommand = new RelayCommand(_ => AddSection());
             RemoveFieldCommand = new RelayCommand(p => RemoveField(p as FieldDefinition));
@@ -51,15 +52,64 @@ namespace PautaDinamicaApp.ViewModels
             PickDateCommand = new RelayCommand(p => PickDate(p as FieldDefinition));
             PickTimeCommand = new RelayCommand(p => PickTime(p as FieldDefinition));
 
-            // Tipos disponibles para el Combo (Excluyendo Separator ya que tiene su propio botón)
+            // Comandos de Gestión de Pautas
+            AddPautaCommand = new RelayCommand(_ => AddPauta());
+            DeletePautaCommand = new RelayCommand(p => DeletePauta(p as PautaSchema));
+            DeleteSelectedPautasCommand = new RelayCommand(_ => DeleteSelectedPautas());
+            TogglePautaMultiSelectCommand = new RelayCommand(_ => IsPautaMultiSelectMode = !IsPautaMultiSelectMode);
+            SelectAllPautasCommand = new RelayCommand(_ => SelectAllPautas());
+            ExportAllDatabaseCommand = new RelayCommand(_ => ExportAllDatabase());
+            ImportAllDatabaseCommand = new RelayCommand(_ => ImportAllDatabase());
+
             AvailableTypes = Enum.GetValues(typeof(FieldType)).Cast<FieldType>()
                                 .Where(t => t != FieldType.Separator)
                                 .ToList();
         }
 
         public bool IsSaveSuccessful { get; private set; }
+        public bool ShouldClearRecords { get; private set; }
         public ICommand PickDateCommand { get; }
         public ICommand PickTimeCommand { get; }
+
+        public ICommand AddPautaCommand { get; }
+        public ICommand DeletePautaCommand { get; }
+        public ICommand DeleteSelectedPautasCommand { get; }
+        public ICommand TogglePautaMultiSelectCommand { get; }
+        public ICommand SelectAllPautasCommand { get; }
+        public ICommand ExportAllDatabaseCommand { get; }
+        public ICommand ImportAllDatabaseCommand { get; }
+
+        public ObservableCollection<PautaSchema> Pautas
+        {
+            get => _pautas;
+            set => SetProperty(ref _pautas, value);
+        }
+
+        public PautaSchema? EditingPauta
+        {
+            get => _editingPauta;
+            set
+            {
+                // Antes de cambiar, podrías advertir si hay cambios sin guardar, 
+                // pero por ahora solo cargamos la nueva pauta.
+                if (SetProperty(ref _editingPauta, value) && value != null)
+                {
+                    LoadPautaFields(value.Id);
+                }
+            }
+        }
+
+        public bool IsPautaMultiSelectMode
+        {
+            get => _isPautaMultiSelectMode;
+            set
+            {
+                if (SetProperty(ref _isPautaMultiSelectMode, value) && !value)
+                {
+                    foreach (var p in Pautas) p.IsSelected = false;
+                }
+            }
+        }
 
         public ObservableCollection<FieldDefinition> Fields
         {
@@ -73,7 +123,7 @@ namespace PautaDinamicaApp.ViewModels
             set => SetProperty(ref _isMultiSelectMode, value);
         }
 
-        public System.Collections.Generic.List<FieldType> AvailableTypes { get; }
+        public List<FieldType> AvailableTypes { get; }
 
         public ICommand AddFieldCommand { get; }
         public ICommand AddSectionCommand { get; }
@@ -88,23 +138,42 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand SelectAllCommand { get; }
         public ICommand DeleteSelectedCommand { get; }
 
-        private string GetNextAvailableLabel(string baseName)
+        public bool HasPendingChanges()
         {
-            var existingLabels = Fields.Select(f => f.Label).ToList();
-
-            // Check if base name exists
-            if (!existingLabels.Contains(baseName)) return baseName;
-
-            int i = 2;
-            while (true)
+            if (EditingPauta != null)
             {
-                string candidate = $"{baseName} {i}";
-                if (!existingLabels.Contains(candidate))
-                {
-                    return candidate;
-                }
-                i++;
+                string currentFieldsJson = JsonSerializer.Serialize(Fields);
+                if (_initialFieldsJson != currentFieldsJson) return true;
             }
+
+            var savedPautas = _storageService.LoadPautas();
+            if (savedPautas.Count != Pautas.Count) return true;
+            if (_pautasToDelete.Any()) return true;
+
+            for (int i = 0; i < Pautas.Count; i++)
+            {
+                if (Pautas[i].Id != savedPautas[i].Id || Pautas[i].Name != savedPautas[i].Name)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void LoadPautaList()
+        {
+            var list = _storageService.LoadPautas();
+            Pautas = new ObservableCollection<PautaSchema>(list);
+
+            string lastId = string.IsNullOrEmpty(_activePautaIdInMain) ? _storageService.GetLastPautaId() : _activePautaIdInMain;
+            EditingPauta = Pautas.FirstOrDefault(p => p.Id == lastId) ?? Pautas.FirstOrDefault();
+        }
+
+        private void LoadPautaFields(string pautaId)
+        {
+            var config = _storageService.LoadConfiguration(pautaId).OrderBy(f => f.Order).ToList();
+            foreach (var f in config) f.EnsureDefaultOptions();
+            Fields = new ObservableCollection<FieldDefinition>(config);
+            _initialFieldsJson = JsonSerializer.Serialize(Fields);
         }
 
         private void AddField()
@@ -114,7 +183,6 @@ namespace PautaDinamicaApp.ViewModels
             {
                 Id = "f_" + Guid.NewGuid().ToString().Substring(0, 4),
                 Label = GetNextAvailableLabel("Nuevo Campo"),
-                // El nuevo campo hereda la categoría o sección actual
                 Category = lastField?.Category ?? "General",
                 Type = FieldType.Text,
                 Order = (lastField?.Order ?? 0) + 1,
@@ -129,347 +197,350 @@ namespace PautaDinamicaApp.ViewModels
             {
                 Id = "s_" + Guid.NewGuid().ToString().Substring(0, 4),
                 Label = GetNextAvailableLabel("Nuevo Cuadro"),
-                Category = "--- SECCIÓN ---", // Marcador visual interno
+                Category = "--- SECCIÓN ---",
                 Type = FieldType.Separator,
                 Order = (lastField?.Order ?? 0) + 1
             });
         }
 
+        private string GetNextAvailableLabel(string baseName)
+        {
+            var existingLabels = Fields.Select(f => f.Label).ToList();
+            if (!existingLabels.Contains(baseName)) return baseName;
+            int i = 2;
+            while (true)
+            {
+                string candidate = $"{baseName} {i}";
+                if (!existingLabels.Contains(candidate)) return candidate;
+                i++;
+            }
+        }
+
         private void RemoveField(FieldDefinition? field)
         {
-            if (field != null)
-            {
-                var result = MessageBox.Show(
-                    $"¿Realmente desea eliminar el campo [{field.Label}]?",
-                    "Confirmar eliminación",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-
-                if (result == MessageBoxResult.Yes)
-                {
-                    Fields.Remove(field);
-                }
-            }
+            if (field != null && MessageBox.Show($"¿Eliminar campo [{field.Label}]?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                Fields.Remove(field);
         }
 
         private void MoveUp(FieldDefinition? field)
         {
             if (field == null) return;
             int index = Fields.IndexOf(field);
-            if (index > 0)
-            {
-                Fields.Move(index, index - 1);
-            }
+            if (index > 0) Fields.Move(index, index - 1);
         }
 
         private void MoveDown(FieldDefinition? field)
         {
             if (field == null) return;
             int index = Fields.IndexOf(field);
-            if (index < Fields.Count - 1)
-            {
-                Fields.Move(index, index + 1);
-            }
+            if (index < Fields.Count - 1) Fields.Move(index, index + 1);
         }
 
         private void ConfigureOptions(FieldDefinition? field)
         {
             if (field == null) return;
-
-            // Tipos que necesitan configuración extra
-            var configurableTypes = new[] {
-                FieldType.Dropdown, FieldType.Boolean, FieldType.Calculation,
-                FieldType.Average, FieldType.Time,
-                // Ahora permitimos configurar longitud para texto
-                FieldType.Text, FieldType.TextArea, FieldType.Numeric
-            };
+            var configurableTypes = new[] { FieldType.Dropdown, FieldType.Boolean, FieldType.Calculation, FieldType.Average, FieldType.Time, FieldType.Text, FieldType.TextArea, FieldType.Numeric };
             if (!configurableTypes.Contains(field.Type)) return;
 
             var vm = new OptionsEditorViewModel(field, Fields.ToList());
-            var win = new OptionsWindow
-            {
-                DataContext = vm,
-                Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
-            };
-
+            var win = new OptionsWindow { DataContext = vm, Owner = Application.Current.MainWindow };
             if (win.ShowDialog() == true)
             {
                 field.UseCustomWeights = vm.UseCustomWeights;
                 field.MaxLength = vm.ResultMaxLength;
+                field.WarnOnDuplicate = vm.WarnOnDuplicate;
                 field.TimeFormat = vm.TimeFormat;
-
-                if (field.Type == FieldType.Dropdown)
-                {
-                    field.Options = vm.ResultOptions;
-                }
-                else if (field.Type == FieldType.Calculation)
-                {
-                    field.ScoringRules = vm.ResultRules;
-                }
-                else if (field.Type == FieldType.Average)
-                {
-                    field.TargetIds = vm.ResultAverageIds;
-                }
-
+                if (field.Type == FieldType.Dropdown) field.Options = vm.ResultOptions;
+                else if (field.Type == FieldType.Calculation) field.ScoringRules = vm.ResultRules;
+                else if (field.Type == FieldType.Average) field.TargetIds = vm.ResultAverageIds;
                 OnPropertyChanged(nameof(Fields));
-                OnPropertyChanged(nameof(IsSaveSuccessful));
             }
         }
 
         private void PickDate(FieldDefinition? field)
         {
             if (field == null) return;
-
-            var selector = new Views.DateSelectorWindow(field.DefaultValue);
-            selector.Owner = Application.Current.Windows.OfType<ConfigWindow>().FirstOrDefault();
-
+            var selector = new DateSelectorWindow(field.DefaultValue) { Owner = Application.Current.MainWindow };
             if (selector.ShowDialog() == true)
             {
-                string val = selector.SelectedValue;
-                if (val == "TODAY")
-                {
-                    val = DateTime.Now.ToString("dd/MM/yyyy");
-                }
-                field.DefaultValue = val;
+                field.DefaultValue = selector.SelectedValue == "TODAY" ? DateTime.Now.ToString("dd/MM/yyyy") : selector.SelectedValue;
             }
         }
 
         private void PickTime(FieldDefinition? field)
         {
             if (field == null) return;
-
-            var selector = new Views.TimeSelectorWindow(field.DefaultValue, field.TimeFormat);
-            selector.Owner = Application.Current.Windows.OfType<ConfigWindow>().FirstOrDefault();
-
+            var selector = new TimeSelectorWindow(field.DefaultValue, field.TimeFormat) { Owner = Application.Current.MainWindow };
             if (selector.ShowDialog() == true)
             {
-                string val = selector.SelectedValue;
-                if (val == "NOW")
-                {
-                    val = DateTime.Now.ToString(field.TimeFormat ?? "HH:mm");
-                }
-                field.DefaultValue = val;
+                field.DefaultValue = selector.SelectedValue == "NOW" ? DateTime.Now.ToString(field.TimeFormat ?? "HH:mm") : selector.SelectedValue;
             }
         }
 
         private void ExportConfig()
         {
-            var sfd = new SaveFileDialog
-            {
-                Filter = "JSON Files (*.json)|*.json",
-                FileName = $"PautaConfig_{DateTime.Now:yyyyMMdd}.json"
-            };
-
+            var sfd = new SaveFileDialog { Filter = "JSON Files (*.json)|*.json", FileName = $"Config_{EditingPauta?.Name}_{DateTime.Now:yyyyMMdd}.json" };
             if (sfd.ShowDialog() == true)
             {
                 try
                 {
                     string json = JsonSerializer.Serialize(Fields, new JsonSerializerOptions { WriteIndented = true });
                     File.WriteAllText(sfd.FileName, json);
-                    MessageBox.Show("Configuración exportada correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Configuración exportada.");
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error al exportar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
             }
         }
 
         private void ImportConfig()
         {
-            var ofd = new OpenFileDialog
-            {
-                Filter = "JSON Files (*.json)|*.json"
-            };
-
+            var ofd = new OpenFileDialog { Filter = "JSON Files (*.json)|*.json" };
             if (ofd.ShowDialog() == true)
             {
                 try
                 {
                     string json = File.ReadAllText(ofd.FileName);
                     var imported = JsonSerializer.Deserialize<ObservableCollection<FieldDefinition>>(json);
-                    if (imported != null)
+                    if (imported != null && MessageBox.Show("¿Reemplazar diseño actual?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                     {
-                        var result = MessageBox.Show(
-                            "¿Está seguro de que desea importar esta configuración? Esto reemplazará su diseño actual.",
-                            "Confirmar Importación",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Warning);
-
-                        if (result == MessageBoxResult.Yes)
-                        {
-                            Fields = imported;
-                        }
+                        Fields = imported;
+                        foreach (var f in Fields) f.EnsureDefaultOptions();
                     }
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error al importar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
             }
         }
 
         private void ToggleMultiSelect()
         {
             IsMultiSelectMode = !IsMultiSelectMode;
-            if (!IsMultiSelectMode)
-            {
-                foreach (var f in Fields) f.IsSelected = false;
-            }
+            if (!IsMultiSelectMode) foreach (var f in Fields) f.IsSelected = false;
         }
 
         private void SelectAll()
         {
-            bool allSelected = Fields.All(f => f.IsSelected);
-            foreach (var f in Fields) f.IsSelected = !allSelected;
-            // Refrescar la vista para mostrar los checks
+            bool all = Fields.All(f => f.IsSelected);
+            foreach (var f in Fields) f.IsSelected = !all;
             OnPropertyChanged(nameof(Fields));
         }
 
         private void DeleteSelected()
         {
             var selected = Fields.Where(f => f.IsSelected).ToList();
-            if (!selected.Any()) return;
-
-            var result = MessageBox.Show(
-                $"¿Desea eliminar los {selected.Count} elementos seleccionados?",
-                "Confirmar eliminación múltiple",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (result == MessageBoxResult.Yes)
+            if (selected.Any() && MessageBox.Show($"¿Eliminar {selected.Count} campos?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
-                foreach (var item in selected)
+                foreach (var f in selected) Fields.Remove(f);
+            }
+        }
+
+        private void AddPauta()
+        {
+            var newPauta = new PautaSchema { Name = "Nueva Pauta " + (Pautas.Count + 1) };
+            Pautas.Add(newPauta);
+            EditingPauta = newPauta;
+        }
+
+        private void DeletePauta(PautaSchema? p)
+        {
+            if (p == null) return;
+            if (Pautas.Count <= 1) { MessageBox.Show("Debe quedar una pauta."); return; }
+            if (MessageBox.Show($"¿Borrar '{p.Name}' al guardar?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            {
+                Pautas.Remove(p);
+                if (!_pautasToDelete.Contains(p)) _pautasToDelete.Add(p);
+                if (EditingPauta == p) EditingPauta = Pautas.First();
+            }
+        }
+
+        private void DeleteSelectedPautas()
+        {
+            var selected = Pautas.Where(p => p.IsSelected).ToList();
+            if (!selected.Any()) return;
+            if (selected.Count >= Pautas.Count) { MessageBox.Show("No puedes borrar todas."); return; }
+            if (MessageBox.Show($"¿Borrar {selected.Count} pautas al guardar?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            {
+                foreach (var p in selected)
                 {
-                    Fields.Remove(item);
+                    Pautas.Remove(p);
+                    if (!_pautasToDelete.Contains(p)) _pautasToDelete.Add(p);
                 }
+                if (EditingPauta == null || !Pautas.Contains(EditingPauta)) EditingPauta = Pautas.First();
+            }
+        }
+
+        private void SelectAllPautas()
+        {
+            bool all = Pautas.All(p => p.IsSelected);
+            foreach (var p in Pautas) p.IsSelected = !all;
+        }
+
+        private void ExportAllDatabase()
+        {
+            var sfd = new SaveFileDialog { Filter = "Database JSON (*.json)|*.json", FileName = $"System_Backup_{DateTime.Now:yyyyMMdd}.json" };
+            if (sfd.ShowDialog() == true)
+            {
+                try
+                {
+                    var fullData = new { Pautas = Pautas.ToList(), Configs = Pautas.ToDictionary(p => p.Id, p => _storageService.LoadConfiguration(p.Id)), Records = Pautas.ToDictionary(p => p.Id, p => _storageService.LoadRecords(p.Id)) };
+                    File.WriteAllText(sfd.FileName, JsonSerializer.Serialize(fullData, new JsonSerializerOptions { WriteIndented = true }));
+                    MessageBox.Show("Respaldo completo exportado.");
+                }
+                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+            }
+        }
+
+        private void ImportAllDatabase()
+        {
+            var ofd = new OpenFileDialog { Filter = "Database JSON (*.json)|*.json" };
+            if (ofd.ShowDialog() == true && MessageBox.Show("¿Reemplazar TODO el sistema?", "Atención", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    var doc = JsonDocument.Parse(File.ReadAllText(ofd.FileName));
+                    var pautas = JsonSerializer.Deserialize<List<PautaSchema>>(doc.RootElement.GetProperty("Pautas").GetRawText());
+                    var configs = JsonSerializer.Deserialize<Dictionary<string, List<FieldDefinition>>>(doc.RootElement.GetProperty("Configs").GetRawText());
+                    if (pautas != null && configs != null)
+                    {
+                        foreach (var p in _storageService.LoadPautas()) _storageService.DeletePautaFiles(p.Id);
+                        _storageService.SavePautas(pautas);
+                        foreach (var kvp in configs) _storageService.SaveConfiguration(kvp.Key, kvp.Value);
+                        if (doc.RootElement.TryGetProperty("Records", out var recsProp))
+                        {
+                            var records = JsonSerializer.Deserialize<Dictionary<string, List<AuditEntry>>>(recsProp.GetRawText());
+                            if (records != null) foreach (var kvp in records) _storageService.SaveRecords(kvp.Key, kvp.Value);
+                        }
+                        LoadPautaList();
+                        MessageBox.Show("Base de datos restaurada.");
+                    }
+                }
+                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
             }
         }
 
         private void SaveConfig()
         {
-            // Reset state
             IsSaveSuccessful = false;
             ShouldClearRecords = false;
 
-            // 1. Validar etiquetas vacías
-            var emptyLabels = Fields.Where(f => string.IsNullOrWhiteSpace(f.Label)).ToList();
-            if (emptyLabels.Any())
+            // 1. Validaciones
+            if (Fields.Any(f => string.IsNullOrWhiteSpace(f.Label)))
             {
-                MessageBox.Show("Todos los campos y cuadros deben tener un nombre. No pueden quedar vacíos.",
-                    "Error de validación", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Hay campos sin nombre.");
+                return;
+            }
+            if (Fields.GroupBy(f => f.Label.Trim().ToLower()).Any(g => g.Count() > 1))
+            {
+                MessageBox.Show("Hay nombres duplicados.");
                 return;
             }
 
-            // 2. Validar opciones de dropdowns
-            var emptyDropdowns = Fields.Where(f => f.Type == FieldType.Dropdown && string.IsNullOrWhiteSpace(f.OptionsString)).ToList();
-            if (emptyDropdowns.Any())
-            {
-                MessageBox.Show($"Los campos de tipo Dropdown deben tener opciones (ej: Cumple, No cumple). Revisar el campo: {emptyDropdowns.First().Label}",
-                    "Error de validación", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            // 3. Validar nombres duplicados
-            var duplicates = Fields.GroupBy(f => f.Label.Trim().ToLower())
-                                   .Where(g => g.Count() > 1)
-                                   .Select(g => g.First().Label)
-                                   .ToList();
-
-            if (duplicates.Any())
-            {
-                MessageBox.Show(
-                    $"No se pueden guardar los cambios porque hay nombres o cuadros duplicados:\n- {string.Join("\n- ", duplicates)}",
-                    "Error de validación",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-                return;
-            }
-
-            // 4. Validar formato de valores predeterminados
-            foreach (var f in Fields)
-            {
-                if (!string.IsNullOrWhiteSpace(f.DefaultValue))
-                {
-                    if (f.Type == FieldType.Numeric && !double.TryParse(f.DefaultValue, out _))
-                    {
-                        MessageBox.Show($"El valor predeterminado para '{f.Label}' debe ser numérico.", "Error de validación", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
-                    }
-                    else if (f.Type == FieldType.Date && f.DefaultValue != "TODAY")
-                    {
-                        if (!DateTime.TryParseExact(f.DefaultValue, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out _) &&
-                            !DateTime.TryParse(f.DefaultValue, out _))
-                        {
-                            MessageBox.Show($"El valor predeterminado para '{f.Label}' debe ser una fecha válida (dd/MM/yyyy).", "Error de validación", MessageBoxButton.OK, MessageBoxImage.Error);
-                            return;
-                        }
-                    }
-                    else if (f.Type == FieldType.Time && f.DefaultValue != "NOW")
-                    {
-                        string format = f.TimeFormat ?? "HH:mm";
-                        if (!DateTime.TryParseExact("01/01/2000 " + f.DefaultValue, "dd/MM/yyyy " + format, null, System.Globalization.DateTimeStyles.None, out _) &&
-                            !DateTime.TryParse(f.DefaultValue, out _))
-                        {
-                            MessageBox.Show($"El valor predeterminado para '{f.Label}' debe ser una hora válida ({format}).", "Error de validación", MessageBoxButton.OK, MessageBoxImage.Error);
-                            return;
-                        }
-                    }
-                }
-            }
-
-            // El orden ahora es el de la colección visual
+            // 2. Procesar estructura para la pauta actual
             var list = Fields.ToList();
-
-            string currentBoxName = "General";
-
+            string currentBox = "General";
             for (int i = 0; i < list.Count; i++)
             {
-                var field = list[i];
-                field.Order = i;
-
-                if (field.Type == FieldType.Separator)
-                {
-                    currentBoxName = field.Label;
-                    field.Category = "--- SECCIÓN ---";
-                }
-                else
-                {
-                    field.Category = currentBoxName;
-                    field.EnsureDefaultOptions();
-                }
+                list[i].Order = i;
+                if (list[i].Type == FieldType.Separator) { currentBox = list[i].Label; list[i].Category = "--- SECCIÓN ---"; }
+                else { list[i].Category = currentBox; list[i].EnsureDefaultOptions(); }
             }
 
-            // DETECCION DE CAMBIOS REALES
-            string currentFieldsJson = JsonSerializer.Serialize(Fields);
-            bool hasStructuralChanges = _initialFieldsJson != currentFieldsJson;
-
-            if (_hasExistingRecords && hasStructuralChanges)
+            // 3. Detectar cambios en pauta actual
+            if (EditingPauta != null)
             {
-                var result = MessageBox.Show(
-                    "Se han detectado cambios en la estructura de la pauta y existen registros actuales.\r\n\r\n" +
-                    "Para mantener la integridad de los datos, se reiniciará la base de datos.\r\n" +
-                    "Se generarán respaldos automáticos tanto en Excel como en JSON de sus datos actuales.\r\n\r\n" +
-                    "¿Desea aplicar los cambios?",
-                    "Cambio de Estructura Detectado",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
+                string currentFieldsJson = JsonSerializer.Serialize(Fields);
+                bool hasStructuralChanges = _initialFieldsJson != currentFieldsJson;
 
-                if (result != MessageBoxResult.Yes)
+                if (hasStructuralChanges)
                 {
-                    return;
+                    var records = _storageService.LoadRecords(EditingPauta.Id);
+                    if (records.Any())
+                    {
+                        var res = MessageBox.Show($"La pauta '{EditingPauta.Name}' tiene {records.Count} registros.\n¿Reestrellar base de datos y respaldar a Excel?", "Cambio Estructural", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+                        if (res == MessageBoxResult.Cancel) return;
+                        if (res == MessageBoxResult.Yes)
+                        {
+                            var sfd = new SaveFileDialog { Filter = "Excel (*.xlsx)|*.xlsx", FileName = $"Resp_{EditingPauta.Name}_{DateTime.Now:yyyyMMdd}.xlsx" };
+                            if (sfd.ShowDialog() == true)
+                            {
+                                try
+                                {
+                                    // Backup usando config ANTERIOR (la de disco)
+                                    var oldConfig = _storageService.LoadConfiguration(EditingPauta.Id);
+                                    ExportToExcelInternal(sfd.FileName, records, oldConfig);
+
+                                    // Limpiar registros en disco
+                                    _storageService.SaveRecords(EditingPauta.Id, new List<AuditEntry>());
+
+                                    // Si es la pauta activa en Main, avisar para limpiar UI
+                                    if (EditingPauta.Id == _activePautaIdInMain) ShouldClearRecords = true;
+                                }
+                                catch (Exception ex) { MessageBox.Show("Error respaldo: " + ex.Message); return; }
+                            }
+                            else return;
+                        }
+                    }
+                    _storageService.BackupConfiguration(EditingPauta.Id);
+                    _storageService.SaveConfiguration(EditingPauta.Id, list);
+                    _initialFieldsJson = currentFieldsJson;
                 }
-                ShouldClearRecords = true;
             }
 
-            // Guardar configuración solo si hubo cambios y NO requiere limpieza diferida (el Main lo hará tras el backup)
-            if (hasStructuralChanges && !ShouldClearRecords)
+            // 4. Procesar eliminaciones
+            foreach (var p in _pautasToDelete)
             {
-                _storageService.BackupConfiguration();
-                _storageService.SaveConfiguration(list);
-            }
+                var records = _storageService.LoadRecords(p.Id);
+                if (records.Any() && MessageBox.Show($"La pauta '{p.Name}' tiene registros. ¿Respaldar a Excel antes de borrar?", "Eliminación", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                {
+                    var sfd = new SaveFileDialog { Filter = "Excel (*.xlsx)|*.xlsx", FileName = $"Final_{p.Name}.xlsx" };
+                    if (sfd.ShowDialog() == true)
+                    {
+                        try { ExportToExcelInternal(sfd.FileName, records, _storageService.LoadConfiguration(p.Id)); } catch { }
+                    }
+                }
 
+                // Solo pedir backup JSON si el archivo EXISTE (no es una pauta nueva sin guardar)
+                if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", $"pauta_{p.Id}_config.json")))
+                {
+                    if (MessageBox.Show($"¿Respaldar JSON de '{p.Name}' antes de borrar?", "Borrar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                    {
+                        var sfd = new SaveFileDialog { Filter = "JSON (*.json)|*.json", FileName = $"Backup_{p.Name}.json" };
+                        if (sfd.ShowDialog() == true) File.WriteAllText(sfd.FileName, JsonSerializer.Serialize(_storageService.LoadConfiguration(p.Id)));
+                    }
+                }
+
+                _storageService.DeletePautaFiles(p.Id);
+            }
+            _pautasToDelete.Clear();
+
+            // 5. Guardar índice
+            _storageService.SavePautas(Pautas.ToList());
             IsSaveSuccessful = true;
+            MessageBox.Show("Cambios guardados con éxito.");
+        }
+
+        private void ExportToExcelInternal(string filePath, List<AuditEntry> records, List<FieldDefinition> config)
+        {
+            using (var workbook = new XLWorkbook())
+            {
+                var ws = workbook.Worksheets.Add("Auditoría");
+                ws.Cell(1, 1).Value = "Fecha";
+                var fields = config.OrderBy(f => f.Order).ToList();
+                for (int i = 0; i < fields.Count; i++) ws.Cell(1, i + 2).Value = fields[i].Label;
+
+                int row = 2;
+                foreach (var entry in records)
+                {
+                    ws.Cell(row, 1).Value = entry.Timestamp.ToString("g");
+                    for (int i = 0; i < fields.Count; i++)
+                    {
+                        if (entry.Values.TryGetValue(fields[i].Id, out var val))
+                            ws.Cell(row, i + 2).Value = val?.ToString() ?? "";
+                    }
+                    row++;
+                }
+                ws.Columns().AdjustToContents();
+                workbook.SaveAs(filePath);
+            }
         }
     }
 }
