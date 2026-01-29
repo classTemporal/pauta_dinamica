@@ -49,6 +49,7 @@ namespace PautaDinamicaApp.ViewModels
             SelectAllCommand = new RelayCommand(_ => SelectAll());
             DeleteSelectedCommand = new RelayCommand(_ => DeleteSelected());
             PickDateCommand = new RelayCommand(p => PickDate(p as FieldDefinition));
+            PickTimeCommand = new RelayCommand(p => PickTime(p as FieldDefinition));
 
             // Tipos disponibles para el Combo
             AvailableTypes = Enum.GetValues(typeof(FieldType)).Cast<FieldType>().ToList();
@@ -56,6 +57,7 @@ namespace PautaDinamicaApp.ViewModels
 
         public bool IsSaveSuccessful { get; private set; }
         public ICommand PickDateCommand { get; }
+        public ICommand PickTimeCommand { get; }
 
         public ObservableCollection<FieldDefinition> Fields
         {
@@ -172,7 +174,7 @@ namespace PautaDinamicaApp.ViewModels
             if (field == null) return;
 
             // Tipos que necesitan configuración extra
-            var configurableTypes = new[] { FieldType.Dropdown, FieldType.Boolean, FieldType.Calculation, FieldType.Average };
+            var configurableTypes = new[] { FieldType.Dropdown, FieldType.Boolean, FieldType.Calculation, FieldType.Average, FieldType.Time };
             if (!configurableTypes.Contains(field.Type)) return;
 
             var vm = new OptionsEditorViewModel(field, Fields.ToList());
@@ -214,7 +216,30 @@ namespace PautaDinamicaApp.ViewModels
 
             if (selector.ShowDialog() == true)
             {
-                field.DefaultValue = selector.SelectedValue;
+                string val = selector.SelectedValue;
+                if (val == "TODAY")
+                {
+                    val = DateTime.Now.ToString("dd/MM/yyyy");
+                }
+                field.DefaultValue = val;
+            }
+        }
+
+        private void PickTime(FieldDefinition? field)
+        {
+            if (field == null) return;
+
+            var selector = new Views.TimeSelectorWindow(field.DefaultValue, field.TimeFormat);
+            selector.Owner = Application.Current.Windows.OfType<ConfigWindow>().FirstOrDefault();
+
+            if (selector.ShowDialog() == true)
+            {
+                string val = selector.SelectedValue;
+                if (val == "NOW")
+                {
+                    val = DateTime.Now.ToString(field.TimeFormat ?? "HH:mm");
+                }
+                field.DefaultValue = val;
             }
         }
 

@@ -1,5 +1,7 @@
 using System;
 using System.Windows;
+using System.Windows.Input; // Added for ICommand if needed later, though relay command is used.
+using System.Linq; // Added for FirstOrDefault
 
 namespace PautaDinamicaApp.Views
 {

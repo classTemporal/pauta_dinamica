@@ -139,6 +139,7 @@ namespace PautaDinamicaApp.ViewModels
         private bool _isMultiSelectMode;
         private bool _useCustomWeights;
         private string _validationError = "";
+        private string _timeFormat = "HH:mm";
         private bool _internalUpdate;
 
         public FieldDefinition OriginalField { get; }
@@ -149,6 +150,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             OriginalField = field;
             _useCustomWeights = field.UseCustomWeights;
+            _timeFormat = field.TimeFormat;
 
             var wrapped = (field.Options ?? new List<string>()).Select(s => new SelectableOptionVM(s));
             Options = new ObservableCollection<SelectableOptionVM>(wrapped);
@@ -284,6 +286,8 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
         }
+
+        public string TimeFormat { get => _timeFormat; set => SetProperty(ref _timeFormat, value); }
 
         public List<string> ResultOptions => Options.Select(o => o.Text).ToList();
         public List<ScoringRule> ResultRules => CalculationRules.Where(r => r.IsActive).Select(r => new ScoringRule

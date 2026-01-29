@@ -270,7 +270,32 @@
     <DataTemplate x:Key="DateTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
-            <DatePicker SelectedDate="{Binding Value}"/>
+            <Grid>
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Padding="8,5,35,5"/>
+                <Button Command="{Binding PickDateCommand}" 
+                        Background="Transparent" BorderThickness="0"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" Width="30" Height="25"
+                        Cursor="Hand">
+                    <TextBlock Text="📅" Foreground="#94a3b8" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+            </Grid>
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Template para Hora -->
+    <DataTemplate x:Key="TimeTemplate" DataType="{x:Type vm:DynamicFieldVM}">
+        <StackPanel Margin="0,5">
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
+            <Grid>
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Padding="8,5,35,5"/>
+                <Button Command="{Binding PickTimeCommand}" 
+                        Background="Transparent" BorderThickness="0"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" Width="30" Height="25"
+                        Cursor="Hand">
+                    <TextBlock Text="🕒" Foreground="#94a3b8" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+            </Grid>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
         </StackPanel>
     </DataTemplate>

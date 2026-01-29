@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using PautaDinamicaApp.Models;
 
+using System.Windows.Input;
+using System.Linq;
+using System.Windows;
+
 namespace PautaDinamicaApp.ViewModels
 {
     public class DynamicFieldVM : ViewModelBase
@@ -16,6 +20,49 @@ namespace PautaDinamicaApp.ViewModels
         {
             Definition = definition;
             InitializeDefaultValue();
+            PickTimeCommand = new RelayCommand(_ => PickTime());
+            PickDateCommand = new RelayCommand(_ => PickDate());
+        }
+
+        public ICommand PickTimeCommand { get; }
+        public ICommand PickDateCommand { get; }
+
+        private void PickTime()
+        {
+            if (Definition.Type != FieldType.Time) return;
+
+            string currentVal = Value?.ToString() ?? "";
+            var selector = new PautaDinamicaApp.Views.TimeSelectorWindow(currentVal, Definition.TimeFormat ?? "HH:mm");
+            selector.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+
+            if (selector.ShowDialog() == true)
+            {
+                string val = selector.SelectedValue;
+                if (val == "NOW")
+                {
+                    val = DateTime.Now.ToString(Definition.TimeFormat ?? "HH:mm");
+                }
+                Value = val;
+            }
+        }
+
+        private void PickDate()
+        {
+            if (Definition.Type != FieldType.Date) return;
+
+            string currentVal = Value?.ToString() ?? "";
+            var selector = new PautaDinamicaApp.Views.DateSelectorWindow(currentVal);
+            selector.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+
+            if (selector.ShowDialog() == true)
+            {
+                string val = selector.SelectedValue;
+                if (val == "TODAY")
+                {
+                    val = DateTime.Now.ToString("dd/MM/yyyy");
+                }
+                Value = val;
+            }
         }
 
         private void InitializeDefaultValue()
@@ -28,8 +75,16 @@ namespace PautaDinamicaApp.ViewModels
                 }
                 else if (Definition.Type == FieldType.Date)
                 {
-                    if (DateTime.TryParse(Definition.DefaultValue, out DateTime d)) _value = d;
-                    else if (Definition.DefaultValue.Equals("TODAY", StringComparison.OrdinalIgnoreCase)) _value = DateTime.Now;
+                    if (DateTime.TryParse(Definition.DefaultValue, out DateTime d)) _value = d.ToString("dd/MM/yyyy");
+                    else if (Definition.DefaultValue.Equals("TODAY", StringComparison.OrdinalIgnoreCase)) _value = DateTime.Now.ToString("dd/MM/yyyy");
+                    else _value = Definition.DefaultValue;
+                }
+                else if (Definition.Type == FieldType.Time)
+                {
+                    string format = Definition.TimeFormat ?? "HH:mm";
+                    if (DateTime.TryParse(Definition.DefaultValue, out DateTime d)) _value = d.ToString(format);
+                    else if (Definition.DefaultValue.Equals("NOW", StringComparison.OrdinalIgnoreCase)) _value = DateTime.Now.ToString(format);
+                    else _value = Definition.DefaultValue;
                 }
                 else
                 {
@@ -40,7 +95,6 @@ namespace PautaDinamicaApp.ViewModels
             {
                 // Fallbacks if no default is specified
                 if (Definition.Type == FieldType.Boolean) _value = false;
-                else if (Definition.Type == FieldType.Date) _value = DateTime.Now;
                 else _value = null;
             }
         }

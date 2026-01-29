@@ -12,6 +12,7 @@ namespace PautaDinamicaApp.Views
         public DataTemplate? BooleanTemplate { get; set; }
         public DataTemplate? DropdownTemplate { get; set; }
         public DataTemplate? DateTemplate { get; set; }
+        public DataTemplate? TimeTemplate { get; set; }
         public DataTemplate? SeparatorTemplate { get; set; }
         public DataTemplate? CalculationTemplate { get; set; }
         public DataTemplate? AverageTemplate { get; set; }
@@ -27,6 +28,7 @@ namespace PautaDinamicaApp.Views
                     FieldType.Boolean => BooleanTemplate,
                     FieldType.Dropdown => DropdownTemplate,
                     FieldType.Date => DateTemplate,
+                    FieldType.Time => TimeTemplate,
                     FieldType.Separator => SeparatorTemplate,
                     FieldType.Calculation => CalculationTemplate,
                     FieldType.Average => AverageTemplate,

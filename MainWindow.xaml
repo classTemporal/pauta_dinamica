@@ -34,6 +34,7 @@
                 BooleanTemplate="{StaticResource BooleanTemplate}"
                 DropdownTemplate="{StaticResource DropdownTemplate}"
                 DateTemplate="{StaticResource DateTemplate}"
+                TimeTemplate="{StaticResource TimeTemplate}"
                 SeparatorTemplate="{StaticResource SeparatorTemplate}"
                 CalculationTemplate="{StaticResource CalculationTemplate}"
                 AverageTemplate="{StaticResource AverageTemplate}"/>

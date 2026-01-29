@@ -11,6 +11,7 @@ namespace PautaDinamicaApp.Models
         Text,
         Numeric,
         Date,
+        Time,
         Boolean,
         Dropdown,
         Separator,
@@ -46,6 +47,7 @@ namespace PautaDinamicaApp.Models
         private bool _useCustomWeights;
         private string _defaultValue = string.Empty;
         private bool _keepValueOnReset;
+        private string _timeFormat = "HH:mm";
 
         public string Id { get => _id; set { _id = value; OnPropertyChanged(); } }
         public string Label { get => _label; set { _label = value; OnPropertyChanged(); } }
@@ -55,6 +57,7 @@ namespace PautaDinamicaApp.Models
         public bool IsRequired { get => _isRequired; set { _isRequired = value; OnPropertyChanged(); } }
         public List<string> Options { get => _options; set { _options = value; OnPropertyChanged(); } }
         public string DefaultValue { get => _defaultValue; set { _defaultValue = value; OnPropertyChanged(); } }
+        public string TimeFormat { get => _timeFormat; set { _timeFormat = value; OnPropertyChanged(); } }
         public bool KeepValueOnReset { get => _keepValueOnReset; set { _keepValueOnReset = value; OnPropertyChanged(); } }
 
         [System.Text.Json.Serialization.JsonIgnore]

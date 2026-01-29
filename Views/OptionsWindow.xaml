@@ -176,6 +176,48 @@
                     </Border>
                 </DockPanel>
             </Grid>
+
+            <!-- VISTA D: FORMATO DE HORA (TIME) -->
+            <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Time:Visible|Default:Collapsed'}">
+                <StackPanel Margin="0,20">
+                    <TextBlock Text="CONFIGURACIÓN DE FORMATO DE HORA" FontWeight="Bold" Foreground="#007bff" Margin="0,0,0,20"/>
+                    <Border Background="#1e222d" CornerRadius="8" Padding="20" BorderBrush="#2d3446" BorderThickness="1">
+                        <StackPanel>
+                            <RadioButton IsChecked="{Binding TimeFormat, Converter={StaticResource DictConverter}, ConverterParameter='HH:mm:True|Default:False'}" 
+                                         GroupName="TimeFormat" Margin="0,0,0,15">
+                                <RadioButton.Style>
+                                    <Style TargetType="RadioButton">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <StackPanel>
+                                                    <TextBlock Text="24 Horas" Foreground="White" FontSize="16" FontWeight="Bold"/>
+                                                    <TextBlock Text="Ejemplo: 14:30" Foreground="#94a3b8" FontSize="12"/>
+                                                </StackPanel>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </RadioButton.Style>
+                            </RadioButton>
+
+                            <RadioButton IsChecked="{Binding TimeFormat, Converter={StaticResource DictConverter}, ConverterParameter='hh:mm tt:True|Default:False'}" 
+                                         GroupName="TimeFormat">
+                                <RadioButton.Style>
+                                    <Style TargetType="RadioButton">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <StackPanel>
+                                                    <TextBlock Text="AM / PM" Foreground="White" FontSize="16" FontWeight="Bold"/>
+                                                    <TextBlock Text="Ejemplo: 02:30 PM" Foreground="#94a3b8" FontSize="12"/>
+                                                </StackPanel>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </RadioButton.Style>
+                            </RadioButton>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <!-- Pie de Pagina -->

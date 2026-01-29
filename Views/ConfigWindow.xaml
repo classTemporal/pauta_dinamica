@@ -266,6 +266,9 @@
                                                 <DataTrigger Binding="{Binding Type}" Value="Separator">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="Time">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Button.Style>
@@ -291,6 +294,12 @@
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Type}" Value="Numeric">
                                                         <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Type}" Value="Date">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Type}" Value="Time">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -413,6 +422,51 @@
                                                 </TextBlock.Style>
                                             </TextBlock>
                                             <TextBlock Grid.Column="1" Text="📅" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Button>
+
+                                    <!-- TIME: Selector -->
+                                    <Button Command="{Binding DataContext.PickTimeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Background="#2d3446" BorderBrush="#3d4456" BorderThickness="1"
+                                            Height="30" VerticalAlignment="Center" Padding="8,0"
+                                            ToolTip="Click para configurar hora automática">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Type}" Value="Time">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <Grid HorizontalAlignment="Stretch">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding DefaultValue}"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding DefaultValue}" Value="">
+                                                                <Setter Property="Text" Value="(Ninguno)"/>
+                                                                <Setter Property="FontStyle" Value="Italic"/>
+                                                                <Setter Property="Opacity" Value="0.6"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding DefaultValue}" Value="{x:Null}">
+                                                                <Setter Property="Text" Value="(Ninguno)"/>
+                                                                <Setter Property="FontStyle" Value="Italic"/>
+                                                                <Setter Property="Opacity" Value="0.6"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Grid.Column="1" Text="🕒" Margin="5,0,0,0" VerticalAlignment="Center"/>
                                         </Grid>
                                     </Button>
                                 </Grid>
