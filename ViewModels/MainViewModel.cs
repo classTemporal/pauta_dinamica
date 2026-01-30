@@ -106,22 +106,87 @@ namespace PautaDinamicaApp.ViewModels
                 using (var workbook = new XLWorkbook())
                 {
                     var worksheet = workbook.Worksheets.Add("Auditoría");
-                    worksheet.Cell(1, 1).Value = "Fecha";
-                    var fields = CurrentFields.ToList();
-                    for (int i = 0; i < fields.Count; i++) worksheet.Cell(1, i + 2).Value = fields[i].Label;
 
+                    // --- CABECERAS ---
+                    var fields = CurrentFields.ToList();
+                    for (int i = 0; i < fields.Count; i++)
+                    {
+                        worksheet.Cell(1, i + 1).Value = fields[i].Label;
+                    }
+
+                    // --- DATOS ---
                     int row = 2;
                     foreach (var entry in data)
                     {
-                        worksheet.Cell(row, 1).Value = entry.Timestamp.ToString("g");
-                        int col = 2;
+                        int col = 1;
                         foreach (var f in fields)
                         {
                             if (entry.Values.TryGetValue(f.Id, out var val))
                             {
                                 string strVal = val?.ToString() ?? "";
                                 var cell = worksheet.Cell(row, col);
-                                cell.Value = strVal;
+
+                                // --- TIPADO DINÁMICO MEJORADO ---
+                                if (f.Type == FieldType.Boolean)
+                                {
+                                    // Boolean como número (1/0) con formato Entero
+                                    if (bool.TryParse(strVal, out bool boolVal))
+                                    {
+                                        cell.Value = boolVal ? 1 : 0;
+                                        cell.Style.NumberFormat.Format = "0";
+                                    }
+                                    else
+                                        cell.Value = strVal;
+                                }
+                                else if (f.Type == FieldType.Numeric || f.Type == FieldType.Calculation || f.Type == FieldType.Average)
+                                {
+                                    // Detectar porcentaje
+                                    if (strVal.Contains("%"))
+                                    {
+                                        string cleanVal = strVal.Replace("%", "").Trim();
+                                        if (double.TryParse(cleanVal, out double pctVal))
+                                        {
+                                            cell.Value = pctVal / 100.0;
+                                            cell.Style.NumberFormat.Format = "0.0%";
+                                        }
+                                        else cell.Value = strVal;
+                                    }
+                                    else
+                                    {
+                                        // Número puro forzado a 'Número' (2 decimales)
+                                        if (double.TryParse(strVal, out double numVal))
+                                        {
+                                            cell.Value = numVal;
+                                            cell.Style.NumberFormat.Format = "0.00";
+                                        }
+                                        else
+                                            cell.Value = strVal;
+                                    }
+                                }
+                                else if (f.Type == FieldType.Date)
+                                {
+                                    // Fecha real
+                                    if (DateTime.TryParse(strVal, out DateTime dateVal))
+                                        cell.Value = dateVal;
+                                    else
+                                        cell.Value = strVal;
+                                }
+                                else if (f.Type == FieldType.Time)
+                                {
+                                    // Tiempo: Usar TimeSpan para eliminar la fecha y los sufijos AM/PM del valor subyacente
+                                    if (DateTime.TryParse(strVal, out DateTime timeVal))
+                                    {
+                                        cell.Value = timeVal.TimeOfDay;
+                                        cell.Style.NumberFormat.Format = "HH:mm:ss";
+                                    }
+                                    else
+                                        cell.Value = strVal;
+                                }
+                                else
+                                {
+                                    // Texto por defecto
+                                    cell.Value = strVal;
+                                }
 
                                 if (f.Type == FieldType.TextArea || strVal.Contains("\n"))
                                 {
@@ -139,7 +204,7 @@ namespace PautaDinamicaApp.ViewModels
                     }
                     workbook.SaveAs(filePath);
                 }
-                if (!silent) MessageBox.Show("Exportación a Excel exitosa.");
+                if (!silent) MessageBox.Show($"Exportación a Excel exitosa en:\n{filePath}");
                 return true;
             }
             catch (Exception ex)
@@ -535,8 +600,32 @@ namespace PautaDinamicaApp.ViewModels
             if (record == null) return;
             foreach (var field in CurrentFields)
             {
-                if (record.Values.TryGetValue(field.Id, out var value)) field.Value = value;
-                else field.Value = null;
+                if (record.Values.TryGetValue(field.Id, out var value))
+                {
+                    // FIX: Desempaquetar JsonElement para evitar errores de binding (especialmente en CheckBox)
+                    if (value is System.Text.Json.JsonElement element)
+                    {
+                        switch (element.ValueKind)
+                        {
+                            case System.Text.Json.JsonValueKind.True: field.Value = true; break;
+                            case System.Text.Json.JsonValueKind.False: field.Value = false; break;
+                            case System.Text.Json.JsonValueKind.String: field.Value = element.GetString(); break;
+                            case System.Text.Json.JsonValueKind.Number:
+                                if (element.TryGetDouble(out double d)) field.Value = d;
+                                else field.Value = element.ToString();
+                                break;
+                            default: field.Value = element.ToString(); break;
+                        }
+                    }
+                    else
+                    {
+                        field.Value = value;
+                    }
+                }
+                else
+                {
+                    field.Value = null;
+                }
             }
         }
 
