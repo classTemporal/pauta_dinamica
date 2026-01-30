@@ -12,6 +12,11 @@
     <SolidColorBrush x:Key="InputBackground" Color="#ffffff"/>
     <SolidColorBrush x:Key="InputBorder" Color="#94a3b8"/>
     <SolidColorBrush x:Key="CaretBrush" Color="#0f172a"/>
+
+    <SolidColorBrush x:Key="SuccessBrush" Color="#16a34a"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#dc2626"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#d97706"/>
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#94a3b8"/>
     
     <!-- En modo claro, mostramos la luna para cambiar a oscuro -->
     <Geometry x:Key="ThemeToggleIcon">M21,12.79A9,9 0 1,1 11.21,3 7,7 0 0,0 21,12.79Z</Geometry>

@@ -12,7 +12,18 @@ namespace PautaDinamicaApp
             // Load and apply theme
             var storage = new StorageService();
             var settings = storage.LoadSettings();
-            new ThemeService().SetTheme(settings.Theme);
+            var themeService = new ThemeService();
+
+            themeService.SetTheme(settings.Theme);
+
+            // Ensure all future windows apply the correct title bar theme when loaded
+            EventManager.RegisterClassHandler(typeof(Window), Window.LoadedEvent, new RoutedEventHandler((s, args) =>
+            {
+                if (s is Window window)
+                {
+                    themeService.ApplyThemeToWindow(window, ThemeService.CurrentTheme);
+                }
+            }));
         }
     }
 }

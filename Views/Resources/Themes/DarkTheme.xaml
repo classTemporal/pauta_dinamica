@@ -12,6 +12,11 @@
     <SolidColorBrush x:Key="InputBackground" Color="#2d3446"/>
     <SolidColorBrush x:Key="InputBorder" Color="#3d4456"/>
     <SolidColorBrush x:Key="CaretBrush" Color="#ffffff"/>
+
+    <SolidColorBrush x:Key="SuccessBrush" Color="#10b981"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#ef4444"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#f59e0b"/>
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#64748b"/>
     
     <!-- En modo oscuro, mostramos el sol para cambiar a claro -->
     <Geometry x:Key="ThemeToggleIcon">M12,7L14,5L16,7L19,7L19,10L21,12L19,14L19,17L16,17L14,19L12,17L10,19L8,17L5,17L5,14L3,12L5,10L5,7L8,7L10,5L12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z</Geometry>

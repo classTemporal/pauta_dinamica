@@ -57,6 +57,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ShowHelpCommand { get; }
         public ICommand ShowGeneralHelpCommand { get; }
         public ICommand LogoutCommand { get; }
+        public ICommand ToggleThemeCommand { get; }
         public UserModel? CurrentUser => SessionService.CurrentUser;
 
         public MainViewModel()
@@ -89,7 +90,17 @@ namespace PautaDinamicaApp.ViewModels
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
             ShowGeneralHelpCommand = new RelayCommand(_ => ShowGeneralHelp());
             LogoutCommand = new RelayCommand(_ => Logout());
+            ToggleThemeCommand = new RelayCommand(_ => ToggleTheme());
         }
+
+        private void ToggleTheme()
+        {
+            var settings = _storageService.LoadSettings();
+            settings.Theme = settings.Theme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
+            _storageService.SaveSettings(settings);
+            new ThemeService().SetTheme(settings.Theme);
+        }
+
 
         private void Logout()
         {

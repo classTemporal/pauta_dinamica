@@ -9,40 +9,14 @@
         mc:Ignorable="d"
         Title="Configuración General" Height="650" Width="650"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Background="#1e222d">
+        Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
 
     <Window.Resources>
         <Style TargetType="TextBlock" x:Key="LabelStyle">
-            <Setter Property="Foreground" Value="#e2e8f0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,0,5"/>
-        </Style>
-        <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="8,5"/>
-            <Setter Property="Background" Value="#2a303c"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#475569"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-        <Style TargetType="Button">
-            <Setter Property="Background" Value="#3b82f6"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Style.Resources>
-                <Style TargetType="Border">
-                    <Setter Property="CornerRadius" Value="4"/>
-                </Style>
-            </Style.Resources>
-        </Style>
-        <Style TargetType="ComboBox">
-            <Setter Property="Background" Value="#2a303c"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="5"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -57,30 +31,14 @@
         </Grid.RowDefinitions>
 
         <TabControl Background="Transparent" BorderThickness="0" Margin="10">
-            <TabControl.Resources>
-                <Style TargetType="TabItem">
-                    <Setter Property="HeaderTemplate">
-                        <Setter.Value>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="14" FontWeight="Bold" Margin="10,5"/>
-                            </DataTemplate>
-                        </Setter.Value>
-                    </Setter>
-                    <Setter Property="Foreground" Value="#94a3b8"/>
-                    <Style.Triggers>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Foreground" Value="#3b82f6"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </TabControl.Resources>
+            <!-- Global styles for TabControl and TabItem from Styles.xaml will be used implicitly -->
 
             <!-- TAB RUTAS -->
             <TabItem Header="Rutas">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <Border Padding="15">
                         <StackPanel>
-                            <TextBlock Text="Rutas Predeterminadas" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="#3b82f6"/>
+                            <TextBlock Text="Rutas Predeterminadas" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
 
                             <TextBlock Text="Carpeta para Exportaciones Excel:" Style="{StaticResource LabelStyle}"/>
                             <Grid Margin="0,0,0,15">
@@ -89,7 +47,8 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{Binding Settings.ExcelExportPath}" IsReadOnly="True"/>
-                                <Button Grid.Column="1" Content="..." Command="{Binding BrowseExcelPathCommand}" Margin="5,0,0,0" Width="40" Padding="0"/>
+                                <Button Grid.Column="1" Content="..." Command="{Binding BrowseExcelPathCommand}" 
+                                        Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Width="45" Height="36"/>
                             </Grid>
 
                             <TextBlock Text="Carpeta para Respaldos (JSON):" Style="{StaticResource LabelStyle}"/>
@@ -99,7 +58,8 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{Binding Settings.JsonBackupPath}" IsReadOnly="True"/>
-                                <Button Grid.Column="1" Content="..." Command="{Binding BrowseJsonPathCommand}" Margin="5,0,0,0" Width="40" Padding="0"/>
+                                <Button Grid.Column="1" Content="..." Command="{Binding BrowseJsonPathCommand}" 
+                                        Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Width="45" Height="36"/>
                             </Grid>
 
                             <TextBlock Text="Carpeta para Reportes PDF:" Style="{StaticResource LabelStyle}"/>
@@ -109,26 +69,27 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{Binding Settings.PdfReportPath}" IsReadOnly="True"/>
-                                <Button Grid.Column="1" Content="..." Command="{Binding BrowsePdfPathCommand}" Margin="5,0,0,0" Width="40" Padding="0"/>
+                                <Button Grid.Column="1" Content="..." Command="{Binding BrowsePdfPathCommand}" 
+                                        Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Width="45" Height="36"/>
                             </Grid>
 
-                            <Separator Background="#3d4456" Margin="0,10,0,20"/>
+                            <Separator Background="{DynamicResource BorderBrush}" Margin="0,10,0,20"/>
 
-                            <TextBlock Text="Resaltado de Filas (Visual)" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="#ffc107"/>
-                            <Border Background="#262b38" BorderBrush="#3d4456" BorderThickness="1" CornerRadius="8" Padding="15">
+                            <TextBlock Text="Resaltado de Filas (Visual)" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
                                 <StackPanel>
                                     <TextBlock Text="1. Seleccione una Pauta para ver sus campos:" Style="{StaticResource LabelStyle}"/>
                                     <ComboBox ItemsSource="{Binding Pautas}" 
                                               SelectedItem="{Binding SelectedPauta}"
                                               DisplayMemberPath="Name"
-                                              Margin="0,0,0,15" Height="35" Background="#363d4d"/>
+                                              Margin="0,0,0,15" Height="35"/>
 
                                     <TextBlock Text="2. Si el campo con este Nombre:" Style="{StaticResource LabelStyle}"/>
                                     <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
                                               SelectedValue="{Binding Settings.ColoringField}"
                                               SelectedValuePath="Label"
                                               DisplayMemberPath="Label"
-                                              Margin="0,0,0,15" Height="35" Background="#363d4d"
+                                              Margin="0,0,0,15" Height="35"
                                               IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
 
                                     <TextBlock Text="3. Tiene este Valor Exacto:" Style="{StaticResource LabelStyle}"/>
@@ -141,7 +102,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBox Text="{Binding Settings.ColoringColor}" Margin="0,0,10,0" VerticalAlignment="Center" ToolTip="Código Hexadecimal"/>
-                                        <Button Grid.Column="1" Command="{Binding PickColorCommand}" Background="Transparent" Padding="0" BorderThickness="0">
+                                        <Button Grid.Column="1" Command="{Binding PickColorCommand}" Background="Transparent" Padding="0" BorderThickness="0" Height="36">
                                             <Border Width="60" Height="32" CornerRadius="4" BorderThickness="1" BorderBrush="White">
                                                 <Border.Background>
                                                     <SolidColorBrush Color="{Binding Settings.ColoringColor, FallbackValue=#28a745}"/>
@@ -149,7 +110,7 @@
                                             </Border>
                                         </Button>
                                     </Grid>
-                                    <TextBlock Text="Tip: Haga clic en el cuadro de color para abrir el selector visual." FontSize="11" Foreground="#94a3b8" FontStyle="Italic" Margin="0,5,0,0"/>
+                                    <TextBlock Text="Tip: Haga clic en el cuadro de color para abrir el selector visual." FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="0,5,0,0"/>
                                 </StackPanel>
                             </Border>
 
@@ -165,17 +126,17 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <Border Padding="15">
                         <StackPanel>
-                            <TextBlock Text="Configurar Envío por Pauta" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="#10b981"/>
+                            <TextBlock Text="Configurar Envío por Pauta" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
                             
                             <!-- Selector de Pauta -->
                             <TextBlock Text="1. Seleccione la Pauta a Configurar:" Style="{StaticResource LabelStyle}"/>
                             <ComboBox ItemsSource="{Binding Pautas}" 
                                       SelectedItem="{Binding SelectedPauta}"
                                       DisplayMemberPath="Name"
-                                      Margin="0,0,0,20" Height="40" Background="#3d4456">
+                                      Margin="0,0,0,20" Height="40">
                             </ComboBox>
 
-                            <Separator Background="#3d4456" Margin="0,0,0,20"/>
+                            <Separator Background="{DynamicResource BorderBrush}" Margin="0,0,0,20"/>
 
                             <StackPanel>
                                 <StackPanel.Style>
@@ -189,7 +150,7 @@
                                     </Style>
                                 </StackPanel.Style>
 
-                                <TextBlock Text="{Binding SelectedPauta.Name, StringFormat='2. Configuración para: {0}'}" FontSize="14" FontWeight="Bold" Foreground="#e2e8f0" Margin="0,0,0,15"/>
+                                <TextBlock Text="{Binding SelectedPauta.Name, StringFormat='2. Configuración para: {0}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15"/>
 
                                 <TextBlock Text="Método de Envío:" Style="{StaticResource LabelStyle}"/>
                                 <ComboBox ItemsSource="{Binding EmailMethods}" 
@@ -197,13 +158,13 @@
                                           Margin="0,0,0,15" Height="35"/>
 
                                 <!-- Detección Automática Compacta -->
-                                <Border Background="#1e222d" BorderBrush="#3d4456" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
                                     <StackPanel>
                                         <Grid>
-                                            <TextBlock Text="Detección Automática de Destinatario" FontSize="14" FontWeight="Bold" Foreground="#e2e8f0" VerticalAlignment="Center"/>
-                                            <CheckBox IsChecked="{Binding SelectedPauta.UseAutomatedRecipient}" Content="Activar" Foreground="#94a3b8" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Detección Automática de Destinatario" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                            <CheckBox IsChecked="{Binding SelectedPauta.UseAutomatedRecipient}" Content="Activar" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                         </Grid>
-                                        <TextBlock Text="Asocia nombres de agentes con sus correos electrónicos automáticamente." FontSize="11" Foreground="#94a3b8" Margin="0,5,0,10"/>
+                                        <TextBlock Text="Asocia nombres de agentes con sus correos electrónicos automáticamente." FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
                                         
                                         <Button Content="⚙️ CONFIGURAR DIRECTORIO Y CAMPO" 
                                                 Command="{Binding OpenEmailDirectoryCommand}"
@@ -227,36 +188,36 @@
                                          AcceptsReturn="True" Height="100" VerticalContentAlignment="Top" TextWrapping="Wrap"/>
 
                                 <!-- Reglas de Envío (Movidas desde ConfigWindow) -->
-                                <TextBlock Text="Reglas de Envío (Exclusión)" FontSize="14" FontWeight="Bold" Foreground="#ef4444" Margin="0,10,0,10"/>
-                                <Border Background="#262b38" BorderBrush="#3d4456" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                                <TextBlock Text="Reglas de Envío (Exclusión)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,10,0,10"/>
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
                                     <StackPanel>
                                         <TextBlock Text="No enviar correo si el campo..." Style="{StaticResource LabelStyle}"/>
                                         <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
                                                   SelectedValue="{Binding SelectedPauta.ExcludeByFieldId}"
                                                   SelectedValuePath="Id"
                                                   DisplayMemberPath="Label"
-                                                  Margin="0,0,0,10" Height="35" Background="#3d4456"/>
+                                                  Margin="0,0,0,10" Height="35"/>
                                         
                                         <TextBlock Text="...tiene exactamente este valor:" Style="{StaticResource LabelStyle}"/>
                                         <TextBox Text="{Binding SelectedPauta.ExcludeByFieldValue}" Margin="0,0,0,5"/>
                                         <TextBlock Text="Ejemplo: Excluir si 'Calificación' tiene el valor '100%'" 
-                                                   FontSize="11" Foreground="#94a3b8" FontStyle="Italic"/>
+                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic"/>
                                     </StackPanel>
                                 </Border>
 
-                                <Border Background="#2d3446" Padding="10" CornerRadius="4">
+                                <Border Background="{DynamicResource CardBackgroundBrush}" Padding="10" CornerRadius="4" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                     <StackPanel>
-                                        <TextBlock Text="💡 Tip sobre Placeholders:" FontWeight="Bold" Foreground="#3b82f6" Margin="0,0,0,5"/>
+                                        <TextBlock Text="💡 Tip sobre Placeholders:" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,5"/>
                                         <TextBlock Text="Puedes usar [Nombre del Campo] para insertar datos del registro automáticamente." 
-                                                   FontSize="11" Foreground="#94a3b8" TextWrapping="Wrap"/>
+                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap"/>
                                         <TextBlock Text="Ejemplo: [Nombre del Agente], [Ticket], [Calificación]" 
-                                                   FontSize="11" Foreground="#94a3b8" Margin="0,3,0,0"/>
+                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,3,0,0"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
 
                             <TextBlock Text="No hay pautas disponibles para configurar." 
-                                       Foreground="#94a3b8" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,20,0,0">
+                                       Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,20,0,0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -274,10 +235,10 @@
             </TabItem>
         </TabControl>
 
-        <Border Grid.Row="1" Background="#1e222d" Padding="20,10" BorderBrush="#3d4456" BorderThickness="0,1,0,0">
+        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" Padding="30,15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancelar" Command="{Binding CancelCommand}" Background="#64748b" Margin="0,0,10,0" Width="100" Padding="0"/>
-                <Button Content="Guardar cambios" Command="{Binding SaveCommand}" Background="#10b981" Width="140" Padding="0"/>
+                <Button Content="Cancelar" Command="{Binding CancelCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,15,0" Width="120" Height="45"/>
+                <Button Content="💾 Guardar cambios" Command="{Binding SaveCommand}" Style="{StaticResource SuccessButton}" Width="190" Height="45" FontSize="15"/>
             </StackPanel>
         </Border>
     </Grid>

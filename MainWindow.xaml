@@ -70,7 +70,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Left: Title -->
-                <TextBlock Grid.Column="0" Text="Sistema de Registro de Llamadas" Foreground="{DynamicResource TextBrush}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                <TextBlock Grid.Column="0" Text="Sistema de Registro de Llamadas" Foreground="{DynamicResource AccentBrush}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,20,0"/>
                 
                 <!-- Center: Pauta Selector -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
@@ -129,8 +129,8 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsEditMode}" Value="True">
                                         <Setter Property="Content" Value="💾 Actualizar Registro"/>
-                                        <Setter Property="Background" Value="#ffc107"/>
-                                        <Setter Property="Foreground" Value="Black"/>
+                                        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource BackgroundBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -192,8 +192,8 @@
                                 <Button Content="✔️ Seleccionar Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
                                 <Button Content="📧 Enviar Multiples" Command="{Binding SendEmailsCommand}" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
                                 <Button Content="📄 Generar PDF" Command="{Binding GenerateSelectedPdfCommand}" Style="{StaticResource SecondaryButton}" Background="#DC3545" Margin="0,5,10,5"/>
-                                <Button Content="🗑️ Borrar Seleccionados" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,5,10,5"/>
-                                <Button Content="📊 Exportar Seleccionados" Command="{Binding ExportSelectedCommand}" Style="{StaticResource ExcelButton}" Margin="0,5,10,5"/>
+                                <Button Content="� Exportar Seleccionados" Command="{Binding ExportSelectedCommand}" Style="{StaticResource ExcelButton}" Margin="0,5,10,5"/>
+                                <Button Content="�️ Borrar Seleccionados" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,5,10,5"/>
                                 <Button Content="❌ Cancelar" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Margin="10,5,0,5" Padding="12,8"/>
                             </WrapPanel>
                         </Border>

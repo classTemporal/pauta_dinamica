@@ -4,7 +4,7 @@
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
         Title="Gestor de Configuraciones" Height="650" Width="600"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
-        Background="#12151c" Foreground="#e1e1e1">
+        Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
     
     <Window.Resources>
     </Window.Resources>
@@ -18,13 +18,13 @@
 
         <!-- Cabecera -->
         <StackPanel Grid.Row="0" Margin="0,0,0,15">
-            <TextBlock Text="Configuración Avanzada" FontSize="20" FontWeight="Bold" Foreground="White"/>
+            <TextBlock Text="Configuración Avanzada" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                <TextBlock Text="Campo: " FontSize="12" Foreground="#94a3b8"/>
-                <TextBlock Text="{Binding OriginalField.Label}" FontSize="12" Foreground="#007bff" FontWeight="Bold"/>
-                <TextBlock Text=" (" FontSize="12" Foreground="#94a3b8"/>
-                <TextBlock Text="{Binding OriginalField.Type}" FontSize="12" Foreground="#94a3b8"/>
-                <TextBlock Text=")" FontSize="12" Foreground="#94a3b8"/>
+                <TextBlock Text="Campo: " FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                <TextBlock Text="{Binding OriginalField.Label}" FontSize="12" Foreground="{DynamicResource TextBrush}" FontWeight="Bold"/>
+                <TextBlock Text=" (" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                <TextBlock Text="{Binding OriginalField.Type}" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                <TextBlock Text=")" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
             </StackPanel>
         </StackPanel>
 
@@ -37,11 +37,11 @@
                     <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                     Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
-                            <Button Content="📥 Importar" Command="{Binding ImportOptionsCommand}" Style="{StaticResource SecondaryButton}" Padding="10,5" FontSize="11" Margin="0,0,5,0" Background="#6f42c1"/>
+                            <Button Content="📥 Importar" Command="{Binding ImportOptionsCommand}" Style="{StaticResource SecondaryButton}" Padding="10,5" FontSize="11" Margin="0,0,5,0"/>
                             <Button Content="📊 Exportar" Command="{Binding ExportOptionsCommand}" Style="{StaticResource ExcelButton}" Padding="10,5" FontSize="11" Margin="0,0,5,0"/>
-                            <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource SecondaryButton}" Padding="10,5" FontSize="11"/>
+                            <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Padding="10,5" FontSize="11"/>
                         </StackPanel>
-                        <Border Background="#3d4456" CornerRadius="4" Padding="5" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="4" Padding="5" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                 <Button Content="✔️ Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,5,0" Padding="8,4" FontSize="11"/>
                                 <Button Content="🗑️ Borrar" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,0,5,0" Padding="8,4" FontSize="11"/>
@@ -50,18 +50,18 @@
                         </Border>
                     </Grid>
                     <StackPanel DockPanel.Dock="Bottom" Margin="0,15,0,0">
-                        <TextBlock Text="Agregar Nueva Opción" FontSize="11" Foreground="#94a3b8" Margin="0,0,0,5"/>
+                        <TextBlock Text="Agregar Nueva Opción" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,5"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox Text="{Binding NewOptionText, UpdateSourceTrigger=PropertyChanged}" Height="40" Background="#262b38" BorderBrush="#3d4456" Padding="12,0" VerticalContentAlignment="Center"/>
+                            <TextBox Text="{Binding NewOptionText, UpdateSourceTrigger=PropertyChanged}" Height="40" VerticalContentAlignment="Center"/>
                             <Button Grid.Column="1" Content="AGREGAR" Command="{Binding AddOptionCommand}" Style="{StaticResource PrimaryButton}" Margin="10,0,0,0" Padding="20,0"/>
                         </Grid>
                     </StackPanel>
-                    <Border Background="#1e222d" CornerRadius="8" Padding="10" BorderBrush="#2d3446" BorderThickness="1">
-                        <ListBox ItemsSource="{Binding Options}" Background="Transparent" BorderThickness="0">
+                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <ListBox ItemsSource="{Binding Options}" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,2">
@@ -71,7 +71,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <CheckBox IsChecked="{Binding IsSelected}" Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Text}" Foreground="White" VerticalAlignment="Center" FontSize="14"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Text}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" FontSize="14"/>
                                         <Button Grid.Column="2" Content="ELIMINAR" Command="{Binding DataContext.RemoveOptionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource DangerButton}" Padding="10,4" FontSize="10"
                                                 Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
                                     </Grid>
@@ -91,10 +91,10 @@
                         <TextBlock Text="{Binding ValidationError}" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center"/>
                     </Border>
 
-                    <Border DockPanel.Dock="Top" Background="#262b38" CornerRadius="6" Padding="12" Margin="0,0,0,15">
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="6" Padding="12" Margin="0,0,0,15">
                         <StackPanel>
-                            <TextBlock Text="REGLAS DE EVALUACIÓN" FontWeight="Bold" Foreground="#28a745" Margin="0,0,0,8"/>
-                            <CheckBox IsChecked="{Binding UseCustomWeights}" Content="Activar Porcentajes Personalizados (Distribución sobre 100%)" Foreground="#94a3b8" FontSize="12"/>
+                            <TextBlock Text="REGLAS DE EVALUACIÓN" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,0,8"/>
+                            <CheckBox IsChecked="{Binding UseCustomWeights}" Content="Activar Porcentajes Personalizados (Distribución sobre 100%)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
                         </StackPanel>
                     </Border>
 
@@ -102,16 +102,16 @@
                         <ItemsControl ItemsSource="{Binding CalculationRules}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#1e222d" CornerRadius="8" Padding="12" Margin="0,0,0,10" BorderBrush="#3d4456" BorderThickness="1">
+                                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="12" Margin="0,0,0,10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                         <StackPanel>
                                             <Grid Margin="0,0,0,10">
                                                 <CheckBox IsChecked="{Binding IsActive}" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding FieldLabel}" Foreground="White" FontWeight="Bold" FontSize="13"/>
+                                                    <TextBlock Text="{Binding FieldLabel}" Foreground="{DynamicResource TextBrush}" FontWeight="Bold" FontSize="13"/>
                                                 </CheckBox>
                                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="N/A:" Foreground="#94a3b8" VerticalAlignment="Center" FontSize="11" Margin="0,0,5,0"/>
+                                                    <TextBlock Text="N/A:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" FontSize="11" Margin="0,0,5,0"/>
                                                     <TextBox Text="{Binding NaValue, UpdateSourceTrigger=PropertyChanged}" Width="60" Height="25" FontSize="10" Padding="5,0" VerticalContentAlignment="Center"/>
-                                                    <TextBlock Text="Contribución %:" Foreground="#94a3b8" VerticalAlignment="Center" FontSize="11" Margin="10,0,5,0" IsEnabled="{Binding DataContext.UseCustomWeights, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                    <TextBlock Text="Contribución %:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" FontSize="11" Margin="10,0,5,0" IsEnabled="{Binding DataContext.UseCustomWeights, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                                     <TextBox Text="{Binding PercentageText, UpdateSourceTrigger=PropertyChanged}" Width="40" Height="25" FontSize="10" Padding="5,0" VerticalContentAlignment="Center" IsEnabled="{Binding DataContext.UseCustomWeights, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                                 </StackPanel>
                                             </Grid>
@@ -125,20 +125,20 @@
                                                         <Border CornerRadius="4" Padding="8,4" Margin="0,0,8,8">
                                                             <Border.Style>
                                                                 <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="#2d3446"/>
+                                                                    <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding IsDisabled}" Value="True">
-                                                                            <Setter Property="Background" Value="#1a1d26"/>
+                                                                            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
                                                                             <Setter Property="Opacity" Value="0.5"/>
                                                                         </DataTrigger>
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
                                                             <StackPanel Orientation="Horizontal">
-                                                                <TextBlock Text="{Binding Value}" Foreground="White" FontSize="11" VerticalAlignment="Center" MaxWidth="120" TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Text=" → " Foreground="#94a3b8" VerticalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding Value}" Foreground="{DynamicResource TextBrush}" FontSize="11" VerticalAlignment="Center" MaxWidth="120" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text=" → " Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
                                                                 <TextBox Text="{Binding ScoreText, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsDisabled, Converter={StaticResource DictConverter}, ConverterParameter='True:False|False:True'}"
-                                                                         Width="40" Height="22" FontSize="10" Background="#12151c" BorderThickness="0" Padding="3,0" VerticalContentAlignment="Center" Foreground="#007bff" FontWeight="Bold"/>
+                                                                         Width="40" Height="22" FontSize="10" Padding="3,0" VerticalContentAlignment="Center" FontWeight="Bold"/>
                                                             </StackPanel>
                                                         </Border>
                                                     </DataTemplate>
@@ -156,13 +156,13 @@
             <!-- VISTA C: PROMEDIO (AVERAGE) -->
             <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Average:Visible|Default:Collapsed'}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="SELECCIONAR CÁLCULOS PARA PROMEDIAR" FontWeight="Bold" Foreground="#6f42c1" Margin="0,0,0,15"/>
-                    <Border Background="#1e222d" CornerRadius="8" Padding="15">
+                    <TextBlock DockPanel.Dock="Top" Text="SELECCIONAR CÁLCULOS PARA PROMEDIAR" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" Margin="0,0,0,15"/>
+                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="15">
                         <ListBox ItemsSource="{Binding AverageTargets}" Background="Transparent" BorderThickness="0">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <CheckBox IsChecked="{Binding IsSelected}" Margin="0,8">
-                                        <TextBlock Text="{Binding Text}" Foreground="White" FontSize="14"/>
+                                        <TextBlock Text="{Binding Text}" Foreground="{DynamicResource TextBrush}" FontSize="14"/>
                                     </CheckBox>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
@@ -174,8 +174,8 @@
             <!-- VISTA D: FORMATO DE HORA (TIME) -->
             <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Time:Visible|Default:Collapsed'}">
                 <StackPanel Margin="0,20">
-                    <TextBlock Text="CONFIGURACIÓN DE FORMATO DE HORA" FontWeight="Bold" Foreground="#007bff" Margin="0,0,0,20"/>
-                    <Border Background="#1e222d" CornerRadius="8" Padding="20" BorderBrush="#2d3446" BorderThickness="1">
+                    <TextBlock Text="CONFIGURACIÓN DE FORMATO DE HORA" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,20"/>
+                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel>
                             <RadioButton IsChecked="{Binding TimeFormat, Converter={StaticResource DictConverter}, ConverterParameter='HH:mm:True|Default:False'}" 
                                          GroupName="TimeFormat" Margin="0,0,0,15">
@@ -184,8 +184,8 @@
                                         <Setter Property="Content">
                                             <Setter.Value>
                                                 <StackPanel>
-                                                    <TextBlock Text="24 Horas" Foreground="White" FontSize="16" FontWeight="Bold"/>
-                                                    <TextBlock Text="Ejemplo: 14:30" Foreground="#94a3b8" FontSize="12"/>
+                                                    <TextBlock Text="24 Horas" Foreground="{DynamicResource TextBrush}" FontSize="16" FontWeight="Bold"/>
+                                                    <TextBlock Text="Ejemplo: 14:30" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
                                                 </StackPanel>
                                             </Setter.Value>
                                         </Setter>
@@ -200,8 +200,8 @@
                                         <Setter Property="Content">
                                             <Setter.Value>
                                                 <StackPanel>
-                                                    <TextBlock Text="AM / PM" Foreground="White" FontSize="16" FontWeight="Bold"/>
-                                                    <TextBlock Text="Ejemplo: 02:30 PM" Foreground="#94a3b8" FontSize="12"/>
+                                                    <TextBlock Text="AM / PM" Foreground="{DynamicResource TextBrush}" FontSize="16" FontWeight="Bold"/>
+                                                    <TextBlock Text="Ejemplo: 02:30 PM" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
                                                 </StackPanel>
                                             </Setter.Value>
                                         </Setter>
@@ -216,14 +216,14 @@
             <!-- VISTA E: LÍMITES DE CARACTERES (TEXT, TEXTAREA, NUMERIC) -->
             <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Text:Visible|TextArea:Visible|Numeric:Visible|Default:Collapsed'}">
                 <StackPanel Margin="0,20">
-                    <TextBlock Text="LÍMITE DE CARACTERES" FontWeight="Bold" Foreground="#ffd166" Margin="0,0,0,20"/>
-                    <Border Background="#1e222d" CornerRadius="8" Padding="20" BorderBrush="#2d3446" BorderThickness="1">
+                    <TextBlock Text="LÍMITE DE CARACTERES" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}" Margin="0,0,0,20"/>
+                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel>
                             <TextBlock Text="Establece la cantidad máxima de caracteres que el usuario puede ingresar en este campo:" 
-                                     Foreground="#94a3b8" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
+                                     Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
                             
                             <CheckBox IsChecked="{Binding WarnOnDuplicate}" Content="⚠️ Advertir si el valor está duplicado en otro registro" 
-                                      Foreground="White" Margin="0,0,0,15" FontWeight="Bold"/>
+                                      Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15" FontWeight="Bold"/>
 
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -233,19 +233,19 @@
                                 <Slider Minimum="1" Maximum="4000" Value="{Binding MaxLength}" TickFrequency="50" IsSnapToTickEnabled="True"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="15,0,0,0">
                                     <TextBox Text="{Binding MaxLength, UpdateSourceTrigger=PropertyChanged}" Width="60" TextAlignment="Center" VerticalContentAlignment="Center"/>
-                                    <TextBlock Text=" caracteres" Foreground="#94a3b8" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                    <TextBlock Text=" caracteres" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="5,0,0,0"/>
                                 </StackPanel>
                             </Grid>
                             
-                            <TextBlock Text="Sugerencias:" Foreground="#94a3b8" FontSize="11" FontWeight="Bold" Margin="0,20,0,8"/>
+                            <TextBlock Text="Sugerencias:" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="Bold" Margin="0,20,0,8"/>
                             <BulletDecorator Margin="0,0,0,5">
-                                <TextBlock Text="Texto corto (Nombre, ID): 100 - 255" Foreground="#94a3b8" FontSize="11"/>
+                                <TextBlock Text="Texto corto (Nombre, ID): 100 - 255" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                             </BulletDecorator>
                             <BulletDecorator Margin="0,0,0,5">
-                                <TextBlock Text="Numérico (RUT, Cantidades): 10 - 20" Foreground="#94a3b8" FontSize="11"/>
+                                <TextBlock Text="Numérico (RUT, Cantidades): 10 - 20" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                             </BulletDecorator>
                             <BulletDecorator>
-                                <TextBlock Text="Área de Texto (Comentarios): 500 - 2000" Foreground="#94a3b8" FontSize="11"/>
+                                <TextBlock Text="Área de Texto (Comentarios): 500 - 2000" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                             </BulletDecorator>
                         </StackPanel>
                     </Border>

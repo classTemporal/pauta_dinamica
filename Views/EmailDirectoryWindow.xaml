@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
         Title="Directorio de Contactos" Height="650" Width="750"
-        WindowStartupLocation="CenterOwner" Background="#12151c" Foreground="#e1e1e1">
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
     
     <Window.Resources>
         <conv:BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -20,87 +20,127 @@
 
         <!-- Cabecera -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Detección Automática de Destinatario" FontSize="22" FontWeight="Bold" Foreground="#10b981"/>
-            <TextBlock Text="Gestiona el mapeo de nombres detectados en la pauta hacia correos electrónicos." FontSize="13" Foreground="#94a3b8" Margin="0,5,0,0"/>
+            <TextBlock Text="Detección Automática de Destinatario" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+            <TextBlock Text="Gestiona el mapeo de nombres detectados en la pauta hacia correos electrónicos." FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"/>
         </StackPanel>
 
         <!-- Configuración de Detección -->
-        <Border Grid.Row="1" Background="#1e222d" Padding="15" CornerRadius="8" Margin="0,0,0,15" BorderBrush="#3d4456" BorderThickness="1">
+        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" Padding="15" CornerRadius="8" Margin="0,0,0,15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
             <StackPanel>
-                <TextBlock Text="Campo de Origen (Nombre/Agente):" FontWeight="Bold" Foreground="#e2e8f0" Margin="0,0,0,10"/>
+                <TextBlock Text="Campo de Origen (Nombre/Agente):" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"/>
                 <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
                           SelectedValue="{Binding SelectedPauta.EmailNameFieldId}"
                           SelectedValuePath="Id"
                           DisplayMemberPath="Label"
-                          Height="35" Background="#363d4d"/>
+                          Height="36"/>
                 <TextBlock Text="* El sistema buscará el valor de este campo en el registro para encontrar el correo en el directorio." 
-                           FontSize="11" Foreground="#94a3b8" Margin="0,8,0,0" FontStyle="Italic"/>
+                           FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,0" FontStyle="Italic"/>
             </StackPanel>
         </Border>
 
         <!-- Directorio -->
         <DockPanel Grid.Row="2">
-            <Border DockPanel.Dock="Top" Background="#2d3446" Padding="10" CornerRadius="8,8,0,0" BorderBrush="#3d4456" BorderThickness="1,1,1,0">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" Padding="10" CornerRadius="8,8,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
                 <Grid>
                     <!-- Vista Normal -->
-                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsContactMultiSelectMode, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                    <WrapPanel Orientation="Horizontal" Visibility="{Binding IsContactMultiSelectMode, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
                         <Button Content="➕ Nuevo" Command="{Binding AddContactCommand}" 
-                                Padding="15,5" Height="32" Margin="0,0,8,0" FontSize="12"/>
-                        
-                        <Button Content="📥 Importar" Command="{Binding ImportContactsCommand}" 
-                                Padding="15,5" Height="32" Margin="0,0,8,0" FontSize="12"/>
-                        
-                        <Button Content="📤 Exportar" Command="{Binding ExportContactsCommand}" 
-                                Style="{StaticResource SecondaryButton}"
-                                Padding="15,5" Height="32" Margin="0,0,8,0" FontSize="12"/>
+                                Style="{StaticResource PrimaryButton}" Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
 
                         <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleContactMultiSelectCommand}" 
                                 Style="{StaticResource GhostButton}"
-                                Padding="15,5" Height="32" FontSize="12"/>
-                    </StackPanel>
+                                Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
+                        
+                        <Button Content="📥 Importar" Command="{Binding ImportContactsCommand}" 
+                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
+                        
+                        <Button Content="📤 Exportar" Command="{Binding ExportContactsCommand}" 
+                                Style="{StaticResource SecondaryButton}"
+                                Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
+                    </WrapPanel>
 
                     <!-- Vista Selección Múltiple -->
-                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsContactMultiSelectMode, Converter={StaticResource BoolToVis}}">
+                    <WrapPanel Orientation="Horizontal" Visibility="{Binding IsContactMultiSelectMode, Converter={StaticResource BoolToVis}}">
                         <CheckBox IsChecked="{Binding AllContactsSelected}" Content="Seleccionar Todo" 
-                                  Foreground="#94a3b8" VerticalAlignment="Center" Margin="5,0,20,0"/>
+                                  VerticalAlignment="Center" Margin="0,0,8,8">
+                            <CheckBox.Template>
+                                <ControlTemplate TargetType="CheckBox">
+                                    <Border x:Name="border" Background="Transparent" CornerRadius="6" Padding="15,8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" SnapsToDevicePixels="True" Height="34">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <TextBlock x:Name="icon" Text="▢" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" FontWeight="Bold" FontSize="14"/>
+                                            <ContentPresenter VerticalAlignment="Center" TextElement.Foreground="{DynamicResource TextBrush}"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="border" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter TargetName="icon" Property="Text" Value="✅"/>
+                                            <Setter TargetName="icon" Property="Foreground" Value="White"/>
+                                            <Setter Property="TextElement.Foreground" Value="White" TargetName="border"/>
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="border" Property="Background" Value="{DynamicResource BorderBrush}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <ColorAnimation Storyboard.TargetName="border" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="#3b82f6" Duration="0:0:0.1"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </CheckBox.Template>
+                        </CheckBox>
 
                         <Button Content="📤 Exportar Seleccionados" Command="{Binding ExportContactsCommand}" 
                                 Style="{StaticResource SecondaryButton}"
-                                Padding="15,5" Height="32" Margin="0,0,8,0" FontSize="12"/>
+                                Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
 
                         <Button Content="🗑️ Eliminar Seleccionados" Command="{Binding DeleteSelectedContactsCommand}" 
-                                Style="{StaticResource DangerButton}" Padding="15,5" Height="32" Margin="0,0,8,0" FontSize="12"/>
+                                Style="{StaticResource DangerButton}" Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
                         
                         <Button Content="❌ Cancelar Selección" Command="{Binding ToggleContactMultiSelectCommand}" 
-                                Style="{StaticResource GhostButton}" Padding="15,5" Height="32" FontSize="12"/>
-                    </StackPanel>
+                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
+                    </WrapPanel>
                 </Grid>
             </Border>
 
             <DataGrid ItemsSource="{Binding CurrentContacts}" 
                       AutoGenerateColumns="False" 
-                      Background="#1e222d" 
-                      BorderBrush="#3d4456" 
-                      BorderThickness="1"
+                      Background="Transparent" 
+                      BorderBrush="{DynamicResource BorderBrush}" 
+                      BorderThickness="1,0,1,1"
                       CanUserAddRows="False"
-                      RowHeight="40"
-                      Foreground="White"
+                      RowHeight="42"
                       HeadersVisibility="Column"
                       GridLinesVisibility="Horizontal"
-                      HorizontalGridLinesBrush="#2d3446">
+                      HorizontalGridLinesBrush="{DynamicResource BorderBrush}">
                 <DataGrid.Resources>
-                    <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#2d3446"/>
-                        <Setter Property="Foreground" Value="#94a3b8"/>
-                        <Setter Property="Padding" Value="10,5"/>
-                        <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="Height" Value="35"/>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Self}, Path=Foreground}"/>
+                            </Trigger>
+                        </Style.Triggers>
                     </Style>
                     <Style TargetType="DataGridRow">
                         <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#2d3446"/>
+                                <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                                <Setter Property="Opacity" Value="0.9"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -121,7 +161,7 @@
                                 <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
                                          Background="Transparent" BorderThickness="0" 
                                          VerticalContentAlignment="Center" HorizontalContentAlignment="Left"
-                                         Padding="10,0" Foreground="White"/>
+                                         Padding="10,0"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -132,7 +172,7 @@
                                 <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" 
                                          Background="Transparent" BorderThickness="0" 
                                          VerticalContentAlignment="Center" HorizontalContentAlignment="Left"
-                                         Padding="10,0" Foreground="#3b82f6"/>
+                                         Padding="10,0" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -142,8 +182,8 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Button Content="×" Command="{Binding DataContext.DeleteContactCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                        CommandParameter="{Binding}" Foreground="#ef4444" Background="Transparent" 
-                                        FontSize="18" BorderThickness="0" Padding="0" VerticalAlignment="Center"/>
+                                        CommandParameter="{Binding}" Foreground="{DynamicResource DangerBrush}" Background="Transparent" 
+                                        FontSize="20" BorderThickness="0" Padding="0" VerticalAlignment="Center" Cursor="Hand"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -159,10 +199,10 @@
             </Grid.ColumnDefinitions>
             
             <Button Content="CANCELAR CAMBIOS" Click="CancelButton_Click" 
-                    Style="{StaticResource GhostButton}" Width="180" Height="45" Margin="0,0,15,0"/>
+                    Style="{StaticResource SecondaryButton}" Width="200" Height="45" Margin="0,0,15,0"/>
             
             <Button Grid.Column="1" Content="ACEPTAR Y REGRESAR" Click="OkButton_Click" 
-                    Style="{StaticResource SuccessButton}" Width="220" Height="45"/>
+                    Style="{StaticResource SuccessButton}" Width="240" Height="45"/>
         </Grid>
     </Grid>
 </Window>
