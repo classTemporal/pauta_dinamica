@@ -25,5 +25,9 @@ namespace PautaDinamicaApp.Models
         public string ColoringField { get; set; } = "";
         public string ColoringValue { get; set; } = "";
         public string ColoringColor { get; set; } = "#28a745"; // Default Green
+
+        // UI Theme
+        public Services.AppTheme Theme { get; set; } = Services.AppTheme.Dark;
     }
 }
+

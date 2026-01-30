@@ -6,7 +6,7 @@
 
     <!-- Template para el Contador de Caracteres -->
     <DataTemplate x:Key="FieldCounterTemplate">
-        <TextBlock HorizontalAlignment="Right" FontSize="9" Margin="0,1,2,0" Foreground="{StaticResource SecondaryTextBrush}">
+        <TextBlock HorizontalAlignment="Right" FontSize="9" Margin="0,1,2,0" Foreground="{DynamicResource SecondaryTextBrush}">
             <TextBlock.Style>
                 <Style TargetType="TextBlock">
                     <Setter Property="Text">
@@ -30,11 +30,12 @@
     <!-- Label Template with Required Asterisk -->
     <DataTemplate x:Key="FieldLabelTemplate">
         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-            <TextBlock Text="{Binding Label}" Foreground="#94a3b8" FontSize="12"/>
+            <TextBlock Text="{Binding Label}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
             <TextBlock Text=" *" Foreground="{StaticResource ErrorBrush}" FontSize="12" 
                        Visibility="{Binding IsRequired, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         </StackPanel>
     </DataTemplate>
+
 
     <!-- Error Message Template -->
     <DataTemplate x:Key="FieldErrorTemplate">
@@ -45,14 +46,14 @@
 
     <!-- Estilo para TextBox -->
     <Style TargetType="TextBox">
-        <Setter Property="Background" Value="{StaticResource InputBackground}"/>
-        <Setter Property="Foreground" Value="{StaticResource InputForeground}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/>
+        <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource InputForeground}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="8,5"/>
         <Setter Property="Height" Value="35"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="CaretBrush" Value="White"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource CaretBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -64,7 +65,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <DataTrigger Binding="{Binding IsValid, FallbackValue=True}" Value="False">
-                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
                             <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
                         </DataTrigger>
                     </ControlTemplate.Triggers>
@@ -77,9 +78,9 @@
     <Style TargetType="ComboBox">
         <Setter Property="Height" Value="35"/>
         <Setter Property="Padding" Value="8,5"/>
-        <Setter Property="Foreground" Value="{StaticResource InputForeground}"/>
-        <Setter Property="Background" Value="{StaticResource InputBackground}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/>
+        <Setter Property="Foreground" Value="{DynamicResource InputForeground}"/>
+        <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -111,7 +112,7 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <DataTrigger Binding="{Binding IsValid, FallbackValue=True}" Value="False">
-                                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
+                                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
                                             <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
                                         </DataTrigger>
                                     </ControlTemplate.Triggers>
@@ -137,9 +138,9 @@
                                   MinWidth="{TemplateBinding ActualWidth}"
                                   MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                 <Border Name="DropDownBorder"
-                                        Background="{StaticResource InputBackground}"
+                                        Background="{DynamicResource InputBackground}"
                                         BorderThickness="1"
-                                        BorderBrush="{StaticResource InputBorder}"
+                                        BorderBrush="{DynamicResource InputBorder}"
                                         CornerRadius="0,0,4,4"/>
                                 <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
                                     <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -154,12 +155,12 @@
 
     <Style TargetType="DatePicker">
         <Setter Property="Height" Value="35"/>
-        <Setter Property="Background" Value="{StaticResource InputBackground}"/>
+        <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="DatePicker">
                     <Border Name="border" Background="{TemplateBinding Background}" 
-                            BorderBrush="{StaticResource InputBorder}" 
+                            BorderBrush="{DynamicResource InputBorder}" 
                             BorderThickness="1" CornerRadius="4">
                         <Grid x:Name="PART_Root">
                             <Grid.ColumnDefinitions>
@@ -167,16 +168,16 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <DatePickerTextBox x:Name="PART_TextBox" Grid.Column="0" 
-                                               Background="Transparent" Foreground="{StaticResource InputForeground}"
+                                               Background="Transparent" Foreground="{DynamicResource InputForeground}"
                                                BorderThickness="0" VerticalContentAlignment="Center" Padding="5,0"/>
                             <Button x:Name="PART_Button" Grid.Column="1" HorizontalAlignment="Right"
                                     VerticalAlignment="Center" Width="20" Margin="0,0,5,0"
-                                    Content="📅" Background="Transparent" BorderThickness="0" Foreground="{StaticResource InputForeground}"/>
+                                    Content="📅" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource InputForeground}"/>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <DataTrigger Binding="{Binding IsValid}" Value="False">
-                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
                             <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
                         </DataTrigger>
                     </ControlTemplate.Triggers>
@@ -214,7 +215,7 @@
         <StackPanel Margin="0,5">
             <CheckBox Content="{Binding Label}" 
                       IsChecked="{Binding Value}" 
-                      Foreground="{StaticResource InputForeground}"
+                      Foreground="{DynamicResource InputForeground}"
                       Margin="0,10"
                       VerticalContentAlignment="Center"/>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
@@ -241,7 +242,7 @@
                         Background="Transparent" BorderThickness="0"
                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" Width="30" Height="25"
                         Cursor="Hand">
-                    <TextBlock Text="📅" Foreground="#94a3b8" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <TextBlock Text="📅" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Button>
             </Grid>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
@@ -258,7 +259,7 @@
                         Background="Transparent" BorderThickness="0"
                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" Width="30" Height="25"
                         Cursor="Hand">
-                    <TextBlock Text="🕒" Foreground="#94a3b8" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <TextBlock Text="🕒" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Button>
             </Grid>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
@@ -268,8 +269,8 @@
     <!-- Template para Separador (Subcabecera dentro de un cuadro) -->
     <DataTemplate x:Key="SeparatorTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,15,0,5">
-            <TextBlock Text="{Binding Label}" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
-            <Rectangle Height="1" Fill="#3d4456" Margin="0,5,0,0"/>
+            <TextBlock Text="{Binding Label}" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
+            <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,5,0,0"/>
         </StackPanel>
     </DataTemplate>
 
@@ -277,8 +278,8 @@
     <DataTemplate x:Key="CalculationTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
-            <Border Background="#1a1f2b" CornerRadius="4" Padding="10,8" BorderBrush="#007bff" BorderThickness="1,1,1,2">
-                <TextBlock Text="{Binding Value, TargetNullValue='0.0%'}" Foreground="#007bff" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
+            <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="4" Padding="10,8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1,1,1,2">
+                <TextBlock Text="{Binding Value, TargetNullValue='0.0%'}" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
             </Border>
         </StackPanel>
     </DataTemplate>
@@ -287,8 +288,8 @@
     <DataTemplate x:Key="AverageTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
-            <Border Background="#1a1f2b" CornerRadius="4" Padding="10,8" BorderBrush="#6f42c1" BorderThickness="1,1,1,2">
-                <TextBlock Text="{Binding Value, TargetNullValue='0.0%'}" Foreground="#6f42c1" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
+            <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="4" Padding="10,8" BorderBrush="{DynamicResource SecondaryBrush}" BorderThickness="1,1,1,2">
+                <TextBlock Text="{Binding Value, TargetNullValue='0.0%'}" Foreground="{DynamicResource SecondaryBrush}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Right"/>
             </Border>
         </StackPanel>
     </DataTemplate>

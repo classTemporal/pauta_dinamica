@@ -55,6 +55,8 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand DeleteUserCommand { get; }
         public ICommand ToggleMasterResetCommand { get; }
         public ICommand ResetPasswordCommand { get; }
+        public ICommand ToggleThemeCommand { get; }
+
 
         public event Action? OnLoginSuccess;
         public event Action? RequestClearPasswords;
@@ -70,7 +72,18 @@ namespace PautaDinamicaApp.ViewModels
             DeleteUserCommand = new RelayCommand(u => DeleteUser(u as UserModel));
             ToggleMasterResetCommand = new RelayCommand(_ => ToggleMasterReset());
             ResetPasswordCommand = new RelayCommand(_ => ResetPassword());
+            ToggleThemeCommand = new RelayCommand(_ => ToggleTheme());
         }
+
+        private void ToggleTheme()
+        {
+            var storage = new StorageService();
+            var settings = storage.LoadSettings();
+            settings.Theme = settings.Theme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
+            storage.SaveSettings(settings);
+            new ThemeService().SetTheme(settings.Theme);
+        }
+
 
         private void ToggleManageMode()
         {

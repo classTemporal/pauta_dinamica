@@ -7,9 +7,11 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Views/Resources/Themes/DarkTheme.xaml"/>
                 <ResourceDictionary Source="Views/Resources/Styles.xaml"/>
                 <ResourceDictionary Source="Views/Resources/FieldTemplates.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
             
             <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <conv:NotNullToVisibilityConverter x:Key="NotNullToVisibilityConverter"/>
