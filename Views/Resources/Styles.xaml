@@ -5,6 +5,8 @@
     <conv:DictConverter x:Key="DictConverter"/>
     <conv:DictionaryValueConverter x:Key="DictionaryValueConverter"/>
     <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    <conv:NotNullToBooleanConverter x:Key="NotNullToBooleanConverter"/>
+    <conv:StringToBrushConverter x:Key="StringToBrushConverter"/>
 
 
     <!-- Design Tokens / Brushes -->

@@ -20,5 +20,10 @@ namespace PautaDinamicaApp.Models
         public string EmailCcTemplate { get; set; } = "";
         public string EmailSubjectTemplate { get; set; } = "";
         public string EmailBodyTemplate { get; set; } = "";
+
+        // Row Coloring Rule
+        public string ColoringField { get; set; } = "";
+        public string ColoringValue { get; set; } = "";
+        public string ColoringColor { get; set; } = "#28a745"; // Default Green
     }
 }

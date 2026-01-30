@@ -112,6 +112,47 @@
                                 <Button Grid.Column="1" Content="..." Command="{Binding BrowsePdfPathCommand}" Margin="5,0,0,0" Width="40" Padding="0"/>
                             </Grid>
 
+                            <Separator Background="#3d4456" Margin="0,10,0,20"/>
+
+                            <TextBlock Text="Resaltado de Filas (Visual)" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="#ffc107"/>
+                            <Border Background="#262b38" BorderBrush="#3d4456" BorderThickness="1" CornerRadius="8" Padding="15">
+                                <StackPanel>
+                                    <TextBlock Text="1. Seleccione una Pauta para ver sus campos:" Style="{StaticResource LabelStyle}"/>
+                                    <ComboBox ItemsSource="{Binding Pautas}" 
+                                              SelectedItem="{Binding SelectedPauta}"
+                                              DisplayMemberPath="Name"
+                                              Margin="0,0,0,15" Height="35" Background="#363d4d"/>
+
+                                    <TextBlock Text="2. Si el campo con este Nombre:" Style="{StaticResource LabelStyle}"/>
+                                    <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
+                                              SelectedValue="{Binding Settings.ColoringField}"
+                                              SelectedValuePath="Label"
+                                              DisplayMemberPath="Label"
+                                              Margin="0,0,0,15" Height="35" Background="#363d4d"
+                                              IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
+
+                                    <TextBlock Text="3. Tiene este Valor Exacto:" Style="{StaticResource LabelStyle}"/>
+                                    <TextBox Text="{Binding Settings.ColoringValue}" Margin="0,0,0,15" ToolTip="Ej: 100%, 0.0%"/>
+
+                                    <TextBlock Text="4. Pintar fila de este color:" Style="{StaticResource LabelStyle}"/>
+                                    <Grid Margin="0,0,0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding Settings.ColoringColor}" Margin="0,0,10,0" VerticalAlignment="Center" ToolTip="Código Hexadecimal"/>
+                                        <Button Grid.Column="1" Command="{Binding PickColorCommand}" Background="Transparent" Padding="0" BorderThickness="0">
+                                            <Border Width="60" Height="32" CornerRadius="4" BorderThickness="1" BorderBrush="White">
+                                                <Border.Background>
+                                                    <SolidColorBrush Color="{Binding Settings.ColoringColor, FallbackValue=#28a745}"/>
+                                                </Border.Background>
+                                            </Border>
+                                        </Button>
+                                    </Grid>
+                                    <TextBlock Text="Tip: Haga clic en el cuadro de color para abrir el selector visual." FontSize="11" Foreground="#94a3b8" FontStyle="Italic" Margin="0,5,0,0"/>
+                                </StackPanel>
+                            </Border>
+
                         </StackPanel>
                     </Border>
                 </ScrollViewer>

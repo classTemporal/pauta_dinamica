@@ -27,6 +27,21 @@ namespace PautaDinamicaApp.Models
         private bool _isSelected;
 
         [System.Text.Json.Serialization.JsonIgnore]
+        public string? RowColor
+        {
+            get => _rowColor;
+            set
+            {
+                if (_rowColor != value)
+                {
+                    _rowColor = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        private string? _rowColor;
+
+        [System.Text.Json.Serialization.JsonIgnore]
         public bool IsValid => true;
 
         public event PropertyChangedEventHandler? PropertyChanged;

@@ -66,6 +66,9 @@ namespace PautaDinamicaApp.Models
         public string ExcludeByFieldId { get => _excludeByFieldId; set => SetProperty(ref _excludeByFieldId, value); }
         public string ExcludeByFieldValue { get => _excludeByFieldValue; set => SetProperty(ref _excludeByFieldValue, value); }
 
+        private string _helpContent = "";
+        public string HelpContent { get => _helpContent; set => SetProperty(ref _helpContent, value); }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)

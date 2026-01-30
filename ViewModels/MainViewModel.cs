@@ -36,6 +36,24 @@ namespace PautaDinamicaApp.ViewModels
 
         public ICommand OpenSettingsCommand { get; }
 
+        // Comandos existentes
+        public ICommand SaveRecordCommand { get; }
+        public ICommand ClearFormCommand { get; }
+        public ICommand SelectRecordCommand { get; }
+        public ICommand OpenConfigCommand { get; }
+        public ICommand DeleteRecordCommand { get; }
+        public ICommand DeleteAllRecordsCommand { get; }
+        public ICommand ExportToExcelCommand { get; }
+        public ICommand ExportToJsonCommand { get; }
+        public ICommand ToggleMultiSelectCommand { get; }
+        public ICommand SelectAllCommand { get; }
+        public ICommand DeleteSelectedCommand { get; }
+        public ICommand ExportSelectedCommand { get; }
+        public ICommand ImportFromExcelCommand { get; }
+        public ICommand GeneratePdfCommand { get; }
+        public ICommand GenerateSelectedPdfCommand { get; }
+        public ICommand SendEmailsCommand { get; }
+        public ICommand ShowHelpCommand { get; }
 
         public MainViewModel()
         {
@@ -58,13 +76,91 @@ namespace PautaDinamicaApp.ViewModels
             DeleteSelectedCommand = new RelayCommand(_ => DeleteSelectedRecords());
             ExportSelectedCommand = new RelayCommand(_ => ExportRecordsToExcel(Records.Where(r => r.IsSelected).ToList(), "Export_Parcial_Auditoria"));
             ImportFromExcelCommand = new RelayCommand(_ => ImportRecordsFromExcel());
-            SendEmailsCommand = new RelayCommand(p => SendEmails(p as AuditEntry));
-            OpenSettingsCommand = new RelayCommand(_ => OpenSettings());
-
-            // Comandos PDF
             GeneratePdfCommand = new RelayCommand(p => GeneratePdfForRecord(p as AuditEntry));
             GenerateSelectedPdfCommand = new RelayCommand(_ => GeneratePdfForSelected());
+            SendEmailsCommand = new RelayCommand(p => SendEmails(p as AuditEntry));
+
+            // Nuevo comando para configuración general
+            OpenSettingsCommand = new RelayCommand(_ => StartSettingsFlow());
+            ShowHelpCommand = new RelayCommand(_ => ShowHelp());
         }
+
+        private void ShowHelp()
+        {
+            if (CurrentPauta == null) return;
+            var vm = new HelpViewModel(CurrentPauta.Name, CurrentPauta.HelpContent);
+            var win = new Views.HelpWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
+            win.ShowDialog();
+        }
+
+        private void StartSettingsFlow()
+        {
+            var vm = new SettingsViewModel();
+            var settingsWin = new Views.SettingsWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
+
+            vm.RequestClose += () => settingsWin.Close();
+            settingsWin.ShowDialog();
+
+            if (vm.IsSaved)
+            {
+                ApplyRowColoring();
+            }
+        }
+
+        private void ApplyRowColoring()
+        {
+            var settings = _storageService.LoadSettings();
+            string targetFieldLabel = settings.ColoringField;
+            string targetValue = settings.ColoringValue;
+            string targetColor = settings.ColoringColor;
+
+            if (string.IsNullOrWhiteSpace(targetFieldLabel) || string.IsNullOrWhiteSpace(targetValue))
+            {
+                // Limpiar colores si no hay regla
+                foreach (var r in Records) r.RowColor = null;
+                return;
+            }
+
+            // Buscar ID del campo basado en el Label (Nombre)
+            // Nota: Buscamos en CurrentFields, pero CurrentFields depende del registro seleccionado/nuevo.
+            // Mejor usar la definición de la pauta cargada.
+            if (CurrentPauta == null) return;
+            var fields = _storageService.LoadConfiguration(CurrentPauta.Id);
+            var targetField = fields.FirstOrDefault(f => f.Label.Equals(targetFieldLabel, StringComparison.OrdinalIgnoreCase));
+
+            if (targetField == null) return; // Campo no encontrado
+
+            foreach (var record in Records)
+            {
+                if (record.Values.TryGetValue(targetField.Id, out var val) && val != null)
+                {
+                    // Comparar valor (como string)
+                    string strVal = val.ToString() ?? "";
+
+                    // Manejo especial para JsonElement si es necesario (ya lo hace LoadData al desempaquetar, 
+                    // pero el record en memoria puede tener JsonElement si no se ha editado)
+                    if (val is System.Text.Json.JsonElement elem) strVal = elem.ToString();
+
+                    // Comparación laxa
+                    if (string.Equals(strVal.Trim(), targetValue.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        record.RowColor = targetColor;
+                    }
+                    else
+                    {
+                        record.RowColor = null;
+                    }
+                }
+                else
+                {
+                    record.RowColor = null;
+                }
+            }
+        }
+
+
+        // Duplicate constructor removed
+        // Orphaned code block removed.
 
         private void OpenSettings()
         {
@@ -412,22 +508,7 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
-        public ICommand SaveRecordCommand { get; }
-        public ICommand ClearFormCommand { get; }
-        public ICommand SelectRecordCommand { get; }
-        public ICommand OpenConfigCommand { get; }
-        public ICommand DeleteRecordCommand { get; }
-        public ICommand DeleteAllRecordsCommand { get; }
-        public ICommand ExportToExcelCommand { get; }
-        public ICommand ExportToJsonCommand { get; }
-        public ICommand ToggleMultiSelectCommand { get; }
-        public ICommand SelectAllCommand { get; }
-        public ICommand DeleteSelectedCommand { get; }
-        public ICommand ExportSelectedCommand { get; }
-        public ICommand ImportFromExcelCommand { get; }
-        public ICommand SendEmailsCommand { get; }
-        public ICommand GeneratePdfCommand { get; }
-        public ICommand GenerateSelectedPdfCommand { get; }
+        // Duplicate command properties removed.
 
         private bool _isMultiSelectMode;
         public bool IsMultiSelectMode { get => _isMultiSelectMode; set => SetProperty(ref _isMultiSelectMode, value); }
@@ -447,6 +528,7 @@ namespace PautaDinamicaApp.ViewModels
             RefreshFields();
             var savedRecords = _storageService.LoadRecords(CurrentPauta.Id);
             Records = new ObservableCollection<AuditEntry>(savedRecords);
+            ApplyRowColoring();
             FieldsRefreshed?.Invoke();
             CreateNewRecord();
         }
@@ -683,6 +765,7 @@ namespace PautaDinamicaApp.ViewModels
             if (SelectedRecord == null) Records.Add(entry);
             entry.NotifyUpdate();
             if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
+            ApplyRowColoring();
             foreach (var field in CurrentFields) field.Reset();
             SelectedRecord = null;
             MessageBox.Show("Registro guardado correctamente.");

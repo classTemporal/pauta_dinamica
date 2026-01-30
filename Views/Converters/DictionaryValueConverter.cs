@@ -30,10 +30,15 @@ namespace PautaDinamicaApp.Views.Converters
 
                     // Manejar Booleanos nativos o Strings que parecen booleanos
                     if (val is bool b) return b ? "1" : "0";
-                    if (val.ToString().Equals("True", StringComparison.OrdinalIgnoreCase)) return "1";
-                    if (val.ToString().Equals("False", StringComparison.OrdinalIgnoreCase)) return "0";
 
-                    return val;
+                    string? strVal = val?.ToString();
+                    if (strVal != null)
+                    {
+                        if (strVal.Equals("True", StringComparison.OrdinalIgnoreCase)) return "1";
+                        if (strVal.Equals("False", StringComparison.OrdinalIgnoreCase)) return "0";
+                    }
+
+                    return val ?? "";
                 }
             }
             return "";

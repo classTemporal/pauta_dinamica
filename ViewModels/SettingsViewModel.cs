@@ -76,6 +76,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand DeleteSelectedContactsCommand { get; }
         public ICommand OpenEmailDirectoryCommand { get; }
         public ICommand ToggleContactMultiSelectCommand { get; }
+        public ICommand PickColorCommand { get; }
 
         private bool _isContactMultiSelectMode;
         public bool IsContactMultiSelectMode { get => _isContactMultiSelectMode; set => SetProperty(ref _isContactMultiSelectMode, value); }
@@ -94,6 +95,7 @@ namespace PautaDinamicaApp.ViewModels
             BrowsePdfPathCommand = new RelayCommand(_ => BrowseFolder(path => Settings.PdfReportPath = path));
             SaveCommand = new RelayCommand(_ => SaveAndClose());
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
+            PickColorCommand = new RelayCommand(_ => PickColor());
 
             AddContactCommand = new RelayCommand(_ => AddContact());
             DeleteContactCommand = new RelayCommand(p => DeleteContact(p as RecipientContact));
@@ -302,6 +304,19 @@ namespace PautaDinamicaApp.ViewModels
         }
 
         public Array EmailMethods => Enum.GetValues(typeof(EmailMethod));
+
+        private void PickColor()
+        {
+            using (var dialog = new ColorDialog())
+            {
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    var c = dialog.Color;
+                    Settings.ColoringColor = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+                    OnPropertyChanged(nameof(Settings));
+                }
+            }
+        }
 
         private void BrowseFolder(Action<string> updateAction)
         {

@@ -78,6 +78,19 @@
                                 </Style>
                             </ComboBox.Resources>
                         </ComboBox>
+
+                        <!-- Botón de Ayuda -->
+                        <Button Command="{Binding ShowHelpCommand}"
+                                Style="{StaticResource GhostButton}"
+                                Width="32" Height="32" Padding="0" Margin="10,0,0,0"
+                                ToolTip="Ver instrucciones de esta pauta">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="16"/>
+                                </Style>
+                            </Button.Resources>
+                            <TextBlock Text="?" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
                     </StackPanel>
                 </StackPanel>
                 
@@ -183,14 +196,13 @@
                                Background="Transparent"
                                Foreground="{StaticResource TextBrush}"
                                BorderThickness="0"
-                               RowBackground="#1e222d"
-                               AlternatingRowBackground="#262b38"
                                GridLinesVisibility="None"
                                HeadersVisibility="Column"
                                CanUserAddRows="False"
                                HorizontalScrollBarVisibility="Visible"
                                SelectionUnit="FullRow"
                                SelectionMode="Extended"
+                               AlternationCount="2"
                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                         
                         <DataGrid.Resources>
@@ -199,11 +211,18 @@
 
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
-                                <Setter Property="Background" Value="Transparent"/>
                                 <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                                <Setter Property="Background" Value="#1e222d"/>
                                 <Setter Property="ContextMenu">
                                     <Setter.Value>
                                         <ContextMenu>
+                                            <MenuItem Header="📧 Enviar Correo" 
+                                                      Command="{Binding PlacementTarget.Tag.SendEmailsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="📧"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
                                             <MenuItem Header="📝 Editar Registro" 
                                                       Command="{Binding PlacementTarget.Tag.SelectRecordCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
@@ -230,9 +249,20 @@
                                     </Setter.Value>
                                 </Setter>
                                 <Style.Triggers>
+                                    <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                                        <Setter Property="Background" Value="#262b38"/>
+                                    </Trigger>
                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                         <Setter Property="Background" Value="#3d4456"/>
                                     </DataTrigger>
+                                    <!-- Custom Row Color Trigger -->
+                                    <DataTrigger Binding="{Binding RowColor, Converter={StaticResource NotNullToBooleanConverter}}" Value="True">
+                                        <Setter Property="Background" Value="{Binding RowColor, Converter={StaticResource StringToBrushConverter}}"/>
+                                    </DataTrigger>
+                                    <!-- Hover effect to maintain readability -->
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Opacity" Value="0.9"/>
+                                    </Trigger>
                                 </Style.Triggers>
                             </Style>
                         </DataGrid.RowStyle>
