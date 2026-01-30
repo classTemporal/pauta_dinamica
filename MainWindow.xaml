@@ -115,7 +115,7 @@
                         </Button.Style>
                     </Button>
                     <Button Command="{Binding SendEmailsCommand}" 
-                            Content="📧 Enviar Correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}"/>
+                            Content="📧 Enviar todos los correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}"/>
                 </StackPanel>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -168,7 +168,7 @@
                             <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                 <TextBlock Text="MODO SELECCIÓN" VerticalAlignment="Center" FontWeight="Bold" Foreground="#ffc107" Margin="10,5,20,5"/>
                                 <Button Content="✔️ Seleccionar Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
-                                <Button Content="📧 Enviar Seleccionados" Command="{Binding SendEmailsCommand}" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                                <Button Content="📧 Enviar Multiples" Command="{Binding SendEmailsCommand}" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
                                 <Button Content="📄 Generar PDF" Command="{Binding GenerateSelectedPdfCommand}" Style="{StaticResource SecondaryButton}" Background="#DC3545" Margin="0,5,10,5"/>
                                 <Button Content="🗑️ Borrar Seleccionados" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,5,10,5"/>
                                 <Button Content="📊 Exportar Seleccionados" Command="{Binding ExportSelectedCommand}" Style="{StaticResource ExcelButton}" Margin="0,5,10,5"/>
@@ -270,7 +270,10 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
-                                            <Button Content="📧" Style="{StaticResource SecondaryButton}" Width="30" Height="25" Margin="2" Padding="0"/>
+                                            <Button Content="📧" Command="{Binding Tag.SendEmailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource SecondaryButton}" Width="30" Height="25" Margin="2" Padding="0"
+                                                    ToolTip="Enviar este correo"/>
                                             <Button Content="📄" Command="{Binding Tag.GeneratePdfCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                     CommandParameter="{Binding}"
                                                     Style="{StaticResource SecondaryButton}" Background="#DC3545" Width="30" Height="25" Margin="2" Padding="0"

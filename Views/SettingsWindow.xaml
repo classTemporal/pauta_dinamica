@@ -4,27 +4,31 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PautaDinamicaApp.Views"
+        xmlns:models="clr-namespace:PautaDinamicaApp.Models"
+        xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
         mc:Ignorable="d"
-        Title="Configuración General" Height="420" Width="500"
+        Title="Configuración General" Height="650" Width="650"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         Background="#1e222d">
 
     <Window.Resources>
-        <Style TargetType="TextBlock">
+        <Style TargetType="TextBlock" x:Key="LabelStyle">
             <Setter Property="Foreground" Value="#e2e8f0"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
         <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Padding" Value="8,5"/>
             <Setter Property="Background" Value="#2a303c"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#475569"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style TargetType="Button">
             <Setter Property="Background" Value="#3b82f6"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Padding" Value="15,8"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -34,51 +38,206 @@
                 </Style>
             </Style.Resources>
         </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="#2a303c"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:BooleanToVisibilityConverter x:Key="BoolToVisCustom"/>
+        <conv:NotNullToBooleanConverter x:Key="NotNullToBool"/>
     </Window.Resources>
 
-    <Border Padding="20">
-        <StackPanel>
-            <TextBlock Text="Rutas Predeterminadas" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="#3b82f6"/>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-            <!-- Excel Path -->
-            <TextBlock Text="Carpeta para Exportaciones Excel:" Margin="0,0,0,5"/>
-            <Grid Margin="0,0,0,15">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Text="{Binding Settings.ExcelExportPath}" IsReadOnly="True" VerticalContentAlignment="Center"/>
-                <Button Grid.Column="1" Content="..." Command="{Binding BrowseExcelPathCommand}" Margin="5,0,0,0" Width="40"/>
-            </Grid>
+        <TabControl Background="Transparent" BorderThickness="0" Margin="10">
+            <TabControl.Resources>
+                <Style TargetType="TabItem">
+                    <Setter Property="HeaderTemplate">
+                        <Setter.Value>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" FontSize="14" FontWeight="Bold" Margin="10,5"/>
+                            </DataTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Foreground" Value="#94a3b8"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Foreground" Value="#3b82f6"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </TabControl.Resources>
 
-            <!-- JSON Path -->
-            <TextBlock Text="Carpeta para Respaldos (JSON):" Margin="0,0,0,5"/>
-            <Grid Margin="0,0,0,15">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Text="{Binding Settings.JsonBackupPath}" IsReadOnly="True" VerticalContentAlignment="Center"/>
-                <Button Grid.Column="1" Content="..." Command="{Binding BrowseJsonPathCommand}" Margin="5,0,0,0" Width="40"/>
-            </Grid>
+            <!-- TAB RUTAS -->
+            <TabItem Header="Rutas">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border Padding="15">
+                        <StackPanel>
+                            <TextBlock Text="Rutas Predeterminadas" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="#3b82f6"/>
 
-            <!-- PDF Path -->
-            <TextBlock Text="Carpeta para Reportes PDF:" Margin="0,0,0,5"/>
-            <Grid Margin="0,0,0,20">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Text="{Binding Settings.PdfReportPath}" IsReadOnly="True" VerticalContentAlignment="Center"/>
-                <Button Grid.Column="1" Content="..." Command="{Binding BrowsePdfPathCommand}" Margin="5,0,0,0" Width="40"/>
-            </Grid>
+                            <TextBlock Text="Carpeta para Exportaciones Excel:" Style="{StaticResource LabelStyle}"/>
+                            <Grid Margin="0,0,0,15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding Settings.ExcelExportPath}" IsReadOnly="True"/>
+                                <Button Grid.Column="1" Content="..." Command="{Binding BrowseExcelPathCommand}" Margin="5,0,0,0" Width="40" Padding="0"/>
+                            </Grid>
 
-            <Separator Background="#3d4456" Margin="0,20,0,20"/>
+                            <TextBlock Text="Carpeta para Respaldos (JSON):" Style="{StaticResource LabelStyle}"/>
+                            <Grid Margin="0,0,0,15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding Settings.JsonBackupPath}" IsReadOnly="True"/>
+                                <Button Grid.Column="1" Content="..." Command="{Binding BrowseJsonPathCommand}" Margin="5,0,0,0" Width="40" Padding="0"/>
+                            </Grid>
 
+                            <TextBlock Text="Carpeta para Reportes PDF:" Style="{StaticResource LabelStyle}"/>
+                            <Grid Margin="0,0,0,15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding Settings.PdfReportPath}" IsReadOnly="True"/>
+                                <Button Grid.Column="1" Content="..." Command="{Binding BrowsePdfPathCommand}" Margin="5,0,0,0" Width="40" Padding="0"/>
+                            </Grid>
+
+                        </StackPanel>
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+
+
+
+            <!-- TAB CORREO -->
+            <TabItem Header="📧 Configuración de Correo">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border Padding="15">
+                        <StackPanel>
+                            <TextBlock Text="Configurar Envío por Pauta" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="#10b981"/>
+                            
+                            <!-- Selector de Pauta -->
+                            <TextBlock Text="1. Seleccione la Pauta a Configurar:" Style="{StaticResource LabelStyle}"/>
+                            <ComboBox ItemsSource="{Binding Pautas}" 
+                                      SelectedItem="{Binding SelectedPauta}"
+                                      DisplayMemberPath="Name"
+                                      Margin="0,0,0,20" Height="40" Background="#3d4456">
+                            </ComboBox>
+
+                            <Separator Background="#3d4456" Margin="0,0,0,20"/>
+
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+
+                                <TextBlock Text="{Binding SelectedPauta.Name, StringFormat='2. Configuración para: {0}'}" FontSize="14" FontWeight="Bold" Foreground="#e2e8f0" Margin="0,0,0,15"/>
+
+                                <TextBlock Text="Método de Envío:" Style="{StaticResource LabelStyle}"/>
+                                <ComboBox ItemsSource="{Binding EmailMethods}" 
+                                          SelectedItem="{Binding SelectedPauta.EmailMethod}"
+                                          Margin="0,0,0,15" Height="35"/>
+
+                                <!-- Detección Automática Compacta -->
+                                <Border Background="#1e222d" BorderBrush="#3d4456" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="Detección Automática de Destinatario" FontSize="14" FontWeight="Bold" Foreground="#e2e8f0" VerticalAlignment="Center"/>
+                                            <CheckBox IsChecked="{Binding SelectedPauta.UseAutomatedRecipient}" Content="Activar" Foreground="#94a3b8" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <TextBlock Text="Asocia nombres de agentes con sus correos electrónicos automáticamente." FontSize="11" Foreground="#94a3b8" Margin="0,5,0,10"/>
+                                        
+                                        <Button Content="⚙️ CONFIGURAR DIRECTORIO Y CAMPO" 
+                                                Command="{Binding OpenEmailDirectoryCommand}"
+                                                Style="{StaticResource GhostButton}" 
+                                                Height="35"
+                                                IsEnabled="{Binding SelectedPauta.UseAutomatedRecipient}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBlock Text="Para (To) [Manual o Fallback]:" Style="{StaticResource LabelStyle}"/>
+                                <TextBox Text="{Binding SelectedPauta.EmailToTemplate}" Margin="0,0,0,10"/>
+
+                                <TextBlock Text="Con Copia (CC):" Style="{StaticResource LabelStyle}"/>
+                                <TextBox Text="{Binding SelectedPauta.EmailCcTemplate}" Margin="0,0,0,10"/>
+
+                                <TextBlock Text="Asunto del Correo:" Style="{StaticResource LabelStyle}"/>
+                                <TextBox Text="{Binding SelectedPauta.EmailSubjectTemplate}" Margin="0,0,0,10"/>
+
+                                <TextBlock Text="Cuerpo del Correo:" Style="{StaticResource LabelStyle}"/>
+                                <TextBox Text="{Binding SelectedPauta.EmailBodyTemplate}" Margin="0,0,0,15" 
+                                         AcceptsReturn="True" Height="100" VerticalContentAlignment="Top" TextWrapping="Wrap"/>
+
+                                <!-- Reglas de Envío (Movidas desde ConfigWindow) -->
+                                <TextBlock Text="Reglas de Envío (Exclusión)" FontSize="14" FontWeight="Bold" Foreground="#ef4444" Margin="0,10,0,10"/>
+                                <Border Background="#262b38" BorderBrush="#3d4456" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                                    <StackPanel>
+                                        <TextBlock Text="No enviar correo si el campo..." Style="{StaticResource LabelStyle}"/>
+                                        <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
+                                                  SelectedValue="{Binding SelectedPauta.ExcludeByFieldId}"
+                                                  SelectedValuePath="Id"
+                                                  DisplayMemberPath="Label"
+                                                  Margin="0,0,0,10" Height="35" Background="#3d4456"/>
+                                        
+                                        <TextBlock Text="...tiene exactamente este valor:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBox Text="{Binding SelectedPauta.ExcludeByFieldValue}" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Ejemplo: Excluir si 'Calificación' tiene el valor '100%'" 
+                                                   FontSize="11" Foreground="#94a3b8" FontStyle="Italic"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="#2d3446" Padding="10" CornerRadius="4">
+                                    <StackPanel>
+                                        <TextBlock Text="💡 Tip sobre Placeholders:" FontWeight="Bold" Foreground="#3b82f6" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Puedes usar [Nombre del Campo] para insertar datos del registro automáticamente." 
+                                                   FontSize="11" Foreground="#94a3b8" TextWrapping="Wrap"/>
+                                        <TextBlock Text="Ejemplo: [Nombre del Agente], [Ticket], [Calificación]" 
+                                                   FontSize="11" Foreground="#94a3b8" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <TextBlock Text="No hay pautas disponibles para configurar." 
+                                       Foreground="#94a3b8" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,20,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <Border Grid.Row="1" Background="#1e222d" Padding="20,10" BorderBrush="#3d4456" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancelar" Command="{Binding CancelCommand}" Background="#64748b" Margin="0,0,10,0" Padding="20,10"/>
-                <Button Content="Guardar cambios" Command="{Binding SaveCommand}" Background="#10b981" Padding="20,10"/>
+                <Button Content="Cancelar" Command="{Binding CancelCommand}" Background="#64748b" Margin="0,0,10,0" Width="100" Padding="0"/>
+                <Button Content="Guardar cambios" Command="{Binding SaveCommand}" Background="#10b981" Width="140" Padding="0"/>
             </StackPanel>
-        </StackPanel>
-    </Border>
+        </Border>
+    </Grid>
 </Window>

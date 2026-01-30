@@ -32,6 +32,13 @@ namespace PautaDinamicaApp.ViewModels
         private bool _isPautaMultiSelectMode;
         private bool _isMultiSelectMode;
         private readonly List<PautaSchema> _pautasToDelete = new();
+        private int _selectedTabIndex;
+
+        public int SelectedTabIndex
+        {
+            get => _selectedTabIndex;
+            set => SetProperty(ref _selectedTabIndex, value);
+        }
 
         public EditorViewModel(string activePautaId = "")
         {
@@ -70,7 +77,10 @@ namespace PautaDinamicaApp.ViewModels
             AvailableTypes = Enum.GetValues(typeof(FieldType)).Cast<FieldType>()
                                 .Where(t => t != FieldType.Separator)
                                 .ToList();
+            EmailMethods = Enum.GetValues(typeof(EmailMethod));
         }
+
+        public Array EmailMethods { get; }
 
         public bool IsSaveSuccessful { get; private set; }
         public bool ShouldClearRecords { get; private set; }
@@ -297,7 +307,11 @@ namespace PautaDinamicaApp.ViewModels
             {
                 string json = JsonSerializer.Serialize(Fields, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(filePath, json);
-                MessageBox.Show($"Configuración exportada con éxito en:\n{filePath}");
+
+                if (MessageBox.Show($"Configuración exportada con éxito en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                {
+                    if (Directory.Exists(exportDir)) System.Diagnostics.Process.Start("explorer.exe", exportDir);
+                }
             }
             catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
         }
@@ -397,7 +411,11 @@ namespace PautaDinamicaApp.ViewModels
             {
                 var fullData = new { Pautas = Pautas.ToList(), Configs = Pautas.ToDictionary(p => p.Id, p => _storageService.LoadConfiguration(p.Id)), Records = Pautas.ToDictionary(p => p.Id, p => _storageService.LoadRecords(p.Id)) };
                 File.WriteAllText(filePath, JsonSerializer.Serialize(fullData, new JsonSerializerOptions { WriteIndented = true }));
-                MessageBox.Show($"Respaldo completo exportado con éxito en:\n{filePath}");
+
+                if (MessageBox.Show($"Respaldo completo exportado con éxito en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                {
+                    if (Directory.Exists(exportDir)) System.Diagnostics.Process.Start("explorer.exe", exportDir);
+                }
             }
             catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
         }
@@ -492,6 +510,11 @@ namespace PautaDinamicaApp.ViewModels
                                 File.WriteAllText(jsonPath, JsonSerializer.Serialize(oldConfig, new JsonSerializerOptions { WriteIndented = true }));
 
                                 MessageBox.Show($"Respaldos realizados con éxito:\n- Excel: {filePath}\n- JSON: {jsonPath}");
+
+                                if (MessageBox.Show("¿Desea abrir la carpeta de exportación?", "Respaldos realizados", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                                {
+                                    if (Directory.Exists(exportDir)) System.Diagnostics.Process.Start("explorer.exe", exportDir);
+                                }
 
                                 // Limpiar registros en disco
                                 _storageService.SaveRecords(EditingPauta.Id, new List<AuditEntry>());

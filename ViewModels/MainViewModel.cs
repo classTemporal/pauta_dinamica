@@ -25,7 +25,8 @@ namespace PautaDinamicaApp.ViewModels
     {
         public event Action? FieldsRefreshed;
         private readonly StorageService _storageService;
-        private readonly PdfService _pdfService; // Nuevo servicio
+        private readonly PdfService _pdfService;
+        private readonly EmailService _emailService;
         private ObservableCollection<DynamicFieldVM> _currentFields = new();
         private ICollectionView? _groupedFields;
         private ObservableCollection<AuditEntry> _records = new();
@@ -40,6 +41,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             _storageService = new StorageService();
             _pdfService = new PdfService();
+            _emailService = new EmailService();
             LoadPautas();
             LoadData();
 
@@ -56,7 +58,7 @@ namespace PautaDinamicaApp.ViewModels
             DeleteSelectedCommand = new RelayCommand(_ => DeleteSelectedRecords());
             ExportSelectedCommand = new RelayCommand(_ => ExportRecordsToExcel(Records.Where(r => r.IsSelected).ToList(), "Export_Parcial_Auditoria"));
             ImportFromExcelCommand = new RelayCommand(_ => ImportRecordsFromExcel());
-            SendEmailsCommand = new RelayCommand(_ => SendEmails());
+            SendEmailsCommand = new RelayCommand(p => SendEmails(p as AuditEntry));
             OpenSettingsCommand = new RelayCommand(_ => OpenSettings());
 
             // Comandos PDF
@@ -70,6 +72,11 @@ namespace PautaDinamicaApp.ViewModels
             var win = new Views.SettingsWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
             vm.RequestClose += () => win.Close();
             win.ShowDialog();
+
+            if (vm.IsSaved)
+            {
+                LoadPautas(); // Refrescar para tener los nuevos métodos de envío, etc.
+            }
         }
 
         public bool ExportRecordsToExcel(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null, bool silent = false)
@@ -158,7 +165,11 @@ namespace PautaDinamicaApp.ViewModels
             {
                 string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(filePath, json);
-                MessageBox.Show($"Exportación a JSON exitosa.\n\nArchivo guardado en:\n{filePath}");
+
+                if (MessageBox.Show($"Exportación a JSON exitosa.\n\nArchivo guardado en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                {
+                    if (Directory.Exists(exportDir)) System.Diagnostics.Process.Start("explorer.exe", exportDir);
+                }
                 return true;
             }
             catch (Exception ex)
@@ -264,7 +275,7 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
-        private void GeneratePdfCommon(List<AuditEntry> records)
+        private string? GeneratePdfCommon(List<AuditEntry> records, bool silent = false)
         {
             try
             {
@@ -279,14 +290,19 @@ namespace PautaDinamicaApp.ViewModels
 
                 _pdfService.GenerateAuditPdf(records, definitions, pautaName, filePath);
 
-                if (MessageBox.Show($"PDF Generado con éxito en:\n{filePath}\n\n¿Abrir ahora?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (!silent)
                 {
-                    new System.Diagnostics.Process { StartInfo = new System.Diagnostics.ProcessStartInfo(filePath) { UseShellExecute = true } }.Start();
+                    if (MessageBox.Show($"PDF Generado con éxito en:\n{filePath}\n\n¿Abrir ahora?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                    {
+                        new System.Diagnostics.Process { StartInfo = new System.Diagnostics.ProcessStartInfo(filePath) { UseShellExecute = true } }.Start();
+                    }
                 }
+                return filePath;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}");
+                MessageBox.Show($"Error al generar PDF: {ex.Message}");
+                return null;
             }
         }
 
@@ -630,9 +646,107 @@ namespace PautaDinamicaApp.ViewModels
             else GenerateBatchPdfs(selected);
         }
 
-        private void SendEmails()
+        private void SendEmails(AuditEntry? singleEntry = null)
         {
-            MessageBox.Show("Funcionalidad de correo electrónico próximamente.", "En Desarrollo");
+            if (CurrentPauta == null)
+            {
+                MessageBox.Show("No hay una pauta activa.");
+                return;
+            }
+
+            // Determinar registros a procesar
+            List<AuditEntry> toProcess = new();
+            if (singleEntry != null)
+            {
+                toProcess.Add(singleEntry);
+            }
+            else
+            {
+                var selected = Records.Where(r => r.IsSelected).ToList();
+                toProcess = selected.Any() ? selected : Records.ToList();
+            }
+
+            if (!toProcess.Any())
+            {
+                MessageBox.Show("No hay registros para enviar.");
+                return;
+            }
+
+            // Aplicar lógica de exclusión si estamos enviando múltiples
+            if (toProcess.Count > 1 && !string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldId))
+            {
+                int totalBefore = toProcess.Count;
+                toProcess = toProcess.Where(entry =>
+                {
+                    if (entry.Values.TryGetValue(CurrentPauta.ExcludeByFieldId, out var val))
+                    {
+                        string valStr = val?.ToString() ?? "";
+                        return !string.Equals(valStr, CurrentPauta.ExcludeByFieldValue, StringComparison.OrdinalIgnoreCase);
+                    }
+                    return true;
+                }).ToList();
+
+                int excluded = totalBefore - toProcess.Count;
+                if (excluded > 0)
+                {
+                    var res = MessageBox.Show($"Se han excluido {excluded} registros según la regla de la pauta.\n\n¿Desea continuar con los {toProcess.Count} restantes?", "Filtro de Exclusión", MessageBoxButton.YesNo);
+                    if (res == MessageBoxResult.No) return;
+                }
+            }
+
+            if (toProcess.Count > 1)
+            {
+                var confirm = MessageBox.Show($"Se prepararán {toProcess.Count} correos individuales. ¿Continuar?", "Confirmar Envío", MessageBoxButton.YesNo);
+                if (confirm == MessageBoxResult.No) return;
+            }
+
+            var globalSettings = _storageService.LoadSettings();
+            var fieldDefinitions = _storageService.LoadConfiguration(CurrentPauta.Id);
+            int count = 0;
+            var generatedPdfs = new List<string>();
+
+            foreach (var entry in toProcess)
+            {
+                try
+                {
+                    // Generar PDF individual (para el adjunto)
+                    string? pdfPath = GeneratePdfCommon(new List<AuditEntry> { entry }, silent: true);
+                    if (!string.IsNullOrEmpty(pdfPath)) generatedPdfs.Add(pdfPath);
+
+                    // El EmailService ahora maneja la herencia internamente
+                    _emailService.SendEmail(globalSettings, CurrentPauta, entry, fieldDefinitions, pdfPath);
+                    count++;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al procesar registro: {ex.Message}");
+                }
+            }
+
+            if (count > 0)
+            {
+                string msg = $"{count} correos procesados.";
+
+                // Determinar el método efectivo para el aviso de adjuntos
+                EmailMethod effectiveMethod = CurrentPauta.EmailMethod;
+
+                if (generatedPdfs.Any())
+                {
+                    msg += $"\n\nLos reportes PDF se guardaron en:\n{globalSettings.PdfReportPath}";
+                    if (effectiveMethod == EmailMethod.Mailto)
+                    {
+                        msg += "\n\n⚠️ NOTA: El método 'Mailto' NO permite adjuntar archivos automáticamente. Deberá adjuntar los PDFs manualmente en cada correo.";
+                    }
+                }
+
+                if (MessageBox.Show(msg + "\n\n¿Desea abrir la carpeta de los reportes ahora?", "Proceso Finalizado", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                {
+                    if (Directory.Exists(globalSettings.PdfReportPath))
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", globalSettings.PdfReportPath);
+                    }
+                }
+            }
         }
 
 

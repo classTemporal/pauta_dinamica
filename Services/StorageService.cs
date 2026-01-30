@@ -75,7 +75,20 @@ namespace PautaDinamicaApp.Services
             try
             {
                 string json = File.ReadAllText(_pautasIndexPath);
-                return JsonSerializer.Deserialize<List<PautaSchema>>(json) ?? new List<PautaSchema>();
+                var pautas = JsonSerializer.Deserialize<List<PautaSchema>>(json) ?? new List<PautaSchema>();
+
+                // MIGRACIÓN: Si las pautas tienen los antiguos defaults hardcodeados, 
+                // los limpiamos para que hereden de la configuración global.
+                bool updated = false;
+                foreach (var p in pautas)
+                {
+                    if (p.EmailSubjectTemplate == "Auditoría - [Nombre del Agente]") { p.EmailSubjectTemplate = ""; updated = true; }
+                    if (p.EmailBodyTemplate != null && p.EmailBodyTemplate.Contains("Adjunto reporte")) { p.EmailBodyTemplate = ""; updated = true; }
+                }
+
+                if (updated) SavePautas(pautas);
+
+                return pautas;
             }
             catch { return new List<PautaSchema>(); }
         }
