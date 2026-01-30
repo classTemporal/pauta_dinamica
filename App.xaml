@@ -2,13 +2,18 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:PautaDinamicaApp"
-             StartupUri="MainWindow.xaml">
+             xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
+             StartupUri="Views/LoginWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Views/Resources/Styles.xaml"/>
                 <ResourceDictionary Source="Views/Resources/FieldTemplates.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            
+            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <conv:NotNullToVisibilityConverter x:Key="NotNullToVisibilityConverter"/>
+            <conv:StringSwitchConverter x:Key="StringSwitchConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

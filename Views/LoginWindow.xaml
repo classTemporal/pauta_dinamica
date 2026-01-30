@@ -1,0 +1,139 @@
+<Window x:Class="PautaDinamicaApp.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Acceso - Pauta Dinámica" Height="580" Width="420"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        Background="#12151c" Foreground="#e1e1e1" WindowStyle="None" AllowsTransparency="True">
+    
+    <Border CornerRadius="15" Background="#1a1d26" BorderBrush="#3d4456" BorderThickness="1">
+        <Grid Margin="30">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                <TextBlock Text="Pauta Dinámica" FontSize="28" FontWeight="Bold" Foreground="#3b82f6" HorizontalAlignment="Center"/>
+                <TextBlock Text="Control de Auditoría" FontSize="12" Foreground="#64748b" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+            </StackPanel>
+
+            <!-- Content -->
+            <Grid Grid.Row="1">
+                
+                <!-- 1. EMPTY STATE (No users) -->
+                <StackPanel VerticalAlignment="Center" 
+                            Visibility="{Binding HasUsers, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                    <Border Background="#1e1e24" Padding="20" CornerRadius="10" BorderBrush="#333" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Bienvenido" FontSize="20" FontWeight="Bold" Foreground="#e1e1e1" HorizontalAlignment="Center"/>
+                            <TextBlock Text="No se han detectado perfiles de usuario en este equipo." 
+                                       Margin="0,15,0,20" TextWrapping="Wrap" TextAlignment="Center" Foreground="#94a3b8"/>
+                            <Button Content="CREAR PRIMER USUARIO" Command="{Binding ToggleManageModeCommand}" 
+                                    Style="{StaticResource SuccessButton}" Height="45"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- 2. LOGIN VIEW -->
+                <StackPanel Visibility="{Binding HasUsers, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Visibility="{Binding IsManageMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                        <TextBlock Text="Seleccionar Usuario:" Foreground="#94a3b8" Margin="0,0,0,8"/>
+                        <ComboBox ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}" 
+                                  DisplayMemberPath="Username" Height="42" Background="#2d3446" FontSize="14"/>
+
+                        <StackPanel Margin="0,20,0,0" Visibility="{Binding SelectedUser.PasswordHash, Converter={StaticResource NotNullToVisibilityConverter}}">
+                            <TextBlock Text="Contraseña:" Foreground="#94a3b8" Margin="0,0,0,8"/>
+                            <PasswordBox x:Name="UserPasswordBox" Height="42" Background="#2d3446" Foreground="White" Padding="10,0" FontSize="14"/>
+                            <Button Content="¿Olvidó su contraseña?" Command="{Binding ToggleMasterResetCommand}"
+                                    Background="Transparent" BorderThickness="0" Foreground="#3b82f6" FontSize="11" 
+                                    HorizontalAlignment="Left" Margin="0,10,0,0"
+                                    Visibility="{Binding IsMasterResetMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Acceso sin contraseña habilitado." Foreground="#10b981" Margin="0,20,0,0"
+                                   HorizontalAlignment="Center" FontStyle="Italic" FontSize="12"
+                                   Visibility="{Binding SelectedUser.PasswordHash, Converter={StaticResource NotNullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+
+                        <Border Background="#1e293b" CornerRadius="8" Padding="15" Margin="0,20,0,0" 
+                                Visibility="{Binding IsMasterResetMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="AUTORIZACIÓN REQUERIDA" FontWeight="Bold" Foreground="#cbd5e1" Margin="0,0,0,10"/>
+                                
+                                <TextBlock Text="Clave de Administrador:" FontSize="10" Foreground="#94a3b8" Margin="0,0,0,5"/>
+                                <PasswordBox x:Name="AdminRestoreBox" Height="35" Background="#0f172a" Foreground="White" Padding="8,0"/>
+                                
+                                <TextBlock Text="Nueva Contraseña:" FontSize="10" Foreground="#94a3b8" Margin="0,10,0,5"/>
+                                <PasswordBox x:Name="ResetNewPasswordBox" Height="35" Background="#0f172a" Foreground="White" Padding="8,0"/>
+
+                                <Grid Margin="0,15,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Content="CANCELAR" Command="{Binding ToggleMasterResetCommand}" 
+                                            Background="Transparent" Foreground="#94a3b8" FontSize="11" Height="30"/>
+                                    <Button Grid.Column="1" Content="ESTABLECER" Command="{Binding ResetPasswordCommand}" 
+                                            Style="{StaticResource PrimaryButton}" Height="30" FontSize="11"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Button Content="INGRESAR" Command="{Binding LoginCommand}" 
+                                Style="{StaticResource PrimaryButton}" Height="50" Margin="0,30,0,10"
+                                Visibility="{Binding IsMasterResetMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 3. MANAGEMENT MODE -->
+                <StackPanel Visibility="{Binding IsManageMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Text="GESTIÓN DE CUENTAS" FontSize="18" FontWeight="Bold" Foreground="#3b82f6" HorizontalAlignment="Center"/>
+                    
+                    <ScrollViewer Margin="0,15,0,0" VerticalScrollBarVisibility="Auto" MaxHeight="350">
+                        <StackPanel>
+                            <!-- Section: Create -->
+                            <Border Background="#212631" Padding="15" CornerRadius="8" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="Nuevo Perfil" FontWeight="Bold" Margin="0,0,0,10" Foreground="#e1e1e1"/>
+                                    <TextBlock Text="Usuario:" Foreground="#94a3b8" FontSize="11" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding NewUsername, UpdateSourceTrigger=PropertyChanged}" Height="35" Background="#2d3446" Foreground="White" Padding="10,0"/>
+
+                                    <TextBlock Text="Contraseña:" Foreground="#94a3b8" FontSize="11" Margin="0,10,0,5"/>
+                                    <PasswordBox x:Name="NewPasswordBox" Height="35" Background="#2d3446" Foreground="White" Padding="10,0"/>
+
+                                    <Button Content="REGISTRAR" Command="{Binding CreateUserCommand}" 
+                                            Style="{StaticResource SuccessButton}" Height="35" Margin="0,15,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Section: Delete -->
+                            <Border Background="#212631" Padding="15" CornerRadius="8" Visibility="{Binding HasUsers, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Eliminar Perfil" FontWeight="Bold" Margin="0,0,0,10" Foreground="#e1e1e1"/>
+                                    <ComboBox ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}" 
+                                              DisplayMemberPath="Username" Height="35" Background="#2d3446" Margin="0,0,0,10"/>
+                                    
+                                    <TextBlock Text="Confirme con su clave de Admin / Usuario si tiene:" FontSize="10" Foreground="#64748b" Margin="0,0,0,5"/>
+                                    <PasswordBox x:Name="AdminDeleteBox" Height="35" Background="#0f172a" Foreground="White" Padding="8,0"/>
+
+                                    <Button Command="{Binding DeleteUserCommand}" CommandParameter="{Binding SelectedUser}"
+                                            Style="{StaticResource DangerButton}" Content="BORRAR PERFIL" Height="35" Margin="0,15,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </StackPanel>
+
+            </Grid>
+
+            <!-- Bottom Navigation -->
+            <StackPanel Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Center" Margin="0,10,0,0">
+                <Button Command="{Binding ToggleManageModeCommand}" Background="Transparent" BorderThickness="0">
+                    <TextBlock Text="{Binding IsManageMode, Converter={StaticResource StringSwitchConverter}, ConverterParameter='Cerrar Gestión|Administrar Usuarios'}" 
+                               Foreground="#3b82f6" FontWeight="SemiBold" FontSize="12"/>
+                </Button>
+                
+                <Button Content="Salir del Sistema" Click="Exit_Click" Background="Transparent" BorderThickness="0" 
+                        Foreground="#64748b" FontSize="11" Margin="0,10,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

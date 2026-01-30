@@ -9,13 +9,17 @@ namespace PautaDinamicaApp.Services
 {
     public class StorageService
     {
-        private readonly string _basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data");
+        private readonly string _basePath;
         private readonly string _pautasIndexPath;
         private readonly string _lastPautaPath;
         private readonly string _settingsPath; // Path for global settings
 
         public StorageService()
         {
+            // Resolve base path based on current user
+            string currentUser = SessionService.CurrentUser?.Username ?? "default";
+            _basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", "users", currentUser);
+
             if (!Directory.Exists(_basePath)) Directory.CreateDirectory(_basePath);
             _pautasIndexPath = Path.Combine(_basePath, "pautas_index.json");
             _lastPautaPath = Path.Combine(_basePath, "last_pauta.txt");

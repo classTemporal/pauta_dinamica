@@ -56,6 +56,8 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand SendEmailsCommand { get; }
         public ICommand ShowHelpCommand { get; }
         public ICommand ShowGeneralHelpCommand { get; }
+        public ICommand LogoutCommand { get; }
+        public UserModel? CurrentUser => SessionService.CurrentUser;
 
         public MainViewModel()
         {
@@ -86,6 +88,26 @@ namespace PautaDinamicaApp.ViewModels
             OpenSettingsCommand = new RelayCommand(_ => StartSettingsFlow());
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
             ShowGeneralHelpCommand = new RelayCommand(_ => ShowGeneralHelp());
+            LogoutCommand = new RelayCommand(_ => Logout());
+        }
+
+        private void Logout()
+        {
+            new SessionService().Logout();
+
+            // Re-open login window
+            var loginWin = new Views.LoginWindow();
+            loginWin.Show();
+
+            // Close current window
+            foreach (Window window in System.Windows.Application.Current.Windows)
+            {
+                if (window is MainWindow)
+                {
+                    window.Close();
+                    break;
+                }
+            }
         }
 
         private void ShowGeneralHelp()
@@ -122,22 +144,34 @@ namespace PautaDinamicaApp.ViewModels
             content.AppendLine("*Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.*");
 
             var vm = new HelpViewModel("Documentación General", content.ToString());
-            var win = new Views.HelpWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
+            var win = new Views.HelpWindow { DataContext = vm };
+            var owner = GetBestOwner();
+            if (owner != null && owner != win) win.Owner = owner;
             win.ShowDialog();
+        }
+
+        private Window? GetBestOwner()
+        {
+            return System.Windows.Application.Current.Windows.OfType<MainWindow>().FirstOrDefault()
+                ?? System.Windows.Application.Current.MainWindow;
         }
 
         private void ShowHelp()
         {
             if (CurrentPauta == null) return;
             var vm = new HelpViewModel(CurrentPauta.Name, CurrentPauta.HelpContent);
-            var win = new Views.HelpWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
+            var win = new Views.HelpWindow { DataContext = vm };
+            var owner = GetBestOwner();
+            if (owner != null && owner != win) win.Owner = owner;
             win.ShowDialog();
         }
 
         private void StartSettingsFlow()
         {
             var vm = new SettingsViewModel();
-            var settingsWin = new Views.SettingsWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
+            var settingsWin = new Views.SettingsWindow { DataContext = vm };
+            var owner = GetBestOwner();
+            if (owner != null && owner != settingsWin) settingsWin.Owner = owner;
 
             vm.RequestClose += () => settingsWin.Close();
             settingsWin.ShowDialog();

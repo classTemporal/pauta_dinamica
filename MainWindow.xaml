@@ -350,9 +350,19 @@
                     <TextBlock Text="v1.1.0" FontSize="10" Foreground="#64748b" VerticalAlignment="Center"/>
                 </StackPanel>
                 
-                <TextBlock Text="Pauta Dinámica - Auditoría de Calidad" 
-                           HorizontalAlignment="Right" VerticalAlignment="Center" 
-                           FontSize="10" Foreground="#4a5568" FontStyle="Italic"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="👤 Usuario: " FontSize="10" Foreground="#64748b" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding CurrentUser.Username}" FontSize="10" FontWeight="Bold" Foreground="#e1e1e1" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                    
+                    <Button Command="{Binding LogoutCommand}" 
+                            Style="{StaticResource GhostButton}" Foreground="#dc3545"
+                            Padding="10,2" Margin="0" Height="25" Content="CERRAR SESIÓN"/>
+
+                    <TextBlock Text="Pauta Dinámica - Auditoría de Calidad" 
+                               Margin="20,0,0,0"
+                               VerticalAlignment="Center" 
+                               FontSize="10" Foreground="#4a5568" FontStyle="Italic"/>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>
