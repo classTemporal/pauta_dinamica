@@ -55,12 +55,18 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
         <Border Grid.Row="0" Padding="20,15" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
             <Grid>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Sistema de Registro de Llamadas" Foreground="{StaticResource TextBrush}" FontSize="22" FontWeight="Bold" Margin="0,0,30,0"/>
                     
                     <!-- Pauta Selector -->
@@ -94,7 +100,7 @@
                     </StackPanel>
                 </StackPanel>
                 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="⚙️ CONFIG. GENERAL" Command="{Binding OpenSettingsCommand}" 
                             Style="{StaticResource GhostButton}" Padding="10,5" Margin="0,0,10,0"/>
                     <Button Content="✏️ CONFIG. PAUTA" Command="{Binding OpenConfigCommand}" 
@@ -328,5 +334,26 @@
                 </DockPanel>
             </Border>
         </Grid>
+
+        <!-- Footer / Barra Inferior -->
+        <Border Grid.Row="2" Padding="20,5" Background="#1a1d26" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Command="{Binding ShowGeneralHelpCommand}" 
+                            Style="{StaticResource GhostButton}" 
+                            Padding="10,2" Margin="0" Height="25">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📘 Documentación y Guía del Sistema" FontSize="11" VerticalAlignment="Center" Foreground="#3b82f6"/>
+                        </StackPanel>
+                    </Button>
+                    <Separator Width="1" Height="15" Margin="10,0" Background="#3d4456"/>
+                    <TextBlock Text="v1.1.0" FontSize="10" Foreground="#64748b" VerticalAlignment="Center"/>
+                </StackPanel>
+                
+                <TextBlock Text="Pauta Dinámica - Auditoría de Calidad" 
+                           HorizontalAlignment="Right" VerticalAlignment="Center" 
+                           FontSize="10" Foreground="#4a5568" FontStyle="Italic"/>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

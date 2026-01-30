@@ -7,14 +7,15 @@ namespace PautaDinamicaApp.Views.Converters
 {
     public class StringToBrushConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is string colorStr && !string.IsNullOrWhiteSpace(colorStr))
             {
                 try
                 {
                     var converter = new BrushConverter();
-                    return (System.Windows.Media.Brush)converter.ConvertFromString(colorStr);
+                    var brush = converter.ConvertFromString(colorStr) as System.Windows.Media.Brush;
+                    return brush ?? System.Windows.Media.Brushes.Transparent;
                 }
                 catch
                 {
@@ -24,7 +25,7 @@ namespace PautaDinamicaApp.Views.Converters
             return System.Windows.Media.Brushes.Transparent;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

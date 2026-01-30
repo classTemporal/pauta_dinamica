@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Data;
 using System.ComponentModel;
+using System.Text;
 using System.Text.Json;
 using System.IO;
 using PautaDinamicaApp.Models;
@@ -54,6 +55,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand GenerateSelectedPdfCommand { get; }
         public ICommand SendEmailsCommand { get; }
         public ICommand ShowHelpCommand { get; }
+        public ICommand ShowGeneralHelpCommand { get; }
 
         public MainViewModel()
         {
@@ -83,6 +85,45 @@ namespace PautaDinamicaApp.ViewModels
             // Nuevo comando para configuración general
             OpenSettingsCommand = new RelayCommand(_ => StartSettingsFlow());
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
+            ShowGeneralHelpCommand = new RelayCommand(_ => ShowGeneralHelp());
+        }
+
+        private void ShowGeneralHelp()
+        {
+            var content = new StringBuilder();
+            content.AppendLine("# 📘 Guía General del Sistema");
+            content.AppendLine("Bienvenido al **Sistema de Registro de Llamadas y Auditoría Dinámica**. Este sistema permite gestionar múltiples tipos de formularios y automatizar procesos de reporte.");
+            content.AppendLine("");
+            content.AppendLine("## 1. Gestión de Pautas (Diseño)");
+            content.AppendLine("En el botón **CONFIG. PAUTA** puedes crear la estructura de tus formularios:");
+            content.AppendLine("- **Campos Dinámicos:** Agrega textos, números, fechas, menús desplegables y campos de cálculo.");
+            content.AppendLine("- **Agrupación:** Usa el botón **BOX** para crear secciones visuales que organizan los campos.");
+            content.AppendLine("- **Personalización:** Marca campos como obligatorios o haz que conserven su valor al limpiar el formulario.");
+            content.AppendLine("- **Instrucciones:** En la pestaña 'Instrucciones de Apoyo' puedes dejar guías específicas para cada pauta.");
+            content.AppendLine("");
+            content.AppendLine("## 2. Registro de Datos");
+            content.AppendLine("- Selecciona una pauta en el menú superior izquierdo.");
+            content.AppendLine("- Completa los campos en el panel izquierdo y presiona **Guardar Registro**.");
+            content.AppendLine("- Los registros aparecerán en la tabla central de la derecha.");
+            content.AppendLine("");
+            content.AppendLine("## 3. Exportación y Reportes");
+            content.AppendLine("- **Excel/JSON:** Exporta toda la base de datos o registros seleccionados a formatos editables.");
+            content.AppendLine("- **PDF:** Genera reportes visuales con un solo clic. Puedes configurar la carpeta de salida en **CONFIG. GENERAL**.");
+            content.AppendLine("");
+            content.AppendLine("## 4. Sistema de Correos y Directorio");
+            content.AppendLine("- **Envío Individual/Masivo:** Selecciona registros y presiona el icono de sobre para enviar correos pre-formateados.");
+            content.AppendLine("- **Directorio de Agentes:** En la configuración general, puedes asociar nombres de agentes con sus correos para que el sistema los detecte automáticamente.");
+            content.AppendLine("- **Plantillas:** Personaliza el asunto y cuerpo del mensaje usando `[Nombre del Campo]` como comodín.");
+            content.AppendLine("");
+            content.AppendLine("## 5. Resaltado Visual");
+            content.AppendLine("- Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en **CONFIG. GENERAL > Rutas**.");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("*Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.*");
+
+            var vm = new HelpViewModel("Documentación General", content.ToString());
+            var win = new Views.HelpWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
+            win.ShowDialog();
         }
 
         private void ShowHelp()
