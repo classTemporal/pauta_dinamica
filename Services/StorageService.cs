@@ -13,6 +13,7 @@ namespace PautaDinamicaApp.Services
         private readonly string _pautasIndexPath;
         private readonly string _lastPautaPath;
         private readonly string _settingsPath; // Path for global settings
+        private readonly string _templatesPath;
 
         public StorageService()
         {
@@ -24,6 +25,7 @@ namespace PautaDinamicaApp.Services
             _pautasIndexPath = Path.Combine(_basePath, "pautas_index.json");
             _lastPautaPath = Path.Combine(_basePath, "last_pauta.txt");
             _settingsPath = Path.Combine(_basePath, "app_settings.json");
+            _templatesPath = Path.Combine(_basePath, "templates.json");
 
             EnsureDefaultPautaExists();
         }
@@ -201,6 +203,27 @@ namespace PautaDinamicaApp.Services
             {
                 new FieldDefinition { Id = Guid.NewGuid().ToString(), Label = "Nuevo Campo", Type = FieldType.Text, Order = 1 }
             };
+        }
+
+        public List<MessageTemplate> LoadTemplates()
+        {
+            if (!File.Exists(_templatesPath)) return new List<MessageTemplate>();
+            try
+            {
+                string json = File.ReadAllText(_templatesPath);
+                return JsonSerializer.Deserialize<List<MessageTemplate>>(json) ?? new List<MessageTemplate>();
+            }
+            catch { return new List<MessageTemplate>(); }
+        }
+
+        public void SaveTemplates(List<MessageTemplate> templates)
+        {
+            try
+            {
+                string json = JsonSerializer.Serialize(templates, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(_templatesPath, json);
+            }
+            catch { }
         }
     }
 }

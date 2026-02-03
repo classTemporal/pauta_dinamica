@@ -25,6 +25,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand BrowsePdfPathCommand { get; }
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
+        public ICommand OpenTemplateManagementCommand { get; }
 
         private ObservableCollection<PautaSchema> _pautas = new();
         private PautaSchema? _selectedPauta;
@@ -105,6 +106,14 @@ namespace PautaDinamicaApp.ViewModels
             SelectAllContactsCommand = new RelayCommand(p => { AllContactsSelected = (bool)(p ?? false); });
             OpenEmailDirectoryCommand = new RelayCommand(_ => OpenEmailDirectory());
             ToggleContactMultiSelectCommand = new RelayCommand(_ => IsContactMultiSelectMode = !IsContactMultiSelectMode);
+            OpenTemplateManagementCommand = new RelayCommand(_ => OpenTemplateManagement());
+        }
+
+        private void OpenTemplateManagement()
+        {
+            var vm = new TemplateManagementViewModel();
+            var win = new Views.TemplateManagementWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
+            win.ShowDialog();
         }
 
         private void OpenEmailDirectory()

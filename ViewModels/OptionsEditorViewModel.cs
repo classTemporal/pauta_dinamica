@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
@@ -8,6 +9,7 @@ using System.Globalization;
 using ClosedXML.Excel;
 using Microsoft.Win32;
 using PautaDinamicaApp.Models;
+using PautaDinamicaApp.Services;
 using MessageBox = System.Windows.MessageBox;
 using MessageBoxButton = System.Windows.MessageBoxButton;
 using MessageBoxImage = System.Windows.MessageBoxImage;
@@ -140,6 +142,7 @@ namespace PautaDinamicaApp.ViewModels
 
     public class OptionsEditorViewModel : ViewModelBase
     {
+        private readonly StorageService _storageService = new StorageService();
         private ObservableCollection<SelectableOptionVM> _options = new();
         private string _newOptionText = string.Empty;
         private bool _isMultiSelectMode;
@@ -392,27 +395,52 @@ namespace PautaDinamicaApp.ViewModels
         {
             var items = list.ToList();
             if (!items.Any()) return;
-            var sfd = new SaveFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx", FileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmm}" };
-            if (sfd.ShowDialog() == true)
+
+            var settings = _storageService.LoadSettings();
+            string exportFolder = settings.ExcelExportPath;
+            string fileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            string finalPath = "";
+
+            if (System.IO.Directory.Exists(exportFolder))
             {
-                try
-                {
-                    using (var workbook = new XLWorkbook())
-                    {
-                        var worksheet = workbook.Worksheets.Add("Opciones");
-                        worksheet.Cell(1, 1).Value = "Opción";
-                        for (int i = 0; i < items.Count; i++) worksheet.Cell(i + 2, 1).Value = items[i].Text;
-                        worksheet.Columns().AdjustToContents();
-                        workbook.SaveAs(sfd.FileName);
-                    }
-                }
-                catch (Exception ex) { MessageBox.Show(ex.Message); }
+                finalPath = System.IO.Path.Combine(exportFolder, fileName);
             }
+            else
+            {
+                var sfd = new SaveFileDialog
+                {
+                    Filter = "Excel Files (*.xlsx)|*.xlsx",
+                    FileName = fileName,
+                    InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+                };
+                if (sfd.ShowDialog() == true) finalPath = sfd.FileName;
+                else return;
+            }
+
+            try
+            {
+                using (var workbook = new XLWorkbook())
+                {
+                    var worksheet = workbook.Worksheets.Add("Opciones");
+                    worksheet.Cell(1, 1).Value = "Opción";
+                    worksheet.Cell(1, 1).Style.Font.Bold = true;
+                    for (int i = 0; i < items.Count; i++) worksheet.Cell(i + 2, 1).Value = items[i].Text;
+                    worksheet.Columns().AdjustToContents();
+                    workbook.SaveAs(finalPath);
+                    MessageBox.Show($"Opciones exportadas correctamente en:\n{finalPath}", "Exportación Exitosa");
+                }
+            }
+            catch (Exception ex) { MessageBox.Show("Error al exportar: " + ex.Message); }
         }
 
         private void ImportFromExcel()
         {
-            var ofd = new OpenFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx" };
+            var settings = _storageService.LoadSettings();
+            var ofd = new OpenFileDialog
+            {
+                Filter = "Excel Files (*.xlsx)|*.xlsx",
+                InitialDirectory = settings.ExcelExportPath
+            };
             if (ofd.ShowDialog() == true)
             {
                 try

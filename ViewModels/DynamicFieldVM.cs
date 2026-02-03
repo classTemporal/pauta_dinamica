@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using PautaDinamicaApp.Models;
-
+using PautaDinamicaApp.Services;
 using System.Windows.Input;
 using System.Linq;
 using System.Windows;
@@ -12,7 +12,7 @@ namespace PautaDinamicaApp.ViewModels
     {
         private object? _value;
         private string? _validationError;
-        private bool _isValid = true; // Backing field for IsValid
+        private bool _isValid = true;
 
         public FieldDefinition Definition { get; }
 
@@ -22,10 +22,12 @@ namespace PautaDinamicaApp.ViewModels
             InitializeDefaultValue();
             PickTimeCommand = new RelayCommand(_ => PickTime());
             PickDateCommand = new RelayCommand(_ => PickDate());
+            OpenTemplatesCommand = new RelayCommand(_ => OpenTemplatePicker());
         }
 
         public ICommand PickTimeCommand { get; }
         public ICommand PickDateCommand { get; }
+        public ICommand OpenTemplatesCommand { get; }
 
         private void PickTime()
         {
@@ -65,6 +67,35 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        private void OpenTemplatePicker()
+        {
+            var storage = new StorageService();
+            var templates = storage.LoadTemplates();
+            if (!templates.Any())
+            {
+                System.Windows.MessageBox.Show("No hay plantillas disponibles. Puedes agregarlas en Configuración General > Plantillas.", "Gestor de Plantillas", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var win = new PautaDinamicaApp.Views.TemplatePickerWindow(templates);
+            win.Owner = System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+            if (win.ShowDialog() == true)
+            {
+                string selectedContent = win.SelectedTemplateContent;
+                string currentText = Value?.ToString() ?? "";
+
+                if (string.IsNullOrWhiteSpace(currentText))
+                {
+                    Value = selectedContent;
+                }
+                else
+                {
+                    string separator = Type == FieldType.TextArea ? (currentText.EndsWith("\n") ? "" : "\n\n") : " ";
+                    Value = currentText + separator + selectedContent;
+                }
+            }
+        }
+
         private void InitializeDefaultValue()
         {
             if (!string.IsNullOrEmpty(Definition.DefaultValue))
@@ -95,7 +126,6 @@ namespace PautaDinamicaApp.ViewModels
             }
             else
             {
-                // Fallbacks if no default is specified
                 if (Definition.Type == FieldType.Boolean) _value = false;
                 else _value = null;
             }
@@ -109,6 +139,7 @@ namespace PautaDinamicaApp.ViewModels
         public List<string> Options => Definition.Options;
         public int MaxLength => Definition.MaxLength;
         public int CurrentLength => _value?.ToString()?.Length ?? 0;
+        public bool ShowTemplateButton => Type == FieldType.Text || Type == FieldType.TextArea;
 
         public object? Value
         {
@@ -129,7 +160,6 @@ namespace PautaDinamicaApp.ViewModels
             set => SetProperty(ref _validationError, value);
         }
 
-        // IsValid is now a settable property
         public override bool IsValid
         {
             get => _isValid;
@@ -145,16 +175,9 @@ namespace PautaDinamicaApp.ViewModels
 
         public void Reset()
         {
-            if (Definition.KeepValueOnReset)
-            {
-                // No tocamos Value, mantenemos lo que tenga
-            }
-            else
-            {
-                InitializeDefaultValue();
-            }
+            if (Definition.KeepValueOnReset) { }
+            else InitializeDefaultValue();
 
-            // Clear validation state
             IsValid = true;
             ValidationError = "";
             OnPropertyChanged(nameof(Value));
@@ -193,7 +216,6 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     if (!DateTime.TryParseExact(strValue, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out _))
                     {
-                        // Intento fallback por si acaso, aunque el formato estricto es mejor
                         if (!DateTime.TryParse(strValue, out _))
                         {
                             IsValid = false;
@@ -204,15 +226,12 @@ namespace PautaDinamicaApp.ViewModels
                 }
                 else if (Type == FieldType.Time)
                 {
-                    // Intentar parsear con el formato definido, pero ser flexible si el usuario escribe
                     string format = Definition.TimeFormat ?? "HH:mm";
-                    // Para validar hora, usamos un dummy date
                     string dummyDate = DateTime.Now.ToString("dd/MM/yyyy");
                     string combined = $"{dummyDate} {strValue}";
 
                     if (!DateTime.TryParseExact(combined, $"dd/MM/yyyy {format}", null, System.Globalization.DateTimeStyles.None, out _))
                     {
-                        // Fallback simple por si acaso
                         if (!DateTime.TryParse(strValue, out _))
                         {
                             IsValid = false;
