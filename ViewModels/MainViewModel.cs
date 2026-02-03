@@ -124,35 +124,55 @@ namespace PautaDinamicaApp.ViewModels
         private void ShowGeneralHelp()
         {
             var content = new StringBuilder();
-            content.AppendLine("# 📘 Guía General del Sistema");
-            content.AppendLine("Bienvenido al **Sistema de Registro de Llamadas y Auditoría Dinámica**. Este sistema permite gestionar múltiples tipos de formularios y automatizar procesos de reporte.");
-            content.AppendLine("");
-            content.AppendLine("## 1. Gestión de Pautas (Diseño)");
-            content.AppendLine("En el botón **CONFIG. PAUTA** puedes crear la estructura de tus formularios:");
-            content.AppendLine("- **Campos Dinámicos:** Agrega textos, números, fechas, menús desplegables y campos de cálculo.");
-            content.AppendLine("- **Agrupación:** Usa el botón **BOX** para crear secciones visuales que organizan los campos.");
-            content.AppendLine("- **Personalización:** Marca campos como obligatorios o haz que conserven su valor al limpiar el formulario.");
-            content.AppendLine("- **Instrucciones:** En la pestaña 'Instrucciones de Apoyo' puedes dejar guías específicas para cada pauta.");
-            content.AppendLine("");
-            content.AppendLine("## 2. Registro de Datos");
-            content.AppendLine("- Selecciona una pauta en el menú superior izquierdo.");
-            content.AppendLine("- Completa los campos en el panel izquierdo y presiona **Guardar Registro**.");
-            content.AppendLine("- Los registros aparecerán en la tabla central de la derecha.");
-            content.AppendLine("");
-            content.AppendLine("## 3. Exportación y Reportes");
-            content.AppendLine("- **Excel/JSON:** Exporta toda la base de datos o registros seleccionados a formatos editables.");
-            content.AppendLine("- **PDF:** Genera reportes visuales con un solo clic. Puedes configurar la carpeta de salida en **CONFIG. GENERAL**.");
-            content.AppendLine("");
-            content.AppendLine("## 4. Sistema de Correos y Directorio");
-            content.AppendLine("- **Envío Individual/Masivo:** Selecciona registros y presiona el icono de sobre para enviar correos pre-formateados.");
-            content.AppendLine("- **Directorio de Agentes:** En la configuración general, puedes asociar nombres de agentes con sus correos para que el sistema los detecte automáticamente.");
-            content.AppendLine("- **Plantillas:** Personaliza el asunto y cuerpo del mensaje usando `[Nombre del Campo]` como comodín.");
-            content.AppendLine("");
-            content.AppendLine("## 5. Resaltado Visual");
-            content.AppendLine("- Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en **CONFIG. GENERAL > Rutas**.");
-            content.AppendLine("");
-            content.AppendLine("---");
-            content.AppendLine("*Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.*");
+            content.AppendLine("<h1>📘 Pauta Dinámica - Documentación</h1>");
+            content.AppendLine("<h2>Versión 1.1.0</h2>");
+
+            content.AppendLine("<h3>📝 Resumen</h3>");
+            content.AppendLine("<p>Pauta Dinámica es una herramienta versátil diseñada para optimizar el registro de llamadas y la realización de auditorías de calidad. A través de un sistema de formularios dinámicos, permite a los usuarios estructurar, recopilar y analizar datos de manera eficiente, automatizando la generación de reportes en PDF, exportaciones a Excel y el envío de correos electrónicos.</p>");
+
+            content.AppendLine("<h3>👤 Creador</h3>");
+            content.AppendLine("<p><strong>Angel Gustavo Pacheco Manzanero</strong></p>");
+            content.AppendLine("<p><a href='https://www.linkedin.com/in/angel-temporal-pacheco/'>🔗 LinkedIn Profile</a></p>");
+            content.AppendLine("<p><a href='https://github.com/classTemporal'>🔗 GitHub Profile</a></p>");
+
+            content.AppendLine("<hr/>");
+
+            content.AppendLine("<h2>📖 Guía de Uso</h2>");
+
+            content.AppendLine("<h3>1. Gestión de Pautas (Diseño)</h3>");
+            content.AppendLine("<p>En el botón <strong>CONFIG. PAUTA</strong> puedes crear la estructura de tus formularios:</p>");
+            content.AppendLine("<ul>");
+            content.AppendLine("<li><strong>Campos Dinámicos:</strong> Agrega textos, números, fechas, menús desplegables y campos de cálculo.</li>");
+            content.AppendLine("<li><strong>Agrupación:</strong> Usa el botón <strong>Nueva sección</strong> para crear bloques visuales que organizan los campos.</li>");
+            content.AppendLine("<li><strong>Personalización:</strong> Marca campos como obligatorios o haz que conserven su valor al limpiar el formulario.</li>");
+            content.AppendLine("<li><strong>Instrucciones:</strong> En la pestaña 'Instrucciones de Apoyo' puedes dejar guías específicas para cada pauta.</li>");
+            content.AppendLine("</ul>");
+
+            content.AppendLine("<h3>2. Registro de Datos</h3>");
+            content.AppendLine("<ul>");
+            content.AppendLine("<li>Selecciona una pauta en el menú superior izquierdo.</li>");
+            content.AppendLine("<li>Completa los campos en el panel izquierdo y presiona <strong>Guardar Registro</strong>.</li>");
+            content.AppendLine("<li>Los registros aparecerán en la tabla central de la derecha.</li>");
+            content.AppendLine("</ul>");
+
+            content.AppendLine("<h3>3. Exportación y Reportes</h3>");
+            content.AppendLine("<ul>");
+            content.AppendLine("<li><strong>Excel/JSON:</strong> Exporta toda la base de datos o registros seleccionados a formatos editables.</li>");
+            content.AppendLine("<li><strong>PDF:</strong> Genera reportes visuales con un solo clic. Puedes configurar la carpeta de salida en <strong>CONFIG. GENERAL</strong>.</li>");
+            content.AppendLine("</ul>");
+
+            content.AppendLine("<h3>4. Sistema de Correos y Directorio</h3>");
+            content.AppendLine("<ul>");
+            content.AppendLine("<li><strong>Envío Individual/Masivo:</strong> Selecciona registros y presiona el icono de sobre para enviar correos pre-formateados.</li>");
+            content.AppendLine("<li><strong>Directorio de Agentes:</strong> En la configuración general, puedes asociar nombres de agentes con sus correos para que el sistema los detecte automáticamente.</li>");
+            content.AppendLine("<li><strong>Plantillas:</strong> Personaliza el asunto y cuerpo del mensaje usando <code>[Nombre del Campo]</code> como comodín.</li>");
+            content.AppendLine("</ul>");
+
+            content.AppendLine("<h3>5. Resaltado Visual</h3>");
+            content.AppendLine("<p>Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en <strong>CONFIG. GENERAL &gt; Rutas</strong>.</p>");
+
+            content.AppendLine("<hr/>");
+            content.AppendLine("<p><em>Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.</em></p>");
 
             var vm = new HelpViewModel("Documentación General", content.ToString());
             var win = new Views.HelpWindow { DataContext = vm };
@@ -269,7 +289,7 @@ namespace PautaDinamicaApp.ViewModels
             string filePath;
             if (silent)
             {
-                string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
+                string backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PautaDinamica", "backups");
                 if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
                 filePath = Path.Combine(backupDir, $"{customTitle ?? "Backup"}.xlsx");
             }

@@ -19,7 +19,8 @@ namespace PautaDinamicaApp.Services
         {
             // Resolve base path based on current user
             string currentUser = SessionService.CurrentUser?.Username ?? "default";
-            _basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", "users", currentUser);
+            string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PautaDinamica");
+            _basePath = Path.Combine(appData, "users", currentUser);
 
             if (!Directory.Exists(_basePath)) Directory.CreateDirectory(_basePath);
             _pautasIndexPath = Path.Combine(_basePath, "pautas_index.json");
@@ -59,19 +60,6 @@ namespace PautaDinamicaApp.Services
                 var defaultPauta = new PautaSchema { Name = "Pauta General" };
                 SavePautas(new List<PautaSchema> { defaultPauta });
                 SetLastPautaId(defaultPauta.Id);
-
-                // Migración: si existe config.json viejo, moverlo a la nueva estructura
-                string oldConfig = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
-                string oldRecords = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audit_records.json");
-
-                if (File.Exists(oldConfig))
-                {
-                    try { File.Move(oldConfig, GetConfigPath(defaultPauta.Id), true); } catch { }
-                }
-                if (File.Exists(oldRecords))
-                {
-                    try { File.Move(oldRecords, GetDataPath(defaultPauta.Id), true); } catch { }
-                }
             }
         }
 

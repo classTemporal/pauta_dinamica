@@ -10,7 +10,8 @@
         mc:Ignorable="d"
         x:Name="MainWin"
         Title="Pauta Dinámica - Auditoría" Height="650" Width="1100"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        Icon="/Assets/logo.ico">
 
     <Window.Resources>
         <ResourceDictionary>

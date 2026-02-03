@@ -11,15 +11,15 @@ namespace PautaDinamicaApp.Services
 {
     public class SessionService
     {
-        private readonly string _usersPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", "users_index.json");
+        private readonly string _appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PautaDinamica");
+        private string _usersPath => Path.Combine(_appDataPath, "users_index.json");
         private static UserModel? _currentUser;
 
         public static UserModel? CurrentUser => _currentUser;
 
         public SessionService()
         {
-            string dir = Path.GetDirectoryName(_usersPath)!;
-            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            if (!Directory.Exists(_appDataPath)) Directory.CreateDirectory(_appDataPath);
         }
 
         public List<UserModel> LoadUsers()
@@ -54,7 +54,7 @@ namespace PautaDinamicaApp.Services
             SaveUsers(users);
 
             // Create user data folder
-            string userDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", "users", username);
+            string userDir = Path.Combine(_appDataPath, "users", username);
             if (!Directory.Exists(userDir)) Directory.CreateDirectory(userDir);
         }
 
@@ -149,7 +149,7 @@ namespace PautaDinamicaApp.Services
             SaveUsers(users);
 
             // Physically delete user folder after backup
-            string userDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", "users", username);
+            string userDir = Path.Combine(_appDataPath, "users", username);
             if (Directory.Exists(userDir))
             {
                 try { Directory.Delete(userDir, true); } catch { }
@@ -158,10 +158,10 @@ namespace PautaDinamicaApp.Services
 
         private void BackupUserData(string username)
         {
-            string sourceDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", "users", username);
+            string sourceDir = Path.Combine(_appDataPath, "users", username);
             if (!Directory.Exists(sourceDir)) return;
 
-            string backupRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", "deleted_users_backups");
+            string backupRoot = Path.Combine(_appDataPath, "deleted_users_backups");
             if (!Directory.Exists(backupRoot)) Directory.CreateDirectory(backupRoot);
 
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");

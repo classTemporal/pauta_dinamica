@@ -117,7 +117,7 @@
 
                     <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="6" Padding="12" Margin="0,0,0,15">
                         <StackPanel>
-                            <TextBlock Text="REGLAS DE EVALUACIÓN" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                            <TextBlock Text="REGLAS DE EVALUACIÓN" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,0,8"/>
                             <CheckBox IsChecked="{Binding UseCustomWeights}" Content="Activar Porcentajes Personalizados (Distribución sobre 100%)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
                         </StackPanel>
                     </Border>
@@ -262,7 +262,7 @@
             <!-- VISTA E: LÍMITES DE CARACTERES (TEXT, TEXTAREA, NUMERIC) -->
             <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Text:Visible|TextArea:Visible|Numeric:Visible|Default:Collapsed'}">
                 <StackPanel Margin="0,20">
-                    <TextBlock Text="LÍMITE DE CARACTERES" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,20"/>
+                    <TextBlock Text="LÍMITE DE CARACTERES" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}" Margin="0,0,0,20"/>
                     <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel>
                             <TextBlock Text="Establece la cantidad máxima de caracteres que el usuario puede ingresar en este campo:" 

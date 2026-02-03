@@ -556,7 +556,8 @@ namespace PautaDinamicaApp.ViewModels
                 }
 
                 // Respaldo JSON si el archivo existe
-                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data", $"pauta_{p.Id}_config.json");
+                string appDataStruct = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PautaDinamica", "users", SessionService.CurrentUser?.Username ?? "default");
+                string configPath = Path.Combine(appDataStruct, $"pauta_{p.Id}_config.json");
                 if (File.Exists(configPath))
                 {
                     if (MessageBox.Show($"¿Respaldar JSON de '{p.Name}' antes de borrar?", "Borrar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)

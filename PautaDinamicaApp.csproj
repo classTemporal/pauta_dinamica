@@ -7,11 +7,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+    <Version>1.1.0</Version>
+    <Authors>Angel Gustavo Pacheco Manzanero</Authors>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="QuestPDF" Version="2025.12.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\logo.ico" />
   </ItemGroup>
 
 </Project>

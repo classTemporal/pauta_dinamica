@@ -23,7 +23,7 @@ namespace PautaDinamicaApp.Views
 
             vm.RequestClearPasswords += () =>
             {
-                UserPasswordBox.Password = "";
+                MainUserPasswordBox.Password = "";
                 NewPasswordBox.Password = "";
                 AdminRestoreBox.Password = "";
                 AdminDeleteBox.Password = "";
@@ -31,7 +31,7 @@ namespace PautaDinamicaApp.Views
             };
 
             // Listen to password changes for all boxes
-            UserPasswordBox.PasswordChanged += (s, e) => vm.Password = UserPasswordBox.Password;
+            MainUserPasswordBox.PasswordChanged += (s, e) => vm.Password = MainUserPasswordBox.Password;
             NewPasswordBox.PasswordChanged += (s, e) => vm.NewPassword = NewPasswordBox.Password;
             AdminRestoreBox.PasswordChanged += (s, e) => vm.AdminPassword = AdminRestoreBox.Password;
             AdminDeleteBox.PasswordChanged += (s, e) => vm.AdminPassword = AdminDeleteBox.Password;
