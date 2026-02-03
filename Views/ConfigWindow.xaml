@@ -566,6 +566,97 @@
                     </Border>
                 </ScrollViewer>
             </TabItem>
+
+            <!-- TAB 3: Export Configuration -->
+            <TabItem Header="CONFIG. EXPORTACIÓN">
+                <Grid Margin="15">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,15" Orientation="Horizontal">
+                        <TextBlock Text="Personalice el orden y nombres de las columnas para el reporte Excel." 
+                                   Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <Button Content="Restablecer Valores" Command="{Binding ResetExportConfigCommand}" Style="{StaticResource GhostButton}" Height="30"/>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding ExportColumns}" AutoGenerateColumns="False" 
+                              CanUserAddRows="False" CanUserDeleteRows="False"
+                              HeadersVisibility="Column" SelectionUnit="FullRow">
+                        
+                        <!-- Override RowStyle to prevent global style errors since ExportColumnConfig isn't a FieldDefinition -->
+                        <DataGrid.ItemContainerStyle>
+                           <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                <!-- Reapply only generic triggers if needed, but avoid Type binding if it was causing issues or ensure Type exists -->
+                                <!-- Since we added Type to ExportColumnConfig, the global style MIGHT work, but to be safe lets reset triggers or use a clean style -->
+                           </Style>
+                        </DataGrid.ItemContainerStyle>
+
+                        <DataGrid.Columns>
+                            <!-- Move Up/Down -->
+                            <DataGridTemplateColumn Width="70" Header="Mover">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button Content="▲" Command="{Binding DataContext.MoveExportUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                    CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}"/>
+                                            <Button Content="▼" Command="{Binding DataContext.MoveExportDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                    CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Ignorar / Check -->
+                            <DataGridTemplateColumn Header="Exportar" Width="60">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsExportEnabled, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center"
+                                                  ToolTip="Si se desmarca, este campo será ignorado en el Excel y las columnas siguientes se recorrerán."/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Original Label -->
+                            <DataGridTextColumn Header="Campo Original" Binding="{Binding OriginalLabel}" IsReadOnly="True" Width="250" Foreground="{DynamicResource SecondaryTextBrush}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsExportEnabled}" Value="False">
+                                                <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                                <Setter Property="Opacity" Value="0.5"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <!-- Custom Header -->
+                            <DataGridTemplateColumn Header="Nombre en Excel (Editable)" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding CustomHeader, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" 
+                                                 BorderThickness="0" Foreground="{DynamicResource TextBrush}" Padding="5">
+                                             <TextBox.Style>
+                                                 <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                     <Style.Triggers>
+                                                         <DataTrigger Binding="{Binding IsExportEnabled}" Value="False">
+                                                             <Setter Property="IsEnabled" Value="False"/>
+                                                             <Setter Property="Opacity" Value="0.5"/>
+                                                         </DataTrigger>
+                                                     </Style.Triggers>
+                                                 </Style>
+                                             </TextBox.Style>
+                                        </TextBox>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
         </TabControl>
 
         <!-- Footer -->

@@ -309,11 +309,44 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     var worksheet = workbook.Worksheets.Add("Auditoría");
 
-                    // --- CABECERAS ---
-                    var fields = CurrentFields.ToList();
-                    for (int i = 0; i < fields.Count; i++)
+                    // --- PREPARAR COLUMNAS (ORDEN Y NOMBRES) ---
+                    var rawFields = CurrentFields.ToList();
+                    var exportCols = new List<(string Id, string Header, FieldType Type)>();
+
+                    if (CurrentPauta != null && CurrentPauta.ExportConfig != null && CurrentPauta.ExportConfig.Any())
                     {
-                        worksheet.Cell(1, i + 1).Value = fields[i].Label;
+                        // Usar orden personalizado
+                        var orderedConfig = CurrentPauta.ExportConfig.OrderBy(c => c.Order).ToList();
+                        var configuredIds = new HashSet<string>(CurrentPauta.ExportConfig.Select(x => x.FieldId)); // IDs que tienen configuración (activa o inactiva)
+
+                        foreach (var cfg in orderedConfig)
+                        {
+                            var f = rawFields.FirstOrDefault(rf => rf.Id == cfg.FieldId);
+                            // AHORA: Chequear tambien IsExportEnabled
+                            if (f != null && cfg.IsVisible && cfg.IsExportEnabled)
+                            {
+                                exportCols.Add((f.Id, cfg.CustomHeader, f.Type));
+                            }
+                        }
+
+                        // Agregar SOLO campos nuevos que no estén en la config (ni habilitados ni deshabilitados)
+                        // Si un campo existe en 'configuredIds' pero no se agregó arriba, es porque estaba deshabilitado intencionalmente.
+                        foreach (var f in rawFields)
+                        {
+                            if (!configuredIds.Contains(f.Id))
+                                exportCols.Add((f.Id, f.Label, f.Type));
+                        }
+                    }
+                    else
+                    {
+                        // Orden natural por defecto
+                        foreach (var f in rawFields) exportCols.Add((f.Id, f.Label, f.Type));
+                    }
+
+                    // --- CABECERAS ---
+                    for (int i = 0; i < exportCols.Count; i++)
+                    {
+                        worksheet.Cell(1, i + 1).Value = exportCols[i].Header;
                     }
 
                     // --- DATOS ---
@@ -321,15 +354,15 @@ namespace PautaDinamicaApp.ViewModels
                     foreach (var entry in data)
                     {
                         int col = 1;
-                        foreach (var f in fields)
+                        foreach (var colDef in exportCols)
                         {
-                            if (entry.Values.TryGetValue(f.Id, out var val))
+                            if (entry.Values.TryGetValue(colDef.Id, out var val))
                             {
                                 string strVal = val?.ToString() ?? "";
                                 var cell = worksheet.Cell(row, col);
 
                                 // --- TIPADO DINÁMICO MEJORADO ---
-                                if (f.Type == FieldType.Boolean)
+                                if (colDef.Type == FieldType.Boolean)
                                 {
                                     // Boolean como número (1/0) con formato Entero
                                     bool? valResult = null;
@@ -346,7 +379,7 @@ namespace PautaDinamicaApp.ViewModels
                                     else
                                         cell.Value = strVal;
                                 }
-                                else if (f.Type == FieldType.Numeric || f.Type == FieldType.Calculation || f.Type == FieldType.Average)
+                                else if (colDef.Type == FieldType.Numeric || colDef.Type == FieldType.Calculation || colDef.Type == FieldType.Average)
                                 {
                                     // Detectar porcentaje
                                     if (strVal.Contains("%"))
@@ -371,7 +404,7 @@ namespace PautaDinamicaApp.ViewModels
                                             cell.Value = strVal;
                                     }
                                 }
-                                else if (f.Type == FieldType.Date)
+                                else if (colDef.Type == FieldType.Date)
                                 {
                                     // Fecha real
                                     if (DateTime.TryParse(strVal, out DateTime dateVal))
@@ -379,7 +412,7 @@ namespace PautaDinamicaApp.ViewModels
                                     else
                                         cell.Value = strVal;
                                 }
-                                else if (f.Type == FieldType.Time)
+                                else if (colDef.Type == FieldType.Time)
                                 {
                                     // Tiempo: Usar TimeSpan para eliminar la fecha y los sufijos AM/PM del valor subyacente
                                     if (DateTime.TryParse(strVal, out DateTime timeVal))
@@ -396,7 +429,7 @@ namespace PautaDinamicaApp.ViewModels
                                     cell.Value = strVal;
                                 }
 
-                                if (f.Type == FieldType.TextArea || strVal.Contains("\n"))
+                                if (colDef.Type == FieldType.TextArea || strVal.Contains("\n"))
                                 {
                                     cell.Style.Alignment.SetWrapText(true);
                                 }

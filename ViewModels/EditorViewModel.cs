@@ -55,6 +55,11 @@ namespace PautaDinamicaApp.ViewModels
             RemoveFieldCommand = new RelayCommand(p => RemoveField(p as FieldDefinition));
             MoveUpCommand = new RelayCommand(p => MoveUp(p as FieldDefinition));
             MoveDownCommand = new RelayCommand(p => MoveDown(p as FieldDefinition));
+
+            MoveExportUpCommand = new RelayCommand(p => MoveExportUp(p as ExportColumnConfig));
+            MoveExportDownCommand = new RelayCommand(p => MoveExportDown(p as ExportColumnConfig));
+            ResetExportConfigCommand = new RelayCommand(_ => ResetExportConfig());
+
             ConfigureOptionsCommand = new RelayCommand(p => ConfigureOptions(p as FieldDefinition));
             SaveConfigCommand = new RelayCommand(_ => SaveConfig());
             ExportConfigCommand = new RelayCommand(_ => ExportConfig());
@@ -133,6 +138,13 @@ namespace PautaDinamicaApp.ViewModels
             set => SetProperty(ref _fields, value);
         }
 
+        private ObservableCollection<ExportColumnConfig> _exportColumns = new();
+        public ObservableCollection<ExportColumnConfig> ExportColumns
+        {
+            get => _exportColumns;
+            set => SetProperty(ref _exportColumns, value);
+        }
+
         public bool IsMultiSelectMode
         {
             get => _isMultiSelectMode;
@@ -146,6 +158,11 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand RemoveFieldCommand { get; }
         public ICommand MoveUpCommand { get; }
         public ICommand MoveDownCommand { get; }
+
+        public ICommand MoveExportUpCommand { get; }
+        public ICommand MoveExportDownCommand { get; }
+        public ICommand ResetExportConfigCommand { get; }
+
         public ICommand ConfigureOptionsCommand { get; }
         public ICommand SaveConfigCommand { get; }
         public ICommand ExportConfigCommand { get; }
@@ -190,12 +207,120 @@ namespace PautaDinamicaApp.ViewModels
             foreach (var f in config) f.EnsureDefaultOptions();
             Fields = new ObservableCollection<FieldDefinition>(config);
             _initialFieldsJson = JsonSerializer.Serialize(Fields);
+
+            LoadExportColumns();
+        }
+
+        private void LoadExportColumns()
+        {
+            if (EditingPauta == null) return;
+
+            var existingConfig = EditingPauta.ExportConfig ?? new List<ExportColumnConfig>();
+            var newConfig = new ObservableCollection<ExportColumnConfig>();
+
+            // Solo mostrar campos reales, no secciones
+            var validFields = Fields.Where(f => f.Type != FieldType.Separator).OrderBy(f => f.Order).ToList();
+
+            // Estrategia: 
+            // 1. Tomar los que ya existen en la config y ordenarlos según su orden guardado
+            // 2. Agregar los nuevos al final
+
+            var sortedExisting = existingConfig.OrderBy(e => e.Order).ToList();
+
+            foreach (var item in sortedExisting)
+            {
+                var field = validFields.FirstOrDefault(f => f.Id == item.FieldId);
+                if (field != null)
+                {
+                    item.OriginalLabel = field.Label;
+                    item.Type = field.Type; // Update Type
+                    // Asegurar consistencia
+                    if (string.IsNullOrEmpty(item.CustomHeader)) item.CustomHeader = field.Label;
+                    newConfig.Add(item);
+                }
+            }
+
+            // Agregar campos nuevos que no estaban en la config
+            foreach (var field in validFields)
+            {
+                if (!newConfig.Any(x => x.FieldId == field.Id))
+                {
+                    newConfig.Add(new ExportColumnConfig
+                    {
+                        FieldId = field.Id,
+                        OriginalLabel = field.Label,
+                        Type = field.Type, // Set Type
+                        CustomHeader = field.Label,
+                        Order = newConfig.Count,
+                        IsVisible = true,
+                        IsExportEnabled = true
+                    });
+                }
+            }
+
+            // Re-indexar para asegurar orden limpio
+            for (int i = 0; i < newConfig.Count; i++) newConfig[i].Order = i;
+
+            ExportColumns = newConfig;
+        }
+
+        private void ResetExportConfig()
+        {
+            if (MessageBox.Show("¿Restablecer el orden y nombres de exportación a los valores por defecto?", "Confirmar", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+
+            var validFields = Fields.Where(f => f.Type != FieldType.Separator).OrderBy(f => f.Order).ToList();
+            var newConfig = new ObservableCollection<ExportColumnConfig>();
+
+            for (int i = 0; i < validFields.Count; i++)
+            {
+                newConfig.Add(new ExportColumnConfig
+                {
+                    FieldId = validFields[i].Id,
+                    OriginalLabel = validFields[i].Label,
+                    Type = validFields[i].Type,
+                    CustomHeader = validFields[i].Label,
+                    Order = i,
+                    IsVisible = true,
+                    IsExportEnabled = true
+                });
+            }
+            ExportColumns = newConfig;
+        }
+
+        private void MoveExportUp(ExportColumnConfig? item)
+        {
+            if (item == null) return;
+            int index = ExportColumns.IndexOf(item);
+            if (index > 0)
+            {
+                ExportColumns.Move(index, index - 1);
+                RecalculateExportOrder();
+            }
+        }
+
+        private void MoveExportDown(ExportColumnConfig? item)
+        {
+            if (item == null) return;
+            int index = ExportColumns.IndexOf(item);
+            if (index < ExportColumns.Count - 1)
+            {
+                ExportColumns.Move(index, index + 1);
+                RecalculateExportOrder();
+            }
+        }
+
+        private void RecalculateExportOrder()
+        {
+            for (int i = 0; i < ExportColumns.Count; i++)
+            {
+                ExportColumns[i].Order = i;
+            }
         }
 
         private void AddField()
         {
             var lastField = Fields.OrderBy(f => f.Order).LastOrDefault();
-            Fields.Add(new FieldDefinition
+            var newField = new FieldDefinition
             {
                 Id = "f_" + Guid.NewGuid().ToString().Substring(0, 4),
                 Label = GetNextAvailableLabel("Nuevo campo"),
@@ -203,6 +328,19 @@ namespace PautaDinamicaApp.ViewModels
                 Type = FieldType.Text,
                 Order = (lastField?.Order ?? 0) + 1,
                 MaxLength = 255
+            };
+            Fields.Add(newField);
+
+            // Add to Export list automatically
+            ExportColumns.Add(new ExportColumnConfig
+            {
+                FieldId = newField.Id,
+                OriginalLabel = newField.Label,
+                Type = newField.Type,
+                CustomHeader = newField.Label,
+                Order = ExportColumns.Count,
+                IsVisible = true,
+                IsExportEnabled = true
             });
         }
 
@@ -235,7 +373,11 @@ namespace PautaDinamicaApp.ViewModels
         private void RemoveField(FieldDefinition? field)
         {
             if (field != null && MessageBox.Show($"¿Eliminar campo [{field.Label}]?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            {
                 Fields.Remove(field);
+                var exportItem = ExportColumns.FirstOrDefault(x => x.FieldId == field.Id);
+                if (exportItem != null) ExportColumns.Remove(exportItem);
+            }
         }
 
         private void MoveUp(FieldDefinition? field)
@@ -334,6 +476,7 @@ namespace PautaDinamicaApp.ViewModels
                     {
                         Fields = imported;
                         foreach (var f in Fields) f.EnsureDefaultOptions();
+                        LoadExportColumns(); // Refresh export columns to match new imported fields
                     }
                 }
                 catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
@@ -358,7 +501,12 @@ namespace PautaDinamicaApp.ViewModels
             var selected = Fields.Where(f => f.IsSelected).ToList();
             if (selected.Any() && MessageBox.Show($"¿Eliminar {selected.Count} campos?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
-                foreach (var f in selected) Fields.Remove(f);
+                foreach (var f in selected)
+                {
+                    Fields.Remove(f);
+                    var exportItem = ExportColumns.FirstOrDefault(x => x.FieldId == f.Id);
+                    if (exportItem != null) ExportColumns.Remove(exportItem);
+                }
             }
         }
 
@@ -532,6 +680,10 @@ namespace PautaDinamicaApp.ViewModels
                         else return;
                     }
                 }
+
+                // SAVE EXPORT CONFIG
+                EditingPauta.ExportConfig = ExportColumns.OrderBy(c => c.Order).ToList();
+
                 _storageService.BackupConfiguration(EditingPauta.Id);
                 _storageService.SaveConfiguration(EditingPauta.Id, list);
                 _initialFieldsJson = currentFieldsJson;

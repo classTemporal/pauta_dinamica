@@ -66,6 +66,9 @@ namespace PautaDinamicaApp.Models
         public string ExcludeByFieldId { get => _excludeByFieldId; set => SetProperty(ref _excludeByFieldId, value); }
         public string ExcludeByFieldValue { get => _excludeByFieldValue; set => SetProperty(ref _excludeByFieldValue, value); }
 
+        private System.Collections.Generic.List<ExportColumnConfig> _exportConfig = new();
+        public System.Collections.Generic.List<ExportColumnConfig> ExportConfig { get => _exportConfig; set => SetProperty(ref _exportConfig, value); }
+
         private string _helpContent = "";
         public string HelpContent { get => _helpContent; set => SetProperty(ref _helpContent, value); }
 

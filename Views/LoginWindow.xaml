@@ -4,7 +4,7 @@
         Title="Acceso - Pauta Dinámica" Height="580" Width="420"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
         Background="Transparent" Foreground="{DynamicResource TextBrush}" WindowStyle="None" AllowsTransparency="True"
-        Icon="/Assets/logo.ico">
+        Icon="pack://application:,,,/Assets/logo.ico">
     
     <Border CornerRadius="15" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
         <Grid Margin="30">
