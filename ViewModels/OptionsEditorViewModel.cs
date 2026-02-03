@@ -147,6 +147,10 @@ namespace PautaDinamicaApp.ViewModels
         private string _validationError = "";
         private string _timeFormat = "HH:mm";
         private bool _internalUpdate;
+        private bool _enableZeroTrigger;
+        private string _zeroTriggerFieldId = string.Empty;
+        private string _zeroTriggerValue = string.Empty;
+        private ObservableCollection<string> _availableTriggerValues = new();
 
         public FieldDefinition OriginalField { get; }
         public ObservableCollection<RuleEditorVM> CalculationRules { get; } = new();
@@ -193,10 +197,10 @@ namespace PautaDinamicaApp.ViewModels
                     }
                     else if (f.Type == FieldType.Boolean)
                     {
-                        var mTrue = existing?.Mappings.FirstOrDefault(x => x.Value == "True");
-                        var mFalse = existing?.Mappings.FirstOrDefault(x => x.Value == "False");
-                        rule.Mappings.Add(new ValueScoreVM { Value = "True (Marcado)", Score = mTrue?.Score ?? 1.0 });
-                        rule.Mappings.Add(new ValueScoreVM { Value = "False (Desmarcado)", Score = mFalse?.Score ?? 0.0 });
+                        var mTrue = existing?.Mappings.FirstOrDefault(x => x.Value == "1" || x.Value == "True");
+                        var mFalse = existing?.Mappings.FirstOrDefault(x => x.Value == "0" || x.Value == "False");
+                        rule.Mappings.Add(new ValueScoreVM { Value = "1 (Marcado)", Score = mTrue?.Score ?? 1.0 });
+                        rule.Mappings.Add(new ValueScoreVM { Value = "0 (Desmarcado)", Score = mFalse?.Score ?? 0.0 });
                     }
                     rule.UpdateDisabledStates();
                     CalculationRules.Add(rule);
@@ -218,6 +222,13 @@ namespace PautaDinamicaApp.ViewModels
                     AverageTargets.Add(new SelectableOptionVM(f.Label) { Tag = f.Id, IsSelected = field.TargetIds.Contains(f.Id) });
                 }
             }
+
+            // Zero Trigger Initialization
+            AvailableFields = allFields.Where(f => f.Id != field.Id && f.Type != FieldType.Separator).ToList();
+            _enableZeroTrigger = field.EnableZeroTrigger;
+            _zeroTriggerFieldId = field.ZeroTriggerFieldId;
+            _zeroTriggerValue = field.ZeroTriggerValue;
+            UpdateAvailableTriggerValues();
 
             AddOptionCommand = new RelayCommand(_ => AddOption(), _ => !string.IsNullOrWhiteSpace(NewOptionText));
             RemoveOptionCommand = new RelayCommand(p => RemoveOption(p as SelectableOptionVM));
@@ -281,6 +292,56 @@ namespace PautaDinamicaApp.ViewModels
             OnPropertyChanged(nameof(HasError));
         }
 
+        public List<FieldDefinition> AvailableFields { get; }
+
+        public bool EnableZeroTrigger
+        {
+            get => _enableZeroTrigger;
+            set => SetProperty(ref _enableZeroTrigger, value);
+        }
+
+        public string ZeroTriggerFieldId
+        {
+            get => _zeroTriggerFieldId;
+            set
+            {
+                if (SetProperty(ref _zeroTriggerFieldId, value))
+                {
+                    UpdateAvailableTriggerValues();
+                    ZeroTriggerValue = "";
+                }
+            }
+        }
+
+        public string ZeroTriggerValue
+        {
+            get => _zeroTriggerValue;
+            set => SetProperty(ref _zeroTriggerValue, value);
+        }
+
+        public ObservableCollection<string> AvailableTriggerValues
+        {
+            get => _availableTriggerValues;
+            set => SetProperty(ref _availableTriggerValues, value);
+        }
+
+        private void UpdateAvailableTriggerValues()
+        {
+            AvailableTriggerValues.Clear();
+            var field = AvailableFields.FirstOrDefault(f => f.Id == ZeroTriggerFieldId);
+            if (field == null) return;
+
+            if (field.Type == FieldType.Dropdown)
+            {
+                foreach (var opt in field.Options) AvailableTriggerValues.Add(opt);
+            }
+            else if (field.Type == FieldType.Boolean)
+            {
+                AvailableTriggerValues.Add("1");
+                AvailableTriggerValues.Add("0");
+            }
+        }
+
         public ObservableCollection<SelectableOptionVM> Options { get => _options; set => SetProperty(ref _options, value); }
         public string NewOptionText { get => _newOptionText; set => SetProperty(ref _newOptionText, value); }
         public bool IsMultiSelectMode { get => _isMultiSelectMode; set => SetProperty(ref _isMultiSelectMode, value); }
@@ -314,6 +375,10 @@ namespace PautaDinamicaApp.ViewModels
         }).ToList();
         public int ResultMaxLength => MaxLength;
         public List<string> ResultAverageIds => AverageTargets.Where(t => t.IsSelected).Select(t => t.Tag?.ToString() ?? "").ToList();
+
+        public bool ResultEnableZeroTrigger => EnableZeroTrigger;
+        public string ResultZeroTriggerFieldId => ZeroTriggerFieldId;
+        public string ResultZeroTriggerValue => ZeroTriggerValue;
 
         public ICommand AddOptionCommand { get; }
         public ICommand RemoveOptionCommand { get; }

@@ -198,7 +198,7 @@ namespace PautaDinamicaApp.ViewModels
             Fields.Add(new FieldDefinition
             {
                 Id = "f_" + Guid.NewGuid().ToString().Substring(0, 4),
-                Label = GetNextAvailableLabel("Nuevo Campo"),
+                Label = GetNextAvailableLabel("Nuevo campo"),
                 Category = lastField?.Category ?? "General",
                 Type = FieldType.Text,
                 Order = (lastField?.Order ?? 0) + 1,
@@ -212,7 +212,7 @@ namespace PautaDinamicaApp.ViewModels
             Fields.Add(new FieldDefinition
             {
                 Id = "s_" + Guid.NewGuid().ToString().Substring(0, 4),
-                Label = GetNextAvailableLabel("Nuevo Cuadro"),
+                Label = GetNextAvailableLabel("Nueva sección"),
                 Category = "--- SECCIÓN ---",
                 Type = FieldType.Separator,
                 Order = (lastField?.Order ?? 0) + 1
@@ -270,6 +270,11 @@ namespace PautaDinamicaApp.ViewModels
                 if (field.Type == FieldType.Dropdown) field.Options = vm.ResultOptions;
                 else if (field.Type == FieldType.Calculation) field.ScoringRules = vm.ResultRules;
                 else if (field.Type == FieldType.Average) field.TargetIds = vm.ResultAverageIds;
+
+                field.EnableZeroTrigger = vm.ResultEnableZeroTrigger;
+                field.ZeroTriggerFieldId = vm.ResultZeroTriggerFieldId;
+                field.ZeroTriggerValue = vm.ResultZeroTriggerValue;
+
                 OnPropertyChanged(nameof(Fields));
             }
         }

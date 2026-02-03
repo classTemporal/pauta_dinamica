@@ -50,20 +50,29 @@
         <Setter Property="Foreground" Value="{DynamicResource InputForeground}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource InputBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="8,5"/>
-        <Setter Property="Height" Value="35"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="Height" Value="38"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="CaretBrush" Value="{DynamicResource CaretBrush}"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Border x:Name="border" Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="4">
+                            CornerRadius="8">
                         <ScrollViewer x:Name="PART_ContentHost"/>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
+                        </Trigger>
                         <DataTrigger Binding="{Binding IsValid, FallbackValue=True}" Value="False">
                             <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
                             <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
@@ -74,94 +83,118 @@
         </Setter>
     </Style>
 
+    <!-- Botón para ComboBox (Define el aspecto del cuadro) -->
+    <ControlTemplate x:Key="ComboBoxToggleButtonTemplate" TargetType="ToggleButton">
+        <Border x:Name="templateBorder" 
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="8">
+            <Grid HorizontalAlignment="Right" Width="30">
+                <Path x:Name="Arrow" 
+                      Fill="{DynamicResource SecondaryTextBrush}"
+                      Data="M 0 0 L 4 4 L 8 0 Z"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="templateBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                <Setter TargetName="Arrow" Property="Fill" Value="{DynamicResource AccentBrush}"/>
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Arrow" Property="Fill" Value="{DynamicResource AccentBrush}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
     <!-- Estilo para ComboBox -->
     <Style TargetType="ComboBox">
-        <Setter Property="Height" Value="35"/>
-        <Setter Property="Padding" Value="8,5"/>
+        <Setter Property="Height" Value="42"/>
+        <Setter Property="Padding" Value="12,5"/>
         <Setter Property="Foreground" Value="{DynamicResource InputForeground}"/>
         <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource InputBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBox">
                     <Grid>
-                        <ToggleButton Name="ToggleButton"
-                                      BorderBrush="{TemplateBinding BorderBrush}"
+                        <!-- El ToggleButton define TODO el fondo y el borde interactivamente -->
+                        <ToggleButton x:Name="ToggleButton" 
                                       Background="{TemplateBinding Background}"
-                                      Foreground="{TemplateBinding Foreground}"
-                                      Grid.Column="2" 
+                                      BorderBrush="{TemplateBinding BorderBrush}"
+                                      BorderThickness="{TemplateBinding BorderThickness}"
+                                      Template="{StaticResource ComboBoxToggleButtonTemplate}"
                                       Focusable="false"
                                       IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
-                                      ClickMode="Press">
-                            <ToggleButton.Template>
-                                <ControlTemplate TargetType="ToggleButton">
-                                    <Border Name="border" Background="{TemplateBinding Background}"
-                                            BorderBrush="{TemplateBinding BorderBrush}"
-                                            BorderThickness="{TemplateBinding BorderThickness}"
-                                            CornerRadius="4">
-                                        <Grid HorizontalAlignment="Right">
-                                            <Path Name="Arrow" 
-                                                  Fill="{TemplateBinding Foreground}"
-                                                  Data="M 0 0 L 4 4 L 8 0 Z"
-                                                  Margin="0,0,10,0"
-                                                  VerticalAlignment="Center"/>
-                                        </Grid>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <DataTrigger Binding="{Binding IsValid, FallbackValue=True}" Value="False">
-                                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-                                            <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
-                                        </DataTrigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </ToggleButton.Template>
-                        </ToggleButton>
-                        <ContentPresenter Name="ContentSite"
+                                      ClickMode="Press"/>
+                        
+                        <!-- El contenido se dibuja sobre el ToggleButton -->
+                        <ContentPresenter x:Name="ContentSite"
                                           IsHitTestVisible="False" 
                                           Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
-                                          Margin="10,3,30,3"
-                                          VerticalAlignment="Center"
-                                          HorizontalAlignment="Left" />
-                        <Popup Name="Popup"
+                                          Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+
+                        <Popup x:Name="Popup"
                                Placement="Bottom"
                                IsOpen="{TemplateBinding IsDropDownOpen}"
                                AllowsTransparency="True" 
                                Focusable="False"
                                PopupAnimation="Slide">
-                            <Grid Name="DropDown"
+                            <Grid x:Name="DropDown"
                                   SnapsToDevicePixels="True"                
                                   MinWidth="{TemplateBinding ActualWidth}"
                                   MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                <Border Name="DropDownBorder"
-                                        Background="{DynamicResource InputBackground}"
+                                <Border x:Name="DropDownBorder"
+                                        Background="{DynamicResource CardBackgroundBrush}"
                                         BorderThickness="1"
-                                        BorderBrush="{DynamicResource InputBorder}"
-                                        CornerRadius="0,0,4,4"/>
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        CornerRadius="0,0,8,8"
+                                        Margin="0,2,0,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="10" Opacity="0.2" ShadowDepth="2"/>
+                                    </Border.Effect>
+                                </Border>
                                 <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
                                     <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
                                 </ScrollViewer>
                             </Grid>
                         </Popup>
                     </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="ToggleButton" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="ToggleButton" Property="BorderThickness" Value="1.5"/>
+                        </Trigger>
+                        <DataTrigger Binding="{Binding IsValid, FallbackValue=True}" Value="False">
+                            <Setter TargetName="ToggleButton" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
+                            <Setter TargetName="ToggleButton" Property="BorderThickness" Value="1.5"/>
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
     <Style TargetType="DatePicker">
-        <Setter Property="Height" Value="35"/>
+        <Setter Property="Height" Value="38"/>
         <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="DatePicker">
                     <Border Name="border" Background="{TemplateBinding Background}" 
                             BorderBrush="{DynamicResource InputBorder}" 
-                            BorderThickness="1" CornerRadius="4">
+                            BorderThickness="1" CornerRadius="8">
                         <Grid x:Name="PART_Root">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -169,9 +202,9 @@
                             </Grid.ColumnDefinitions>
                             <DatePickerTextBox x:Name="PART_TextBox" Grid.Column="0" 
                                                Background="Transparent" Foreground="{DynamicResource InputForeground}"
-                                               BorderThickness="0" VerticalContentAlignment="Center" Padding="5,0"/>
+                                               BorderThickness="0" VerticalContentAlignment="Center" Padding="10,0"/>
                             <Button x:Name="PART_Button" Grid.Column="1" HorizontalAlignment="Right"
-                                    VerticalAlignment="Center" Width="20" Margin="0,0,5,0"
+                                    VerticalAlignment="Center" Width="30" Margin="0,0,5,0"
                                     Content="📅" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource InputForeground}"/>
                         </Grid>
                     </Border>
@@ -190,7 +223,12 @@
     <DataTemplate x:Key="TextTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
-            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" MaxLength="{Binding MaxLength}"/>
+            <Grid>
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" MaxLength="{Binding MaxLength}" Padding="8,5,35,5"/>
+                <TextBlock Text="🔤" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" 
+                           Foreground="{DynamicResource SecondaryTextBrush}" IsHitTestVisible="False" FontSize="14"
+                           Opacity="0.5"/>
+            </Grid>
             <Grid>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldCounterTemplate}"/>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
@@ -202,7 +240,12 @@
     <DataTemplate x:Key="NumericTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
-            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" MaxLength="{Binding MaxLength}"/>
+            <Grid>
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" MaxLength="{Binding MaxLength}" Padding="8,5,35,5"/>
+                <TextBlock Text="🔢" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" 
+                           Foreground="{DynamicResource SecondaryTextBrush}" IsHitTestVisible="False" FontSize="14"
+                           Opacity="0.5"/>
+            </Grid>
             <Grid>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldCounterTemplate}"/>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
@@ -298,13 +341,19 @@
     <DataTemplate x:Key="TextAreaTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,5">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldLabelTemplate}"/>
-            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" 
-                     Height="80" 
-                     TextWrapping="Wrap" 
-                     AcceptsReturn="True" 
-                     VerticalContentAlignment="Top"
-                     VerticalScrollBarVisibility="Auto"
-                     MaxLength="{Binding MaxLength}"/>
+            <Grid>
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" 
+                         Height="80" 
+                         TextWrapping="Wrap" 
+                         AcceptsReturn="True" 
+                         VerticalContentAlignment="Top"
+                         VerticalScrollBarVisibility="Auto"
+                         MaxLength="{Binding MaxLength}"
+                         Padding="8,5,35,5"/>
+                <TextBlock Text="📝" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,10,0" 
+                           Foreground="{DynamicResource SecondaryTextBrush}" IsHitTestVisible="False" FontSize="14"
+                           Opacity="0.5"/>
+            </Grid>
             <Grid>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldCounterTemplate}"/>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>

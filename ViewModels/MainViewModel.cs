@@ -312,9 +312,15 @@ namespace PautaDinamicaApp.ViewModels
                                 if (f.Type == FieldType.Boolean)
                                 {
                                     // Boolean como número (1/0) con formato Entero
-                                    if (bool.TryParse(strVal, out bool boolVal))
+                                    bool? valResult = null;
+                                    if (val is bool b) valResult = b;
+                                    else if (strVal == "1") valResult = true;
+                                    else if (strVal == "0") valResult = false;
+                                    else if (bool.TryParse(strVal, out bool boolVal)) valResult = boolVal;
+
+                                    if (valResult.HasValue)
                                     {
-                                        cell.Value = boolVal ? 1 : 0;
+                                        cell.Value = valResult.Value ? 1 : 0;
                                         cell.Style.NumberFormat.Format = "0";
                                     }
                                     else
@@ -657,7 +663,28 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     double totalPossibleWeights = 0;
                     double totalEarnedWeights = 0;
-                    var rules = calcField.Definition.ScoringRules;
+                    var def = calcField.Definition;
+                    var rules = def.ScoringRules;
+
+                    // 1.1 Anulación Crítica (Zero Trigger)
+                    if (def.EnableZeroTrigger && !string.IsNullOrEmpty(def.ZeroTriggerFieldId))
+                    {
+                        var triggerSource = CurrentFields.FirstOrDefault(f => f.Id == def.ZeroTriggerFieldId);
+                        if (triggerSource != null)
+                        {
+                            string triggerVal = triggerSource.Value?.ToString() ?? "";
+                            if (triggerSource.Type == FieldType.Boolean)
+                            {
+                                if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
+                            }
+
+                            if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
+                            {
+                                calcField.Value = "0.0%";
+                                continue;
+                            }
+                        }
+                    }
 
                     // Si hay reglas configuradas, solo evaluamos esos campos. 
                     // Si no hay reglas, evaluamos todos los Dropdowns y Checkboxes (Modo Auto).
@@ -683,10 +710,18 @@ namespace PautaDinamicaApp.ViewModels
                         if (rule != null && rule.Mappings.Any())
                         {
                             // Comparar el valor seleccionado con los mapeos.
-                            // Nota: Para Booleans, currentVal será "True" o "False".
+                            // Si el campo es Boolean, normalizamos el valor actual a "1"/"0" para comparar con los mapeos
+                            string normalizedVal = currentVal;
+                            if (source.Type == FieldType.Boolean)
+                            {
+                                if (source.Value is bool b) normalizedVal = b ? "1" : "0";
+                                else if (currentVal.Equals("True", StringComparison.OrdinalIgnoreCase)) normalizedVal = "1";
+                                else if (currentVal.Equals("False", StringComparison.OrdinalIgnoreCase)) normalizedVal = "0";
+                            }
+
                             var mapping = rule.Mappings.FirstOrDefault(m =>
-                                m.Value.Equals(currentVal, StringComparison.OrdinalIgnoreCase) ||
-                                (source.Type == FieldType.Boolean && m.Value.Split(' ')[0].Equals(currentVal, StringComparison.OrdinalIgnoreCase))
+                                m.Value.Equals(normalizedVal, StringComparison.OrdinalIgnoreCase) ||
+                                (m.Value.Contains(" ") && m.Value.Split(' ')[0].Equals(normalizedVal, StringComparison.OrdinalIgnoreCase))
                             );
 
                             if (mapping != null) earnedNormalized = mapping.Score;
@@ -714,7 +749,29 @@ namespace PautaDinamicaApp.ViewModels
                 // 2. CÁLCULO DE PROMEDIOS (AVERAGE)
                 foreach (var avgField in CurrentFields.Where(f => f.Type == FieldType.Average))
                 {
-                    var targets = CurrentFields.Where(f => avgField.Definition.TargetIds.Contains(f.Id)).ToList();
+                    var def = avgField.Definition;
+
+                    // 2.1 Anulación Crítica (Zero Trigger)
+                    if (def.EnableZeroTrigger && !string.IsNullOrEmpty(def.ZeroTriggerFieldId))
+                    {
+                        var triggerSource = CurrentFields.FirstOrDefault(f => f.Id == def.ZeroTriggerFieldId);
+                        if (triggerSource != null)
+                        {
+                            string triggerVal = triggerSource.Value?.ToString() ?? "";
+                            if (triggerSource.Type == FieldType.Boolean)
+                            {
+                                if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
+                            }
+
+                            if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
+                            {
+                                avgField.Value = "0.0%";
+                                continue;
+                            }
+                        }
+                    }
+
+                    var targets = CurrentFields.Where(f => def.TargetIds.Contains(f.Id)).ToList();
                     double sum = 0;
                     int count = 0;
                     foreach (var t in targets)

@@ -49,6 +49,9 @@ namespace PautaDinamicaApp.Models
         private string _defaultValue = string.Empty;
         private bool _keepValueOnReset;
         private string _timeFormat = "HH:mm";
+        private string _zeroTriggerFieldId = string.Empty;
+        private string _zeroTriggerValue = string.Empty;
+        private bool _enableZeroTrigger;
 
         public string Id { get => _id; set { _id = value; OnPropertyChanged(); } }
         public string Label { get => _label; set { _label = value; OnPropertyChanged(); } }
@@ -84,6 +87,9 @@ namespace PautaDinamicaApp.Models
         public string DefaultValue { get => _defaultValue; set { _defaultValue = value; OnPropertyChanged(); } }
         public string TimeFormat { get => _timeFormat; set { _timeFormat = value; OnPropertyChanged(); } }
         public bool KeepValueOnReset { get => _keepValueOnReset; set { _keepValueOnReset = value; OnPropertyChanged(); } }
+        public string ZeroTriggerFieldId { get => _zeroTriggerFieldId; set { _zeroTriggerFieldId = value; OnPropertyChanged(); } }
+        public string ZeroTriggerValue { get => _zeroTriggerValue; set { _zeroTriggerValue = value; OnPropertyChanged(); } }
+        public bool EnableZeroTrigger { get => _enableZeroTrigger; set { _enableZeroTrigger = value; OnPropertyChanged(); } }
         private int _maxLength = 255;
         public int MaxLength { get => _maxLength; set { _maxLength = value; OnPropertyChanged(); } }
 

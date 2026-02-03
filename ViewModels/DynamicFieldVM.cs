@@ -71,7 +71,9 @@ namespace PautaDinamicaApp.ViewModels
             {
                 if (Definition.Type == FieldType.Boolean)
                 {
-                    if (bool.TryParse(Definition.DefaultValue, out bool b)) _value = b;
+                    if (Definition.DefaultValue == "1") _value = true;
+                    else if (Definition.DefaultValue == "0") _value = false;
+                    else if (bool.TryParse(Definition.DefaultValue, out bool b)) _value = b;
                 }
                 else if (Definition.Type == FieldType.Date)
                 {

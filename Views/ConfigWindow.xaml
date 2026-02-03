@@ -16,9 +16,10 @@
         <ResourceDictionary>
             <conv:PrependOptionConverter x:Key="PrependOptionConverter"/>
             <conv:NotNullToBooleanConverter x:Key="NotNullToBooleanConverter"/>
+            <conv:FieldTypeDisplayNameConverter x:Key="FieldTypeDisplayNameConverter"/>
             <x:Array x:Key="BooleanOptions" Type="{x:Type sys:String}">
-                <sys:String>True</sys:String>
-                <sys:String>False</sys:String>
+                <sys:String>1</sys:String>
+                <sys:String>0</sys:String>
             </x:Array>
             <SolidColorBrush x:Key="SeparatorBackground" Color="#003566"/>
             <DynamicResource x:Key="CardBackground" ResourceKey="CardBackgroundBrush"/>
@@ -97,18 +98,28 @@
                                 Style="{StaticResource GhostButton}" HorizontalAlignment="Left"
                                 Visibility="{Binding IsPautaMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
                         
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{Binding IsPautaMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <Button Content="✔️ Todo" Command="{Binding SelectAllPautasCommand}" Style="{StaticResource GhostButton}" Margin="0,0,10,0"/>
-                            <Button Content="🗑️ Borrar" Command="{Binding DeleteSelectedPautasCommand}" Style="{StaticResource DangerButton}"/>
-                            <Button Content="❌" Command="{Binding TogglePautaMultiSelectCommand}" Style="{StaticResource GhostButton}" Margin="10,0,0,0"/>
-                        </StackPanel>
+                        <Grid Visibility="{Binding IsPautaMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.5*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="✔️ Seleccionar Todo" Command="{Binding SelectAllPautasCommand}" 
+                                    Style="{StaticResource GhostButton}" Margin="0,0,5,0" Padding="3,5" FontSize="11"
+                                    ToolTip="Seleccionar todas las pautas"/>
+                            <Button Grid.Column="1" Content="🗑️ Borrar" Command="{Binding DeleteSelectedPautasCommand}" 
+                                    Style="{StaticResource DangerButton}" Padding="5" FontSize="11"
+                                    ToolTip="Eliminar permanentemente"/>
+                            <Button Grid.Column="2" Content="❌" Command="{Binding TogglePautaMultiSelectCommand}" 
+                                    Style="{StaticResource GhostButton}" Margin="5,0,0,0" Padding="8,5" FontSize="11" FontWeight="Bold"/>
+                        </Grid>
                     </Grid>
                     <Button Content="+ Nueva Pauta" Command="{Binding AddPautaCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,15" Height="40"/>
 
                     <!-- Base de Datos (Sistema) -->
                     <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="8" Padding="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel>
-                            <TextBlock Text="BASE DE DATOS (SISTEMA)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="9" FontWeight="Bold" Margin="0,0,0,10" HorizontalAlignment="Center"/>
+                            <TextBlock Text="TODAS LAS PAUTAS" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="9" FontWeight="Bold" Margin="0,0,0,10" HorizontalAlignment="Center"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -149,11 +160,12 @@
                                                      <TextBlock Text="{Binding CreatedAt, StringFormat='{}Creado: {0:dd/MM/yyyy}'}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="2,2,0,0"/>
                                                 </StackPanel>
 
-                                                <Button Grid.Column="2" Content="🗑️" 
-                                                        Command="{Binding DataContext.DeletePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
-                                                        CommandParameter="{Binding}" 
-                                                        Style="{StaticResource DangerButton}" Padding="5" Width="28" Height="28" FontSize="10"
-                                                        Visibility="{Binding DataContext.IsPautaMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                 <Button Grid.Column="2" Content="🗑️" 
+                                                         Command="{Binding DataContext.DeletePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                                         CommandParameter="{Binding}" 
+                                                         Style="{StaticResource DangerButton}" Padding="5" Width="28" Height="28" FontSize="10"
+                                                         ToolTip="Eliminar permanentemente"
+                                                         Visibility="{Binding DataContext.IsPautaMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
                                             </Grid>
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -218,7 +230,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="SELECCIÓN ACTIVA" VerticalAlignment="Center" FontWeight="Bold" FontSize="10" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0"/>
                                 <Button Content="✔️ Seleccionar Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,5,0" Padding="10,5" FontSize="11" Height="28"/>
-                                <Button Content="🗑️ Borrar" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,0,0,0" Padding="10,5" FontSize="11" Height="28"/>
+                                <Button Content="🗑️ Borrar" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,0,0,0" Padding="10,5" FontSize="11" Height="28" ToolTip="Eliminar permanentemente"/>
                             </StackPanel>
                         </Border>
 
@@ -249,9 +261,9 @@
                         </CheckBox>
 
                         <StackPanel Orientation="Horizontal" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}" Margin="15,0,0,0">
-                            <Button Content="➕ CAMPO" Command="{Binding AddFieldCommand}" 
+                            <Button Content="➕ Nuevo campo" Command="{Binding AddFieldCommand}" 
                                     Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Padding="12,5" Height="34"/>
-                            <Button Content="📦 BOX" Command="{Binding AddSectionCommand}" 
+                            <Button Content="📦 Nueva sección" Command="{Binding AddSectionCommand}" 
                                     Style="{StaticResource SecondaryButton}" Padding="12,5" Height="34"/>
                         </StackPanel>
                     </StackPanel>
@@ -313,21 +325,26 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid>
-                                            <ComboBox ItemsSource="{Binding DataContext.AvailableTypes, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                                      SelectedItem="{Binding Type, UpdateSourceTrigger=PropertyChanged}"
-                                                      HorizontalAlignment="Stretch" VerticalAlignment="Center">
-                                                <ComboBox.Style>
-                                                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Type}" Value="Separator">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </ComboBox.Style>
-                                            </ComboBox>
-                                            <TextBlock Text="--- CUADRO ---" Foreground="#ffd166" FontWeight="Bold" 
-                                                       VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
+                                             <ComboBox ItemsSource="{Binding DataContext.AvailableTypes, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                       SelectedItem="{Binding Type, UpdateSourceTrigger=PropertyChanged}"
+                                                       HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                                                 <ComboBox.ItemTemplate>
+                                                     <DataTemplate>
+                                                         <TextBlock Text="{Binding Converter={StaticResource FieldTypeDisplayNameConverter}}"/>
+                                                     </DataTemplate>
+                                                 </ComboBox.ItemTemplate>
+                                                 <ComboBox.Style>
+                                                     <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                                         <Style.Triggers>
+                                                             <DataTrigger Binding="{Binding Type}" Value="Separator">
+                                                                 <Setter Property="Visibility" Value="Collapsed"/>
+                                                             </DataTrigger>
+                                                         </Style.Triggers>
+                                                     </Style>
+                                                 </ComboBox.Style>
+                                             </ComboBox>
+                                             <TextBlock Text="--- SECCIÓN ---" Foreground="#ffd166" FontWeight="Bold" 
+                                                        VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -484,14 +501,24 @@
                             </DataGridTemplateColumn>
 
                             <DataGridTemplateColumn Header="Pers." Width="50">
-                                <DataGridTemplateColumn.CellTemplate>
+                                 <DataGridTemplateColumn.HeaderStyle>
+                                     <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                         <Setter Property="ToolTip" Value="El contenido persiste aunque agregues un nuevo registro (no se limpia)"/>
+                                     </Style>
+                                 </DataGridTemplateColumn.HeaderStyle>
+                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <CheckBox IsChecked="{Binding KeepValueOnReset, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTemplateColumn Header="Obl." Width="40">
-                                <DataGridTemplateColumn.CellTemplate>
+                             <DataGridTemplateColumn Header="Obl." Width="40">
+                                 <DataGridTemplateColumn.HeaderStyle>
+                                     <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                         <Setter Property="ToolTip" Value="Campo obligatorio"/>
+                                     </Style>
+                                 </DataGridTemplateColumn.HeaderStyle>
+                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <CheckBox IsChecked="{Binding IsRequired, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center"/>
                                     </DataTemplate>
@@ -500,8 +527,9 @@
                             <DataGridTemplateColumn Width="85">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="🗑️" Command="{Binding DataContext.RemoveFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                                CommandParameter="{Binding}" Style="{StaticResource DangerButton}" Padding="5" Width="28" Height="28" FontSize="12"/>
+                                         <Button Content="🗑️" Command="{Binding DataContext.RemoveFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                 CommandParameter="{Binding}" Style="{StaticResource DangerButton}" Padding="5" Width="28" Height="28" FontSize="12"
+                                                 ToolTip="Eliminar permanentemente"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
