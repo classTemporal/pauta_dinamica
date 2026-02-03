@@ -110,7 +110,7 @@ namespace PautaDinamicaApp.Models
         private bool _isSelected;
 
         // Propiedad para activar la advertencia de duplicados
-        private bool _warnOnDuplicate = true;
+        private bool _warnOnDuplicate = false;
         public bool WarnOnDuplicate
         {
             get => _warnOnDuplicate;

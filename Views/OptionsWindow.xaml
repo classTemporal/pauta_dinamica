@@ -116,10 +116,17 @@
                     </Border>
 
                     <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="6" Padding="12" Margin="0,0,0,15">
-                        <StackPanel>
-                            <TextBlock Text="REGLAS DE EVALUACIÓN" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,0,8"/>
-                            <CheckBox IsChecked="{Binding UseCustomWeights}" Content="Activar Porcentajes Personalizados (Distribución sobre 100%)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
-                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="REGLAS DE EVALUACIÓN" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,0,8"/>
+                                <CheckBox IsChecked="{Binding UseCustomWeights}" Content="Activar Porcentajes Personalizados (Distribución sobre 100%)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="🔄 Restablecer todo" Command="{Binding ResetCalculationCommand}" Style="{StaticResource DangerButton}" Padding="10,5" VerticalAlignment="Bottom" FontSize="11"/>
+                        </Grid>
                     </Border>
 
                     <ScrollViewer VerticalScrollBarVisibility="Auto">

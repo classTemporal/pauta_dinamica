@@ -99,7 +99,10 @@ namespace PautaDinamicaApp.ViewModels
             set
             {
                 if (SetProperty(ref _percentage, value))
+                {
                     _percentageText = value.ToString(CultureInfo.InvariantCulture);
+                    OnPropertyChanged(nameof(PercentageText));
+                }
             }
         }
 
@@ -170,6 +173,7 @@ namespace PautaDinamicaApp.ViewModels
             var wrapped = (field.Options ?? new List<string>()).Select(s => new SelectableOptionVM(s));
             Options = new ObservableCollection<SelectableOptionVM>(wrapped);
 
+            _internalUpdate = true;
             if (field.Type == FieldType.Calculation)
             {
                 var candidates = allFields.Where(f => f.Id != field.Id && (f.Type == FieldType.Dropdown || f.Type == FieldType.Boolean)).ToList();
@@ -209,12 +213,18 @@ namespace PautaDinamicaApp.ViewModels
                     CalculationRules.Add(rule);
                 }
 
+                _internalUpdate = false; // Permitimos que OnRuleChanged funcione para las llamadas siguientes
+
                 if (field.ScoringRules.Count == 0 || needsInitialRedistribution(field))
                 {
                     RedistributeEqually();
                 }
 
                 ValidatePercentages();
+            }
+            else
+            {
+                _internalUpdate = false;
             }
 
             if (field.Type == FieldType.Average)
@@ -240,6 +250,7 @@ namespace PautaDinamicaApp.ViewModels
             DeleteSelectedCommand = new RelayCommand(_ => DeleteSelected());
             ExportOptionsCommand = new RelayCommand(_ => ExportToExcel(Options, "Opciones"));
             ImportOptionsCommand = new RelayCommand(_ => ImportFromExcel());
+            ResetCalculationCommand = new RelayCommand(_ => ResetCalculation());
         }
 
         private bool needsInitialRedistribution(FieldDefinition f)
@@ -251,26 +262,59 @@ namespace PautaDinamicaApp.ViewModels
         private void OnRuleChanged()
         {
             if (_internalUpdate) return;
+
+            if (!UseCustomWeights)
+            {
+                RedistributeEqually();
+            }
+
             ValidatePercentages();
         }
 
         private void RedistributeEqually()
         {
             _internalUpdate = true;
-            var active = CalculationRules.Where(r => r.IsActive).ToList();
-            if (active.Any())
+            try
             {
-                double share = Math.Round(100.0 / active.Count, 2);
-                foreach (var r in active) r.Percentage = share;
+                var active = CalculationRules.Where(r => r.IsActive).ToList();
+                if (active.Any())
+                {
+                    double share = Math.Round(100.0 / active.Count, 2);
+                    foreach (var r in active) r.Percentage = share;
 
-                double total = active.Sum(r => r.Percentage);
-                if (Math.Abs(total - 100) > 0.001) active.Last().Percentage += (100 - total);
+                    double total = active.Sum(r => r.Percentage);
+                    if (Math.Abs(total - 100) > 0.001) active.Last().Percentage += (100 - total);
+                }
+                else
+                {
+                    foreach (var r in CalculationRules) r.Percentage = 0;
+                }
             }
-            else
+            finally
             {
-                foreach (var r in CalculationRules) r.Percentage = 0;
+                _internalUpdate = false;
             }
-            _internalUpdate = false;
+        }
+
+        private void ResetCalculation()
+        {
+            _internalUpdate = true;
+            try
+            {
+                foreach (var r in CalculationRules)
+                {
+                    r.IsActive = false;
+                    r.Percentage = 0;
+                }
+                // No llamamos a RedistributeEqually aqui porque queremos que todo este en 0
+                // Pero si hay campos por defecto que el usuario suele querer, 
+                // el comportamiento de "deselect all" es literal lo solicitado.
+            }
+            finally
+            {
+                _internalUpdate = false;
+            }
+            ValidatePercentages();
         }
 
         public string ValidationError { get => _validationError; set => SetProperty(ref _validationError, value); }
@@ -390,6 +434,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand DeleteSelectedCommand { get; }
         public ICommand ExportOptionsCommand { get; }
         public ICommand ImportOptionsCommand { get; }
+        public ICommand ResetCalculationCommand { get; }
 
         private void ExportToExcel(IEnumerable<SelectableOptionVM> list, string baseName)
         {
