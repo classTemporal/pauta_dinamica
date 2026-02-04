@@ -58,6 +58,14 @@ namespace PautaDinamicaApp.Models
             set => SetProperty(ref _type, value);
         }
 
+        private bool _isSelected;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
         {

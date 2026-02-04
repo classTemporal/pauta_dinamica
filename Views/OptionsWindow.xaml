@@ -9,6 +9,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <conv:FieldTypeDisplayNameConverter x:Key="FieldTypeDisplayNameConverter"/>
+            <conv:CalculationRoundingDisplayNameConverter x:Key="RoundingConverter"/>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -103,14 +104,30 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <CheckBox Grid.Column="0" IsChecked="{Binding EnableZeroTrigger}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                             <TextBlock Grid.Column="1" Text="Anulación Crítica: Poner en 0% si " VerticalAlignment="Center" FontSize="11" Foreground="#ff4d4d" FontWeight="Bold"/>
-                            <ComboBox Grid.Column="2" ItemsSource="{Binding AvailableFields}" SelectedValue="{Binding ZeroTriggerFieldId}" SelectedValuePath="Id" DisplayMemberPath="Label"
-                                      Height="28" Margin="5,0" IsEnabled="{Binding EnableZeroTrigger}"/>
+
+                            <Grid Grid.Column="2">
+                                <ToggleButton x:Name="CalcTriggerToggle" Height="28" Margin="5,0" IsEnabled="{Binding EnableZeroTrigger}" Style="{StaticResource GhostToggleButtonStyle}" FontSize="10">
+                                    <TextBlock Text="Seleccionar Campos..." TextTrimming="CharacterEllipsis"/>
+                                </ToggleButton>
+                                <Popup IsOpen="{Binding IsChecked, ElementName=CalcTriggerToggle}" StaysOpen="False" PlacementTarget="{Binding ElementName=CalcTriggerToggle}" AllowsTransparency="True" PopupAnimation="Slide">
+                                    <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="10" CornerRadius="6" MaxHeight="300" Width="250">
+                                        <ListBox ItemsSource="{Binding TriggerFieldChoices}" Background="Transparent" BorderThickness="0">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Label}" Foreground="{DynamicResource TextBrush}" Margin="0,2"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+
                             <TextBlock Grid.Column="3" Text=" es igual a " VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                            <TextBox Grid.Column="4" Text="{Binding ZeroTriggerValue, UpdateSourceTrigger=PropertyChanged}" Height="28" Margin="5,0,0,0" Padding="5,0" VerticalContentAlignment="Center"
+                            <TextBox Grid.Column="4" Text="{Binding ZeroTriggerValue, UpdateSourceTrigger=PropertyChanged}" Height="28" Width="100" Margin="5,0,0,0" Padding="5,0" VerticalContentAlignment="Center"
                                      IsEnabled="{Binding EnableZeroTrigger}"/>
                         </Grid>
                     </Border>
@@ -125,6 +142,17 @@
                                 <TextBlock Text="REGLAS DE EVALUACIÓN" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,0,8"/>
                                 <CheckBox IsChecked="{Binding UseCustomWeights}" Content="Activar Porcentajes Personalizados (Distribución sobre 100%)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
                                 <CheckBox IsChecked="{Binding ShowDecimals}" Content="Mostrar decimales en el resultado (ej: 95.0% vs 95%)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,5,0,0"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                    <TextBlock Text="Modo de Redondeo:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,10,0"/>
+                                    <ComboBox ItemsSource="{Binding AvailableRoundingModes}" SelectedItem="{Binding Rounding}" 
+                                              Width="200" Height="28">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource RoundingConverter}}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
                             </StackPanel>
                             <Button Grid.Column="1" Content="🔄 Restablecer todo" Command="{Binding ResetCalculationCommand}" Style="{StaticResource DangerButton}" Padding="10,5" VerticalAlignment="Bottom" FontSize="11"/>
                         </Grid>
@@ -188,10 +216,25 @@
             <!-- VISTA C: PROMEDIO (AVERAGE) -->
             <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Average:Visible|Default:Collapsed'}">
                 <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-                        <TextBlock Text="SELECCIONAR CÁLCULOS PARA PROMEDIAR" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" VerticalAlignment="Center" Margin="0,0,20,0"/>
-                        <CheckBox IsChecked="{Binding ShowDecimals}" Content="Mostrar decimales" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" FontSize="11"/>
-                    </StackPanel>
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,15">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="SELECCIONAR CÁLCULOS PARA PROMEDIAR" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" Margin="0,0,0,10"/>
+                        <StackPanel Grid.Row="1" Orientation="Horizontal">
+                            <CheckBox IsChecked="{Binding ShowDecimals}" Content="Mostrar decimales" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" FontSize="11" Margin="0,0,20,0"/>
+                            <TextBlock Text="Redondeo:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,5,0"/>
+                            <ComboBox ItemsSource="{Binding AvailableRoundingModes}" SelectedItem="{Binding Rounding}" 
+                                      Width="180" Height="28" FontSize="11">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource RoundingConverter}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
 
                     <!-- BARRA DE ANULACIÓN CRÍTICA -->
                     <Border DockPanel.Dock="Bottom" Background="{DynamicResource BackgroundBrush}" CornerRadius="8" Padding="12" Margin="0,15,0,0" 
@@ -202,14 +245,30 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <CheckBox Grid.Column="0" IsChecked="{Binding EnableZeroTrigger}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                             <TextBlock Grid.Column="1" Text="Anulación Crítica: Poner en 0% si " VerticalAlignment="Center" FontSize="11" Foreground="#ff4d4d" FontWeight="Bold"/>
-                            <ComboBox Grid.Column="2" ItemsSource="{Binding AvailableFields}" SelectedValue="{Binding ZeroTriggerFieldId}" SelectedValuePath="Id" DisplayMemberPath="Label"
-                                      Height="28" Margin="5,0" IsEnabled="{Binding EnableZeroTrigger}"/>
+
+                            <Grid Grid.Column="2">
+                                <ToggleButton x:Name="AvgTriggerToggle" Height="28" Margin="5,0" IsEnabled="{Binding EnableZeroTrigger}" Style="{StaticResource GhostToggleButtonStyle}" FontSize="10">
+                                    <TextBlock Text="Seleccionar Campos..." TextTrimming="CharacterEllipsis"/>
+                                </ToggleButton>
+                                <Popup IsOpen="{Binding IsChecked, ElementName=AvgTriggerToggle}" StaysOpen="False" PlacementTarget="{Binding ElementName=AvgTriggerToggle}" AllowsTransparency="True" PopupAnimation="Slide">
+                                    <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="10" CornerRadius="6" MaxHeight="300" Width="250">
+                                        <ListBox ItemsSource="{Binding TriggerFieldChoices}" Background="Transparent" BorderThickness="0">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Label}" Foreground="{DynamicResource TextBrush}" Margin="0,2"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+
                             <TextBlock Grid.Column="3" Text=" es igual a " VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                            <TextBox Grid.Column="4" Text="{Binding ZeroTriggerValue, UpdateSourceTrigger=PropertyChanged}" Height="28" Margin="5,0,0,0" Padding="5,0" VerticalContentAlignment="Center"
+                            <TextBox Grid.Column="4" Text="{Binding ZeroTriggerValue, UpdateSourceTrigger=PropertyChanged}" Height="28" Width="100" Margin="5,0,0,0" Padding="5,0" VerticalContentAlignment="Center"
                                      IsEnabled="{Binding EnableZeroTrigger}"/>
                         </Grid>
                     </Border>

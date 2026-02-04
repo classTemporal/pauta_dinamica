@@ -20,6 +20,13 @@ namespace PautaDinamicaApp.Models
         TextArea
     }
 
+    public enum CalculationRounding
+    {
+        None,
+        Up,
+        Down
+    }
+
     public class ScoringRule
     {
         public string FieldId { get; set; } = string.Empty;
@@ -50,9 +57,11 @@ namespace PautaDinamicaApp.Models
         private bool _keepValueOnReset;
         private string _timeFormat = "HH:mm";
         private string _zeroTriggerFieldId = string.Empty;
+        private List<string> _zeroTriggerFieldIds = new();
         private string _zeroTriggerValue = string.Empty;
         private bool _enableZeroTrigger;
         private bool _showDecimals = true;
+        private CalculationRounding _rounding = CalculationRounding.None;
 
         public string Id { get => _id; set { _id = value; OnPropertyChanged(); } }
         public string Label { get => _label; set { _label = value; OnPropertyChanged(); } }
@@ -68,6 +77,7 @@ namespace PautaDinamicaApp.Models
                     _type = value;
                     ApplyTypeDefaults();
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(DefaultValue)); // Trigger UI refresh for predeterminado
                 }
             }
         }
@@ -89,9 +99,11 @@ namespace PautaDinamicaApp.Models
         public string TimeFormat { get => _timeFormat; set { _timeFormat = value; OnPropertyChanged(); } }
         public bool KeepValueOnReset { get => _keepValueOnReset; set { _keepValueOnReset = value; OnPropertyChanged(); } }
         public string ZeroTriggerFieldId { get => _zeroTriggerFieldId; set { _zeroTriggerFieldId = value; OnPropertyChanged(); } }
+        public List<string> ZeroTriggerFieldIds { get => _zeroTriggerFieldIds; set { _zeroTriggerFieldIds = value ?? new(); OnPropertyChanged(); } }
         public string ZeroTriggerValue { get => _zeroTriggerValue; set { _zeroTriggerValue = value; OnPropertyChanged(); } }
         public bool EnableZeroTrigger { get => _enableZeroTrigger; set { _enableZeroTrigger = value; OnPropertyChanged(); } }
         public bool ShowDecimals { get => _showDecimals; set { _showDecimals = value; OnPropertyChanged(); } }
+        public CalculationRounding Rounding { get => _rounding; set { _rounding = value; OnPropertyChanged(); } }
         private int _maxLength = 255;
         public int MaxLength { get => _maxLength; set { _maxLength = value; OnPropertyChanged(); } }
 

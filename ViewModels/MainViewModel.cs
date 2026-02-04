@@ -720,22 +720,36 @@ namespace PautaDinamicaApp.ViewModels
                     var rules = def.ScoringRules;
 
                     // 1.1 Anulación Crítica (Zero Trigger)
-                    if (def.EnableZeroTrigger && !string.IsNullOrEmpty(def.ZeroTriggerFieldId))
+                    if (def.EnableZeroTrigger)
                     {
-                        var triggerSource = CurrentFields.FirstOrDefault(f => f.Id == def.ZeroTriggerFieldId);
-                        if (triggerSource != null)
-                        {
-                            string triggerVal = triggerSource.Value?.ToString() ?? "";
-                            if (triggerSource.Type == FieldType.Boolean)
-                            {
-                                if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
-                            }
+                        var triggerIds = def.ZeroTriggerFieldIds?.Any() == true
+                            ? def.ZeroTriggerFieldIds
+                            : (!string.IsNullOrEmpty(def.ZeroTriggerFieldId) ? new List<string> { def.ZeroTriggerFieldId } : new List<string>());
 
-                            if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
+                        bool triggerFired = false;
+                        foreach (var tId in triggerIds)
+                        {
+                            var triggerSource = CurrentFields.FirstOrDefault(f => f.Id == tId);
+                            if (triggerSource != null)
                             {
-                                calcField.Value = def.ShowDecimals ? "0.0%" : "0%";
-                                continue;
+                                string triggerVal = triggerSource.Value?.ToString() ?? "";
+                                if (triggerSource.Type == FieldType.Boolean)
+                                {
+                                    if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
+                                }
+
+                                if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    triggerFired = true;
+                                    break;
+                                }
                             }
+                        }
+
+                        if (triggerFired)
+                        {
+                            calcField.Value = def.ShowDecimals ? "0.0%" : "0%";
+                            continue;
                         }
                     }
 
@@ -794,9 +808,14 @@ namespace PautaDinamicaApp.ViewModels
                         totalPossibleWeights += 1.0 * weight;
                     }
 
+                    double rawPercentage = totalPossibleWeights > 0 ? (totalEarnedWeights / totalPossibleWeights * 100) : 0;
+
+                    if (def.Rounding == CalculationRounding.Up) rawPercentage = Math.Ceiling(rawPercentage);
+                    else if (def.Rounding == CalculationRounding.Down) rawPercentage = Math.Floor(rawPercentage);
+
                     string format = def.ShowDecimals ? "F1" : "F0";
                     calcField.Value = totalPossibleWeights > 0
-                        ? $"{(totalEarnedWeights / totalPossibleWeights * 100).ToString(format)}%"
+                        ? $"{rawPercentage.ToString(format)}%"
                         : (def.ShowDecimals ? "0.0%" : "0%");
                 }
 
@@ -806,22 +825,36 @@ namespace PautaDinamicaApp.ViewModels
                     var def = avgField.Definition;
 
                     // 2.1 Anulación Crítica (Zero Trigger)
-                    if (def.EnableZeroTrigger && !string.IsNullOrEmpty(def.ZeroTriggerFieldId))
+                    if (def.EnableZeroTrigger)
                     {
-                        var triggerSource = CurrentFields.FirstOrDefault(f => f.Id == def.ZeroTriggerFieldId);
-                        if (triggerSource != null)
-                        {
-                            string triggerVal = triggerSource.Value?.ToString() ?? "";
-                            if (triggerSource.Type == FieldType.Boolean)
-                            {
-                                if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
-                            }
+                        var triggerIds = def.ZeroTriggerFieldIds?.Any() == true
+                            ? def.ZeroTriggerFieldIds
+                            : (!string.IsNullOrEmpty(def.ZeroTriggerFieldId) ? new List<string> { def.ZeroTriggerFieldId } : new List<string>());
 
-                            if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
+                        bool triggerFired = false;
+                        foreach (var tId in triggerIds)
+                        {
+                            var triggerSource = CurrentFields.FirstOrDefault(f => f.Id == tId);
+                            if (triggerSource != null)
                             {
-                                avgField.Value = def.ShowDecimals ? "0.0%" : "0%";
-                                continue;
+                                string triggerVal = triggerSource.Value?.ToString() ?? "";
+                                if (triggerSource.Type == FieldType.Boolean)
+                                {
+                                    if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
+                                }
+
+                                if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    triggerFired = true;
+                                    break;
+                                }
                             }
+                        }
+
+                        if (triggerFired)
+                        {
+                            avgField.Value = def.ShowDecimals ? "0.0%" : "0%";
+                            continue;
                         }
                     }
 
@@ -833,8 +866,13 @@ namespace PautaDinamicaApp.ViewModels
                         string valText = t.Value?.ToString()?.Replace("%", "") ?? "";
                         if (double.TryParse(valText, out double d)) { sum += d; count++; }
                     }
+                    double rawAvg = count > 0 ? (sum / count) : 0;
+
+                    if (def.Rounding == CalculationRounding.Up) rawAvg = Math.Ceiling(rawAvg);
+                    else if (def.Rounding == CalculationRounding.Down) rawAvg = Math.Floor(rawAvg);
+
                     string avgFormat = def.ShowDecimals ? "F1" : "F0";
-                    avgField.Value = count > 0 ? $"{(sum / count).ToString(avgFormat)}%" : (def.ShowDecimals ? "0.0%" : "0%");
+                    avgField.Value = count > 0 ? $"{rawAvg.ToString(avgFormat)}%" : (def.ShowDecimals ? "0.0%" : "0%");
                 }
             }
             finally { _isCalculating = false; }

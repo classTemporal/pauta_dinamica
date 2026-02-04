@@ -68,8 +68,12 @@ namespace PautaDinamicaApp.ViewModels
             SaveConfigCommand = new RelayCommand(_ => SaveConfig());
             ExportConfigCommand = new RelayCommand(_ => ExportConfig());
             ImportConfigCommand = new RelayCommand(_ => ImportConfig());
-            ToggleMultiSelectCommand = new RelayCommand(_ => ToggleMultiSelect());
-            SelectAllCommand = new RelayCommand(_ => SelectAll());
+            ToggleMultiSelectCommand = new RelayCommand(_ => IsMultiSelectMode = !IsMultiSelectMode);
+            ToggleExportMultiSelectCommand = new RelayCommand(_ => IsExportMultiSelectMode = !IsExportMultiSelectMode);
+            TogglePdfMultiSelectCommand = new RelayCommand(_ => IsPdfMultiSelectMode = !IsPdfMultiSelectMode);
+            SelectAllCommand = new RelayCommand(_ => { foreach (var f in Fields) f.IsSelected = true; });
+            SelectAllExportCommand = new RelayCommand(_ => { foreach (var c in ExportColumns) c.IsSelected = true; });
+            SelectAllPdfCommand = new RelayCommand(_ => { foreach (var c in PdfColumns) c.IsSelected = true; });
             DeleteSelectedCommand = new RelayCommand(_ => DeleteSelected());
             PickDateCommand = new RelayCommand(p => PickDate(p as FieldDefinition));
             PickTimeCommand = new RelayCommand(p => PickTime(p as FieldDefinition));
@@ -161,7 +165,39 @@ namespace PautaDinamicaApp.ViewModels
         public bool IsMultiSelectMode
         {
             get => _isMultiSelectMode;
-            set => SetProperty(ref _isMultiSelectMode, value);
+            set
+            {
+                if (SetProperty(ref _isMultiSelectMode, value) && !value)
+                {
+                    foreach (var f in Fields) f.IsSelected = false;
+                }
+            }
+        }
+
+        private bool _isExportMultiSelectMode;
+        public bool IsExportMultiSelectMode
+        {
+            get => _isExportMultiSelectMode;
+            set
+            {
+                if (SetProperty(ref _isExportMultiSelectMode, value) && !value)
+                {
+                    foreach (var c in ExportColumns) c.IsSelected = false;
+                }
+            }
+        }
+
+        private bool _isPdfMultiSelectMode;
+        public bool IsPdfMultiSelectMode
+        {
+            get => _isPdfMultiSelectMode;
+            set
+            {
+                if (SetProperty(ref _isPdfMultiSelectMode, value) && !value)
+                {
+                    foreach (var c in PdfColumns) c.IsSelected = false;
+                }
+            }
         }
 
         public List<FieldType> AvailableTypes { get; }
@@ -185,7 +221,11 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ExportConfigCommand { get; }
         public ICommand ImportConfigCommand { get; }
         public ICommand ToggleMultiSelectCommand { get; }
+        public ICommand ToggleExportMultiSelectCommand { get; }
+        public ICommand TogglePdfMultiSelectCommand { get; }
         public ICommand SelectAllCommand { get; }
+        public ICommand SelectAllExportCommand { get; }
+        public ICommand SelectAllPdfCommand { get; }
         public ICommand DeleteSelectedCommand { get; }
 
         public bool HasPendingChanges()
@@ -375,24 +415,36 @@ namespace PautaDinamicaApp.ViewModels
 
         private void MoveExportUp(ExportColumnConfig? item)
         {
-            if (item == null) return;
-            int index = ExportColumns.IndexOf(item);
-            if (index > 0)
+            var selected = ExportColumns.Where(f => f.IsSelected).ToList();
+            if (!selected.Any()) { if (item != null) selected.Add(item); else return; }
+
+            var orderedSelected = selected.OrderBy(f => ExportColumns.IndexOf(f)).ToList();
+            foreach (var f in orderedSelected)
             {
-                ExportColumns.Move(index, index - 1);
-                RecalculateExportOrder();
+                int idx = ExportColumns.IndexOf(f);
+                if (idx > 0 && !ExportColumns[idx - 1].IsSelected)
+                {
+                    ExportColumns.Move(idx, idx - 1);
+                }
             }
+            RecalculateExportOrder();
         }
 
         private void MoveExportDown(ExportColumnConfig? item)
         {
-            if (item == null) return;
-            int index = ExportColumns.IndexOf(item);
-            if (index < ExportColumns.Count - 1)
+            var selected = ExportColumns.Where(f => f.IsSelected).ToList();
+            if (!selected.Any()) { if (item != null) selected.Add(item); else return; }
+
+            var orderedSelected = selected.OrderByDescending(f => ExportColumns.IndexOf(f)).ToList();
+            foreach (var f in orderedSelected)
             {
-                ExportColumns.Move(index, index + 1);
-                RecalculateExportOrder();
+                int idx = ExportColumns.IndexOf(f);
+                if (idx < ExportColumns.Count - 1 && !ExportColumns[idx + 1].IsSelected)
+                {
+                    ExportColumns.Move(idx, idx + 1);
+                }
             }
+            RecalculateExportOrder();
         }
 
         private void RecalculateExportOrder()
@@ -405,24 +457,36 @@ namespace PautaDinamicaApp.ViewModels
 
         private void MovePdfUp(ExportColumnConfig? item)
         {
-            if (item == null) return;
-            int index = PdfColumns.IndexOf(item);
-            if (index > 0)
+            var selected = PdfColumns.Where(f => f.IsSelected).ToList();
+            if (!selected.Any()) { if (item != null) selected.Add(item); else return; }
+
+            var orderedSelected = selected.OrderBy(f => PdfColumns.IndexOf(f)).ToList();
+            foreach (var f in orderedSelected)
             {
-                PdfColumns.Move(index, index - 1);
-                RecalculatePdfOrder();
+                int idx = PdfColumns.IndexOf(f);
+                if (idx > 0 && !PdfColumns[idx - 1].IsSelected)
+                {
+                    PdfColumns.Move(idx, idx - 1);
+                }
             }
+            RecalculatePdfOrder();
         }
 
         private void MovePdfDown(ExportColumnConfig? item)
         {
-            if (item == null) return;
-            int index = PdfColumns.IndexOf(item);
-            if (index < PdfColumns.Count - 1)
+            var selected = PdfColumns.Where(f => f.IsSelected).ToList();
+            if (!selected.Any()) { if (item != null) selected.Add(item); else return; }
+
+            var orderedSelected = selected.OrderByDescending(f => PdfColumns.IndexOf(f)).ToList();
+            foreach (var f in orderedSelected)
             {
-                PdfColumns.Move(index, index + 1);
-                RecalculatePdfOrder();
+                int idx = PdfColumns.IndexOf(f);
+                if (idx < PdfColumns.Count - 1 && !PdfColumns[idx + 1].IsSelected)
+                {
+                    PdfColumns.Move(idx, idx + 1);
+                }
             }
+            RecalculatePdfOrder();
         }
 
         private void RecalculatePdfOrder()
@@ -525,16 +589,34 @@ namespace PautaDinamicaApp.ViewModels
 
         private void MoveUp(FieldDefinition? field)
         {
-            if (field == null) return;
-            int index = Fields.IndexOf(field);
-            if (index > 0) Fields.Move(index, index - 1);
+            var selected = Fields.Where(f => f.IsSelected).ToList();
+            if (!selected.Any()) { if (field != null) selected.Add(field); else return; }
+
+            var orderedSelected = selected.OrderBy(f => Fields.IndexOf(f)).ToList();
+            foreach (var f in orderedSelected)
+            {
+                int idx = Fields.IndexOf(f);
+                if (idx > 0 && !Fields[idx - 1].IsSelected)
+                {
+                    Fields.Move(idx, idx - 1);
+                }
+            }
         }
 
         private void MoveDown(FieldDefinition? field)
         {
-            if (field == null) return;
-            int index = Fields.IndexOf(field);
-            if (index < Fields.Count - 1) Fields.Move(index, index + 1);
+            var selected = Fields.Where(f => f.IsSelected).ToList();
+            if (!selected.Any()) { if (field != null) selected.Add(field); else return; }
+
+            var orderedSelected = selected.OrderByDescending(f => Fields.IndexOf(f)).ToList();
+            foreach (var f in orderedSelected)
+            {
+                int idx = Fields.IndexOf(f);
+                if (idx < Fields.Count - 1 && !Fields[idx + 1].IsSelected)
+                {
+                    Fields.Move(idx, idx + 1);
+                }
+            }
         }
 
         private void ConfigureOptions(FieldDefinition? field)
@@ -558,8 +640,10 @@ namespace PautaDinamicaApp.ViewModels
 
                 field.EnableZeroTrigger = vm.ResultEnableZeroTrigger;
                 field.ZeroTriggerFieldId = vm.ResultZeroTriggerFieldId;
+                field.ZeroTriggerFieldIds = vm.ResultZeroTriggerFieldIds;
                 field.ZeroTriggerValue = vm.ResultZeroTriggerValue;
                 field.ShowDecimals = vm.ResultShowDecimals;
+                field.Rounding = vm.ResultRounding;
 
                 OnPropertyChanged(nameof(Fields));
             }
@@ -804,9 +888,13 @@ namespace PautaDinamicaApp.ViewModels
                 MessageBox.Show("Hay campos sin nombre.");
                 return;
             }
-            if (Fields.GroupBy(f => f.Label.Trim().ToLower()).Any(g => g.Count() > 1))
+            var duplicates = Fields.GroupBy(f => f.Label.Trim().ToLower())
+                                   .Where(g => g.Count() > 1)
+                                   .Select(g => g.First().Label)
+                                   .ToList();
+            if (duplicates.Any())
             {
-                MessageBox.Show("Hay nombres duplicados.");
+                MessageBox.Show($"Hay nombres duplicados:\n{string.Join(", ", duplicates)}", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

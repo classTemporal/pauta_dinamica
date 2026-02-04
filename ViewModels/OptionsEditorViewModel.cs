@@ -19,6 +19,14 @@ using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
 namespace PautaDinamicaApp.ViewModels
 {
+    public class SelectableFieldVM : ViewModelBase
+    {
+        private bool _isSelected;
+        public string Id { get; set; } = "";
+        public string Label { get; set; } = "";
+        public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
+    }
+
     public class SelectableOptionVM : ViewModelBase
     {
         private string _text = "";
@@ -154,10 +162,10 @@ namespace PautaDinamicaApp.ViewModels
         private string _timeFormat = "HH:mm";
         private bool _internalUpdate;
         private bool _enableZeroTrigger;
-        private string _zeroTriggerFieldId = string.Empty;
         private string _zeroTriggerValue = string.Empty;
-        private ObservableCollection<string> _availableTriggerValues = new();
         private bool _showDecimals;
+        private CalculationRounding _rounding;
+        private ObservableCollection<SelectableFieldVM> _triggerFieldChoices = new();
 
         public FieldDefinition OriginalField { get; }
         public ObservableCollection<RuleEditorVM> CalculationRules { get; } = new();
@@ -171,6 +179,7 @@ namespace PautaDinamicaApp.ViewModels
             _maxLength = field.MaxLength;
             WarnOnDuplicate = field.WarnOnDuplicate;
             ShowDecimals = field.ShowDecimals;
+            Rounding = field.Rounding;
 
             var wrapped = (field.Options ?? new List<string>()).Select(s => new SelectableOptionVM(s));
             Options = new ObservableCollection<SelectableOptionVM>(wrapped);
@@ -241,9 +250,21 @@ namespace PautaDinamicaApp.ViewModels
             // Zero Trigger Initialization
             AvailableFields = allFields.Where(f => f.Id != field.Id && f.Type != FieldType.Separator).ToList();
             _enableZeroTrigger = field.EnableZeroTrigger;
-            _zeroTriggerFieldId = field.ZeroTriggerFieldId;
             _zeroTriggerValue = field.ZeroTriggerValue;
-            UpdateAvailableTriggerValues();
+
+            // Compatibilidad: Si ZeroTriggerFieldId tiene valor pero ZeroTriggerFieldIds está vacío, migrar
+            var initialIds = field.ZeroTriggerFieldIds ?? new List<string>();
+            if (initialIds.Count == 0 && !string.IsNullOrEmpty(field.ZeroTriggerFieldId))
+            {
+                initialIds = new List<string> { field.ZeroTriggerFieldId };
+            }
+
+            foreach (var f in AvailableFields)
+            {
+                TriggerFieldChoices.Add(new SelectableFieldVM { Id = f.Id, Label = f.Label, IsSelected = initialIds.Contains(f.Id) });
+            }
+
+
 
             AddOptionCommand = new RelayCommand(_ => AddOption(), _ => !string.IsNullOrWhiteSpace(NewOptionText));
             RemoveOptionCommand = new RelayCommand(p => RemoveOption(p as SelectableOptionVM));
@@ -349,46 +370,16 @@ namespace PautaDinamicaApp.ViewModels
             set => SetProperty(ref _enableZeroTrigger, value);
         }
 
-        public string ZeroTriggerFieldId
+        public ObservableCollection<SelectableFieldVM> TriggerFieldChoices
         {
-            get => _zeroTriggerFieldId;
-            set
-            {
-                if (SetProperty(ref _zeroTriggerFieldId, value))
-                {
-                    UpdateAvailableTriggerValues();
-                    ZeroTriggerValue = "";
-                }
-            }
+            get => _triggerFieldChoices;
+            set => SetProperty(ref _triggerFieldChoices, value);
         }
 
         public string ZeroTriggerValue
         {
             get => _zeroTriggerValue;
             set => SetProperty(ref _zeroTriggerValue, value);
-        }
-
-        public ObservableCollection<string> AvailableTriggerValues
-        {
-            get => _availableTriggerValues;
-            set => SetProperty(ref _availableTriggerValues, value);
-        }
-
-        private void UpdateAvailableTriggerValues()
-        {
-            AvailableTriggerValues.Clear();
-            var field = AvailableFields.FirstOrDefault(f => f.Id == ZeroTriggerFieldId);
-            if (field == null) return;
-
-            if (field.Type == FieldType.Dropdown)
-            {
-                foreach (var opt in field.Options) AvailableTriggerValues.Add(opt);
-            }
-            else if (field.Type == FieldType.Boolean)
-            {
-                AvailableTriggerValues.Add("1");
-                AvailableTriggerValues.Add("0");
-            }
         }
 
         public ObservableCollection<SelectableOptionVM> Options { get => _options; set => SetProperty(ref _options, value); }
@@ -426,15 +417,25 @@ namespace PautaDinamicaApp.ViewModels
         public List<string> ResultAverageIds => AverageTargets.Where(t => t.IsSelected).Select(t => t.Tag?.ToString() ?? "").ToList();
 
         public bool ResultEnableZeroTrigger => EnableZeroTrigger;
-        public string ResultZeroTriggerFieldId => ZeroTriggerFieldId;
+        public string ResultZeroTriggerFieldId => TriggerFieldChoices.FirstOrDefault(t => t.IsSelected)?.Id ?? "";
+        public List<string> ResultZeroTriggerFieldIds => TriggerFieldChoices.Where(t => t.IsSelected).Select(t => t.Id).ToList();
         public string ResultZeroTriggerValue => ZeroTriggerValue;
         public bool ResultShowDecimals => ShowDecimals;
+        public CalculationRounding ResultRounding => Rounding;
 
         public bool ShowDecimals
         {
             get => _showDecimals;
             set => SetProperty(ref _showDecimals, value);
         }
+
+        public CalculationRounding Rounding
+        {
+            get => _rounding;
+            set => SetProperty(ref _rounding, value);
+        }
+
+        public Array AvailableRoundingModes => Enum.GetValues(typeof(CalculationRounding));
 
         public ICommand AddOptionCommand { get; }
         public ICommand RemoveOptionCommand { get; }

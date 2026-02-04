@@ -14,6 +14,7 @@ using DataObject = System.Windows.DataObject;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
+using System.Linq;
 
 namespace PautaDinamicaApp
 {
@@ -24,7 +25,44 @@ namespace PautaDinamicaApp
         public ConfigWindow(string activePautaId = "")
         {
             InitializeComponent();
-            this.DataContext = new ViewModels.EditorViewModel(activePautaId);
+            var vm = new ViewModels.EditorViewModel(activePautaId);
+            this.DataContext = vm;
+
+            // Auto-scroll logic when items move
+            vm.Fields.CollectionChanged += (s, e) =>
+            {
+                if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Move)
+                    ScrollFirstSelected(EditorGrid);
+            };
+            vm.ExportColumns.CollectionChanged += (s, e) =>
+            {
+                if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Move)
+                    ScrollFirstSelected(ExportGrid);
+            };
+            vm.PdfColumns.CollectionChanged += (s, e) =>
+            {
+                if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Move)
+                    ScrollFirstSelected(PdfGrid);
+            };
+        }
+
+        private void ScrollFirstSelected(DataGrid grid)
+        {
+            if (grid == null) return;
+            var items = grid.ItemsSource as System.Collections.IEnumerable;
+            if (items == null) return;
+
+            object? firstSelected = null;
+            foreach (var item in items)
+            {
+                if (item is FieldDefinition f && f.IsSelected) { firstSelected = item; break; }
+                if (item is ExportColumnConfig c && c.IsSelected) { firstSelected = item; break; }
+            }
+
+            if (firstSelected != null)
+            {
+                grid.ScrollIntoView(firstSelected);
+            }
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -143,5 +181,4 @@ namespace PautaDinamicaApp
             return FindVisualParent<T>(parentObject);
         }
     }
-
 }
