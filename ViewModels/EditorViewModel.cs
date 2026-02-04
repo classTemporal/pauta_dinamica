@@ -933,7 +933,7 @@ namespace PautaDinamicaApp.ViewModels
                             {
                                 // 1. Backup Excel de registros
                                 var oldConfig = _storageService.LoadConfiguration(EditingPauta.Id);
-                                ExportToExcelInternal(filePath, records, oldConfig);
+                                ExportToExcelInternal(filePath, records, oldConfig, EditingPauta.ExportConfig);
 
                                 // 2. Backup JSON de configuración (la que corresponde a esos registros)
                                 string jsonDir = settings.JsonBackupPath;
@@ -981,7 +981,7 @@ namespace PautaDinamicaApp.ViewModels
 
                     try
                     {
-                        ExportToExcelInternal(filePath, records, _storageService.LoadConfiguration(p.Id));
+                        ExportToExcelInternal(filePath, records, _storageService.LoadConfiguration(p.Id), p.ExportConfig);
                         MessageBox.Show($"Respaldo final guardado en:\n{filePath}");
                     }
                     catch (Exception ex) { MessageBox.Show("Error al respaldar pauta borrada: " + ex.Message); }
@@ -1017,27 +1017,114 @@ namespace PautaDinamicaApp.ViewModels
             MessageBox.Show("Cambios guardados con éxito.");
         }
 
-        private void ExportToExcelInternal(string filePath, List<AuditEntry> records, List<FieldDefinition> config)
+        private void ExportToExcelInternal(string filePath, List<AuditEntry> records, List<FieldDefinition> rawFields, List<ExportColumnConfig> exportConfig)
         {
             using (var workbook = new XLWorkbook())
             {
-                var ws = workbook.Worksheets.Add("Auditoría");
-                ws.Cell(1, 1).Value = "Fecha";
-                var fields = config.OrderBy(f => f.Order).ToList();
-                for (int i = 0; i < fields.Count; i++) ws.Cell(1, i + 2).Value = fields[i].Label;
+                var worksheet = workbook.Worksheets.Add("Auditoría");
+                var exportCols = new List<(string Id, string Header, FieldType Type)>();
 
+                if (exportConfig != null && exportConfig.Any())
+                {
+                    // Usar orden personalizado
+                    var orderedConfig = exportConfig.OrderBy(c => c.Order).ToList();
+                    var configuredIds = new HashSet<string>(exportConfig.Select(x => x.FieldId));
+
+                    foreach (var cfg in orderedConfig)
+                    {
+                        var f = rawFields.FirstOrDefault(rf => rf.Id == cfg.FieldId);
+                        if (f != null && cfg.IsVisible && cfg.IsExportEnabled)
+                        {
+                            exportCols.Add((f.Id, cfg.CustomHeader, f.Type));
+                        }
+                    }
+
+                    // Agregar campos nuevos que no estén en la config
+                    foreach (var f in rawFields)
+                    {
+                        if (!configuredIds.Contains(f.Id) && f.Type != FieldType.Separator)
+                            exportCols.Add((f.Id, f.Label, f.Type));
+                    }
+                }
+                else
+                {
+                    // Orden natural por defecto
+                    foreach (var f in rawFields.Where(f => f.Type != FieldType.Separator))
+                        exportCols.Add((f.Id, f.Label, f.Type));
+                }
+
+                // --- CABECERAS ---
+                for (int i = 0; i < exportCols.Count; i++)
+                {
+                    worksheet.Cell(1, i + 1).Value = exportCols[i].Header;
+                }
+
+                // --- DATOS ---
                 int row = 2;
                 foreach (var entry in records)
                 {
-                    ws.Cell(row, 1).Value = entry.Timestamp.ToString("g");
-                    for (int i = 0; i < fields.Count; i++)
+                    int col = 1;
+                    foreach (var colDef in exportCols)
                     {
-                        if (entry.Values.TryGetValue(fields[i].Id, out var val))
-                            ws.Cell(row, i + 2).Value = val?.ToString() ?? "";
+                        if (entry.Values.TryGetValue(colDef.Id, out var val))
+                        {
+                            string strVal = val?.ToString() ?? "";
+                            var cell = worksheet.Cell(row, col);
+
+                            if (colDef.Type == FieldType.Boolean)
+                            {
+                                bool? valResult = null;
+                                if (val is bool b) valResult = b;
+                                else if (strVal == "1") valResult = true;
+                                else if (strVal == "0") valResult = false;
+                                else if (bool.TryParse(strVal, out bool boolVal)) valResult = boolVal;
+
+                                if (valResult.HasValue)
+                                {
+                                    cell.Value = valResult.Value ? 1 : 0;
+                                    cell.Style.NumberFormat.Format = "0";
+                                }
+                                else cell.Value = strVal;
+                            }
+                            else if (colDef.Type == FieldType.Numeric || colDef.Type == FieldType.Calculation || colDef.Type == FieldType.Average)
+                            {
+                                if (strVal.Contains("%"))
+                                {
+                                    string cleanVal = strVal.Replace("%", "").Trim();
+                                    if (double.TryParse(cleanVal, out double pctVal))
+                                    {
+                                        cell.Value = pctVal / 100.0;
+                                        cell.Style.NumberFormat.Format = "0.0%";
+                                    }
+                                    else cell.Value = strVal;
+                                }
+                                else if (double.TryParse(strVal, out double numVal))
+                                {
+                                    cell.Value = numVal;
+                                    cell.Style.NumberFormat.Format = "0.00";
+                                }
+                                else cell.Value = strVal;
+                            }
+                            else if (colDef.Type == FieldType.Date && DateTime.TryParse(strVal, out DateTime dt))
+                            {
+                                cell.Value = dt;
+                            }
+                            else if (colDef.Type == FieldType.Time && DateTime.TryParse(strVal, out DateTime tm))
+                            {
+                                cell.Value = tm.TimeOfDay;
+                                cell.Style.NumberFormat.Format = "HH:mm:ss";
+                            }
+                            else cell.Value = strVal;
+
+                            if (colDef.Type == FieldType.TextArea || strVal.Contains("\n"))
+                                cell.Style.Alignment.SetWrapText(true);
+                        }
+                        col++;
                     }
                     row++;
                 }
-                ws.Columns().AdjustToContents();
+                worksheet.Columns().AdjustToContents();
+                foreach (var c in worksheet.Columns()) { if (c.Width > 50) c.Width = 50; }
                 workbook.SaveAs(filePath);
             }
         }

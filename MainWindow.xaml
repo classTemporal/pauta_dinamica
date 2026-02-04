@@ -137,6 +137,10 @@
                             </Style>
                         </Button.Style>
                     </Button>
+                    <Button Command="{Binding CancelEditCommand}" 
+                            Content="✖️ Cancelar" Height="40" Padding="20,0" Margin="0,0,10,0"
+                            Style="{StaticResource DangerButton}"
+                            Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     <Button Command="{Binding SendEmailsCommand}" 
                             Content="📧 Enviar todos los correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}"/>
                 </StackPanel>

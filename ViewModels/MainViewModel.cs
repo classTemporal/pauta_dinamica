@@ -58,6 +58,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ShowGeneralHelpCommand { get; }
         public ICommand LogoutCommand { get; }
         public ICommand ToggleThemeCommand { get; }
+        public ICommand CancelEditCommand { get; }
         public UserModel? CurrentUser => SessionService.CurrentUser;
 
         public MainViewModel()
@@ -91,6 +92,7 @@ namespace PautaDinamicaApp.ViewModels
             ShowGeneralHelpCommand = new RelayCommand(_ => ShowGeneralHelp());
             LogoutCommand = new RelayCommand(_ => Logout());
             ToggleThemeCommand = new RelayCommand(_ => ToggleTheme());
+            CancelEditCommand = new RelayCommand(_ => CreateNewRecord());
         }
 
         private void ToggleTheme()
@@ -521,16 +523,73 @@ namespace PautaDinamicaApp.ViewModels
                         {
                             var entry = new AuditEntry();
                             bool rowHasData = false;
+
+                            // Support for 'Fecha' column (optional/standard)
                             if (headers.TryGetValue(1, out var firstHeader) && firstHeader.Equals("Fecha", StringComparison.OrdinalIgnoreCase))
                             {
-                                if (DateTime.TryParse(row.Cell(1).Value.ToString(), out var dt)) entry.Timestamp = dt;
+                                var dateCell = row.Cell(1);
+                                if (dateCell.Value.IsDateTime) entry.Timestamp = dateCell.Value.GetDateTime();
+                                else if (DateTime.TryParse(dateCell.Value.ToString(), out var dt)) entry.Timestamp = dt;
                             }
+
                             foreach (var header in headers)
                             {
-                                var field = fields.FirstOrDefault(f => f.Label.Equals(header.Value, StringComparison.OrdinalIgnoreCase));
+                                string cleanHeader = header.Value.Trim().TrimEnd(':');
+                                var field = fields.FirstOrDefault(f =>
+                                    f.Label.Trim().TrimEnd(':').Equals(cleanHeader, StringComparison.OrdinalIgnoreCase));
+
                                 if (field != null)
                                 {
-                                    entry.Values[field.Id] = row.Cell(header.Key).Value.ToString();
+                                    var cell = row.Cell(header.Key);
+                                    object? processedVal = null;
+                                    string rawString = cell.Value.ToString();
+
+                                    if (field.Type == FieldType.Boolean)
+                                    {
+                                        if (cell.Value.IsBoolean) processedVal = cell.Value.GetBoolean();
+                                        else if (cell.Value.IsNumber) processedVal = cell.Value.GetNumber() == 1;
+                                        else processedVal = rawString.Equals("True", StringComparison.OrdinalIgnoreCase) || rawString == "1" || rawString.Equals("Sí", StringComparison.OrdinalIgnoreCase);
+                                    }
+                                    else if (field.Type == FieldType.Calculation || field.Type == FieldType.Average)
+                                    {
+                                        // Handle percentages from Excel (often raw decimals)
+                                        if (cell.Value.IsNumber)
+                                        {
+                                            double num = cell.Value.GetNumber();
+                                            // Scale to 0-100 range if it looks like a decimal-proportion
+                                            if (num <= 1.1 && !rawString.Contains("%")) num *= 100.0;
+                                            processedVal = num.ToString("N1") + "%";
+                                        }
+                                        else if (double.TryParse(rawString.Replace("%", "").Trim(), out double d))
+                                        {
+                                            processedVal = d.ToString("N1") + "%";
+                                        }
+                                        else processedVal = rawString;
+                                    }
+                                    else if (field.Type == FieldType.Date)
+                                    {
+                                        if (cell.Value.IsDateTime) processedVal = cell.Value.GetDateTime().ToString("dd/MM/yyyy");
+                                        else if (DateTime.TryParse(rawString, out DateTime dt)) processedVal = dt.ToString("dd/MM/yyyy");
+                                        else processedVal = rawString;
+                                    }
+                                    else if (field.Type == FieldType.Time)
+                                    {
+                                        string fmt = field.Definition.TimeFormat ?? "HH:mm";
+                                        // Avoid seconds if not explicitly asked
+                                        if (cell.Value.IsDateTime) processedVal = cell.Value.GetDateTime().ToString(fmt);
+                                        else if (DateTime.TryParse(rawString, out DateTime dt)) processedVal = dt.ToString(fmt);
+                                        else processedVal = rawString;
+                                    }
+                                    else if (field.Type == FieldType.Numeric && cell.Value.IsNumber)
+                                    {
+                                        processedVal = cell.Value.GetNumber().ToString();
+                                    }
+                                    else
+                                    {
+                                        processedVal = rawString;
+                                    }
+
+                                    entry.Values[field.Id] = processedVal;
                                     rowHasData = true;
                                 }
                             }
@@ -937,7 +996,14 @@ namespace PautaDinamicaApp.ViewModels
                     }
                     else
                     {
-                        field.Value = value;
+                        if (field.Type == FieldType.Boolean && value != null)
+                        {
+                            string valStr = value.ToString() ?? "";
+                            if (valStr == "1" || valStr.Equals("True", StringComparison.OrdinalIgnoreCase)) field.Value = true;
+                            else if (valStr == "0" || valStr.Equals("False", StringComparison.OrdinalIgnoreCase)) field.Value = false;
+                            else field.Value = value;
+                        }
+                        else field.Value = value;
                     }
                 }
                 else
