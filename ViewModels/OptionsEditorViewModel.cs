@@ -240,7 +240,7 @@ namespace PautaDinamicaApp.ViewModels
 
             if (field.Type == FieldType.Average)
             {
-                var candidates = allFields.Where(f => f.Id != field.Id && f.Type == FieldType.Calculation);
+                var candidates = allFields.Where(f => f.Id != field.Id && (f.Type == FieldType.Calculation || f.Type == FieldType.Average));
                 foreach (var f in candidates)
                 {
                     AverageTargets.Add(new SelectableOptionVM(f.Label) { Tag = f.Id, IsSelected = field.TargetIds.Contains(f.Id) });

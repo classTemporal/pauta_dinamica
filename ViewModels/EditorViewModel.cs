@@ -263,6 +263,7 @@ namespace PautaDinamicaApp.ViewModels
             var config = _storageService.LoadConfiguration(pautaId).OrderBy(f => f.Order).ToList();
             foreach (var f in config) f.EnsureDefaultOptions();
             Fields = new ObservableCollection<FieldDefinition>(config);
+            foreach (var f in Fields) f.PropertyChanged += OnFieldPropertyChanged;
             _initialFieldsJson = JsonSerializer.Serialize(Fields);
 
             LoadExportColumns();
@@ -509,6 +510,7 @@ namespace PautaDinamicaApp.ViewModels
                 Order = (lastField?.Order ?? 0) + 1,
                 MaxLength = 255
             };
+            newField.PropertyChanged += OnFieldPropertyChanged;
             Fields.Add(newField);
 
             // Add to Export list automatically
@@ -538,14 +540,16 @@ namespace PautaDinamicaApp.ViewModels
         private void AddSection()
         {
             var lastField = Fields.OrderBy(f => f.Order).LastOrDefault();
-            Fields.Add(new FieldDefinition
+            var newSection = new FieldDefinition
             {
                 Id = "s_" + Guid.NewGuid().ToString().Substring(0, 4),
                 Label = GetNextAvailableLabel("Nueva sección"),
                 Category = "--- SECCIÓN ---",
                 Type = FieldType.Separator,
                 Order = (lastField?.Order ?? 0) + 1
-            });
+            };
+            newSection.PropertyChanged += OnFieldPropertyChanged;
+            Fields.Add(newSection);
 
             var newSec = Fields.Last();
             // Add to PDF list automatically
@@ -708,6 +712,26 @@ namespace PautaDinamicaApp.ViewModels
                     }
                 }
                 catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+            }
+        }
+
+        private void OnFieldPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (sender is FieldDefinition f && e.PropertyName == nameof(FieldDefinition.Label))
+            {
+                var exp = ExportColumns.FirstOrDefault(x => x.FieldId == f.Id);
+                if (exp != null) exp.OriginalLabel = f.Label;
+
+                var pdfItem = PdfColumns.FirstOrDefault(x => x.FieldId == f.Id);
+                if (pdfItem != null) pdfItem.OriginalLabel = f.Label;
+            }
+            if (sender is FieldDefinition f2 && e.PropertyName == nameof(FieldDefinition.Type))
+            {
+                var exp = ExportColumns.FirstOrDefault(x => x.FieldId == f2.Id);
+                if (exp != null) exp.Type = f2.Type;
+
+                var pdfItem = PdfColumns.FirstOrDefault(x => x.FieldId == f2.Id);
+                if (pdfItem != null) pdfItem.Type = f2.Type;
             }
         }
 
