@@ -69,6 +69,9 @@ namespace PautaDinamicaApp.Models
         private System.Collections.Generic.List<ExportColumnConfig> _exportConfig = new();
         public System.Collections.Generic.List<ExportColumnConfig> ExportConfig { get => _exportConfig; set => SetProperty(ref _exportConfig, value); }
 
+        private System.Collections.Generic.List<ExportColumnConfig> _pdfConfig = new();
+        public System.Collections.Generic.List<ExportColumnConfig> PdfConfig { get => _pdfConfig; set => SetProperty(ref _pdfConfig, value); }
+
         private string _helpContent = "";
         public string HelpContent { get => _helpContent; set => SetProperty(ref _helpContent, value); }
 

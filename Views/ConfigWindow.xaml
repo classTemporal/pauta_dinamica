@@ -244,12 +244,19 @@
                                                      <TextBlock Text="{Binding CreatedAt, StringFormat='{}Creado: {0:dd/MM/yyyy}'}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="2,2,0,0"/>
                                                 </StackPanel>
 
-                                                 <Button Grid.Column="2" Content="🗑️" 
-                                                         Command="{Binding DataContext.DeletePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
-                                                         CommandParameter="{Binding}" 
-                                                         Style="{StaticResource DangerButton}" Padding="5" Width="28" Height="28" FontSize="10"
-                                                         ToolTip="Eliminar permanentemente"
-                                                         Visibility="{Binding DataContext.IsPautaMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                                                             Visibility="{Binding DataContext.IsPautaMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                     <Button Content="📑" 
+                                                             Command="{Binding DataContext.DuplicatePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                                             CommandParameter="{Binding}" 
+                                                             Style="{StaticResource GhostButton}" Padding="5" Width="28" Height="28" FontSize="10" Margin="0,0,5,0"
+                                                             ToolTip="Duplicar Pauta"/>
+                                                     <Button Content="🗑️" 
+                                                             Command="{Binding DataContext.DeletePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                                             CommandParameter="{Binding}" 
+                                                             Style="{StaticResource DangerButton}" Padding="5" Width="28" Height="28" FontSize="10"
+                                                             ToolTip="Eliminar permanentemente"/>
+                                                 </StackPanel>
                                             </Grid>
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -658,6 +665,126 @@
                                                          <DataTrigger Binding="{Binding IsExportEnabled}" Value="False">
                                                              <Setter Property="IsEnabled" Value="False"/>
                                                              <Setter Property="Opacity" Value="0.5"/>
+                                                         </DataTrigger>
+                                                     </Style.Triggers>
+                                                 </Style>
+                                             </TextBox.Style>
+                                        </TextBox>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- TAB 4: PDF Configuration -->
+            <TabItem Header="CONFIG. PDF">
+                <Grid Margin="15">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,15" Orientation="Horizontal">
+                        <TextBlock Text="Personalice el orden y nombres de los campos para el reporte PDF." 
+                                   Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <Button Content="Restablecer Valores" Command="{Binding ResetPdfConfigCommand}" Style="{StaticResource GhostButton}" Height="30"/>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding PdfColumns}" AutoGenerateColumns="False" 
+                              CanUserAddRows="False" CanUserDeleteRows="False"
+                              HeadersVisibility="Column" SelectionUnit="FullRow">
+                        
+                        <DataGrid.ItemContainerStyle>
+                           <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                           </Style>
+                        </DataGrid.ItemContainerStyle>
+
+                        <DataGrid.Columns>
+                            <!-- Move Up/Down -->
+                            <DataGridTemplateColumn Width="70" Header="Mover">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button Content="▲" Command="{Binding DataContext.MovePdfUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                    CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}"/>
+                                            <Button Content="▼" Command="{Binding DataContext.MovePdfDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                    CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Ignorar / Check -->
+                            <DataGridTemplateColumn Header="Exportar" Width="60">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsExportEnabled, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center"
+                                                  ToolTip="Si se desmarca, este campo no aparecerá en el PDF."/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Original Label -->
+                            <DataGridTemplateColumn Header="Campo Original" Width="250">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <!-- Campo normal -->
+                                            <TextBlock Text="{Binding OriginalLabel}" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryTextBrush}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsExportEnabled}" Value="False">
+                                                                <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                                                <Setter Property="Opacity" Value="0.5"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Type}" Value="Separator">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <!-- Sección -->
+                                            <TextBlock Text="--- SECCIÓN ---" Foreground="#ffd166" FontWeight="Bold" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Type}" Value="Separator">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsExportEnabled}" Value="False">
+                                                                <Setter Property="Opacity" Value="0.5"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Custom Header -->
+                            <DataGridTemplateColumn Header="Nombre en PDF (Editable)" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding CustomHeader, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" 
+                                                 BorderThickness="0" Foreground="{DynamicResource TextBrush}" Padding="5">
+                                             <TextBox.Style>
+                                                 <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                     <Style.Triggers>
+                                                         <DataTrigger Binding="{Binding IsExportEnabled}" Value="False">
+                                                             <Setter Property="IsEnabled" Value="False"/>
+                                                             <Setter Property="Opacity" Value="0.5"/>
+                                                         </DataTrigger>
+                                                         <DataTrigger Binding="{Binding Type}" Value="Separator">
+                                                             <Setter Property="FontWeight" Value="Bold"/>
+                                                             <Setter Property="Foreground" Value="#ffd166"/>
                                                          </DataTrigger>
                                                      </Style.Triggers>
                                                  </Style>

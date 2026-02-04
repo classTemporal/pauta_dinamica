@@ -557,7 +557,7 @@ namespace PautaDinamicaApp.ViewModels
                 if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
                 string pautaName = CurrentPauta?.Name ?? "Auditoria";
                 string safePautaName = string.Join("_", pautaName.Split(Path.GetInvalidFileNameChars()));
-                var definitions = CurrentFields.Select(f => f.Definition).ToList();
+                var definitions = CurrentPauta != null ? _storageService.LoadConfiguration(CurrentPauta.Id) : new List<FieldDefinition>();
                 int count = 0;
 
                 foreach (var record in records)
@@ -566,7 +566,7 @@ namespace PautaDinamicaApp.ViewModels
                     string filename = $"Reporte_{safePautaName}_{timestamp}_{count + 1}.pdf";
                     string fullPath = Path.Combine(folderPath, filename);
 
-                    _pdfService.GenerateAuditPdf(new List<AuditEntry> { record }, definitions, pautaName, fullPath);
+                    _pdfService.GenerateAuditPdf(new List<AuditEntry> { record }, definitions, CurrentPauta?.PdfConfig, pautaName, fullPath);
                     count++;
                 }
 
@@ -586,7 +586,7 @@ namespace PautaDinamicaApp.ViewModels
             try
             {
                 string pautaName = CurrentPauta?.Name ?? "Auditoria";
-                var definitions = CurrentFields.Select(f => f.Definition).ToList();
+                var definitions = CurrentPauta != null ? _storageService.LoadConfiguration(CurrentPauta.Id) : new List<FieldDefinition>();
                 var settings = _storageService.LoadSettings();
                 string exportDir = settings.PdfReportPath;
                 if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
@@ -594,7 +594,7 @@ namespace PautaDinamicaApp.ViewModels
                 string fileName = $"Reporte_{pautaName}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
                 string filePath = Path.Combine(exportDir, fileName);
 
-                _pdfService.GenerateAuditPdf(records, definitions, pautaName, filePath);
+                _pdfService.GenerateAuditPdf(records, definitions, CurrentPauta?.PdfConfig, pautaName, filePath);
 
                 if (!silent)
                 {

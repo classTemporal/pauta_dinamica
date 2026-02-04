@@ -60,6 +60,10 @@ namespace PautaDinamicaApp.ViewModels
             MoveExportDownCommand = new RelayCommand(p => MoveExportDown(p as ExportColumnConfig));
             ResetExportConfigCommand = new RelayCommand(_ => ResetExportConfig());
 
+            MovePdfUpCommand = new RelayCommand(p => MovePdfUp(p as ExportColumnConfig));
+            MovePdfDownCommand = new RelayCommand(p => MovePdfDown(p as ExportColumnConfig));
+            ResetPdfConfigCommand = new RelayCommand(_ => ResetPdfConfig());
+
             ConfigureOptionsCommand = new RelayCommand(p => ConfigureOptions(p as FieldDefinition));
             SaveConfigCommand = new RelayCommand(_ => SaveConfig());
             ExportConfigCommand = new RelayCommand(_ => ExportConfig());
@@ -78,6 +82,7 @@ namespace PautaDinamicaApp.ViewModels
             SelectAllPautasCommand = new RelayCommand(_ => SelectAllPautas());
             ExportAllDatabaseCommand = new RelayCommand(_ => ExportAllDatabase());
             ImportAllDatabaseCommand = new RelayCommand(_ => ImportAllDatabase());
+            DuplicatePautaCommand = new RelayCommand(p => DuplicatePauta(p as PautaSchema));
 
             AvailableTypes = Enum.GetValues(typeof(FieldType)).Cast<FieldType>()
                                 .Where(t => t != FieldType.Separator)
@@ -99,6 +104,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand SelectAllPautasCommand { get; }
         public ICommand ExportAllDatabaseCommand { get; }
         public ICommand ImportAllDatabaseCommand { get; }
+        public ICommand DuplicatePautaCommand { get; }
 
         public ObservableCollection<PautaSchema> Pautas
         {
@@ -145,6 +151,13 @@ namespace PautaDinamicaApp.ViewModels
             set => SetProperty(ref _exportColumns, value);
         }
 
+        private ObservableCollection<ExportColumnConfig> _pdfColumns = new();
+        public ObservableCollection<ExportColumnConfig> PdfColumns
+        {
+            get => _pdfColumns;
+            set => SetProperty(ref _pdfColumns, value);
+        }
+
         public bool IsMultiSelectMode
         {
             get => _isMultiSelectMode;
@@ -162,6 +175,10 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand MoveExportUpCommand { get; }
         public ICommand MoveExportDownCommand { get; }
         public ICommand ResetExportConfigCommand { get; }
+
+        public ICommand MovePdfUpCommand { get; }
+        public ICommand MovePdfDownCommand { get; }
+        public ICommand ResetPdfConfigCommand { get; }
 
         public ICommand ConfigureOptionsCommand { get; }
         public ICommand SaveConfigCommand { get; }
@@ -209,6 +226,52 @@ namespace PautaDinamicaApp.ViewModels
             _initialFieldsJson = JsonSerializer.Serialize(Fields);
 
             LoadExportColumns();
+            LoadPdfColumns();
+        }
+
+        private void LoadPdfColumns()
+        {
+            if (EditingPauta == null) return;
+
+            var existingConfig = EditingPauta.PdfConfig ?? new List<ExportColumnConfig>();
+            var newConfig = new ObservableCollection<ExportColumnConfig>();
+
+            // En PDF incluimos todos los campos, INCLUYENDO Secciones (Separadores)
+            var validFields = Fields.OrderBy(f => f.Order).ToList();
+
+            var sortedExisting = existingConfig.OrderBy(e => e.Order).ToList();
+
+            foreach (var item in sortedExisting)
+            {
+                var field = validFields.FirstOrDefault(f => f.Id == item.FieldId);
+                if (field != null)
+                {
+                    item.OriginalLabel = field.Label;
+                    item.Type = field.Type;
+                    if (string.IsNullOrEmpty(item.CustomHeader)) item.CustomHeader = field.Label;
+                    newConfig.Add(item);
+                }
+            }
+
+            foreach (var field in validFields)
+            {
+                if (!newConfig.Any(x => x.FieldId == field.Id))
+                {
+                    newConfig.Add(new ExportColumnConfig
+                    {
+                        FieldId = field.Id,
+                        OriginalLabel = field.Label,
+                        Type = field.Type,
+                        CustomHeader = field.Label,
+                        Order = newConfig.Count,
+                        IsVisible = true,
+                        IsExportEnabled = true
+                    });
+                }
+            }
+
+            for (int i = 0; i < newConfig.Count; i++) newConfig[i].Order = i;
+            PdfColumns = newConfig;
         }
 
         private void LoadExportColumns()
@@ -287,6 +350,29 @@ namespace PautaDinamicaApp.ViewModels
             ExportColumns = newConfig;
         }
 
+        private void ResetPdfConfig()
+        {
+            if (MessageBox.Show("¿Restablecer el orden y nombres del PDF a los valores por defecto?", "Confirmar", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+
+            var validFields = Fields.OrderBy(f => f.Order).ToList();
+            var newConfig = new ObservableCollection<ExportColumnConfig>();
+
+            for (int i = 0; i < validFields.Count; i++)
+            {
+                newConfig.Add(new ExportColumnConfig
+                {
+                    FieldId = validFields[i].Id,
+                    OriginalLabel = validFields[i].Label,
+                    Type = validFields[i].Type,
+                    CustomHeader = validFields[i].Label,
+                    Order = i,
+                    IsVisible = true,
+                    IsExportEnabled = true
+                });
+            }
+            PdfColumns = newConfig;
+        }
+
         private void MoveExportUp(ExportColumnConfig? item)
         {
             if (item == null) return;
@@ -317,6 +403,36 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        private void MovePdfUp(ExportColumnConfig? item)
+        {
+            if (item == null) return;
+            int index = PdfColumns.IndexOf(item);
+            if (index > 0)
+            {
+                PdfColumns.Move(index, index - 1);
+                RecalculatePdfOrder();
+            }
+        }
+
+        private void MovePdfDown(ExportColumnConfig? item)
+        {
+            if (item == null) return;
+            int index = PdfColumns.IndexOf(item);
+            if (index < PdfColumns.Count - 1)
+            {
+                PdfColumns.Move(index, index + 1);
+                RecalculatePdfOrder();
+            }
+        }
+
+        private void RecalculatePdfOrder()
+        {
+            for (int i = 0; i < PdfColumns.Count; i++)
+            {
+                PdfColumns[i].Order = i;
+            }
+        }
+
         private void AddField()
         {
             var lastField = Fields.OrderBy(f => f.Order).LastOrDefault();
@@ -342,8 +458,19 @@ namespace PautaDinamicaApp.ViewModels
                 IsVisible = true,
                 IsExportEnabled = true
             });
-        }
 
+            // Add to PDF list
+            PdfColumns.Add(new ExportColumnConfig
+            {
+                FieldId = newField.Id,
+                OriginalLabel = newField.Label,
+                Type = newField.Type,
+                CustomHeader = newField.Label,
+                Order = PdfColumns.Count,
+                IsVisible = true,
+                IsExportEnabled = true
+            });
+        }
         private void AddSection()
         {
             var lastField = Fields.OrderBy(f => f.Order).LastOrDefault();
@@ -354,6 +481,19 @@ namespace PautaDinamicaApp.ViewModels
                 Category = "--- SECCIÓN ---",
                 Type = FieldType.Separator,
                 Order = (lastField?.Order ?? 0) + 1
+            });
+
+            var newSec = Fields.Last();
+            // Add to PDF list automatically
+            PdfColumns.Add(new ExportColumnConfig
+            {
+                FieldId = newSec.Id,
+                OriginalLabel = newSec.Label,
+                Type = newSec.Type,
+                CustomHeader = newSec.Label,
+                Order = PdfColumns.Count,
+                IsVisible = true,
+                IsExportEnabled = true
             });
         }
 
@@ -377,6 +517,9 @@ namespace PautaDinamicaApp.ViewModels
                 Fields.Remove(field);
                 var exportItem = ExportColumns.FirstOrDefault(x => x.FieldId == field.Id);
                 if (exportItem != null) ExportColumns.Remove(exportItem);
+
+                var pdfItem = PdfColumns.FirstOrDefault(x => x.FieldId == field.Id);
+                if (pdfItem != null) PdfColumns.Remove(pdfItem);
             }
         }
 
@@ -515,6 +658,53 @@ namespace PautaDinamicaApp.ViewModels
             var newPauta = new PautaSchema { Name = "Nueva Pauta " + (Pautas.Count + 1) };
             Pautas.Add(newPauta);
             EditingPauta = newPauta;
+        }
+
+        private void DuplicatePauta(PautaSchema? source)
+        {
+            if (source == null) return;
+
+            // Clonar el esquema básico
+            var newPauta = new PautaSchema
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = source.Name + " (Copia)",
+                CreatedAt = DateTime.Now,
+                HelpContent = source.HelpContent,
+                // Clonar configuraciones de exportación
+                ExportConfig = source.ExportConfig?.Select(c => new ExportColumnConfig
+                {
+                    FieldId = c.FieldId,
+                    CustomHeader = c.CustomHeader,
+                    IsExportEnabled = c.IsExportEnabled,
+                    Order = c.Order,
+                    OriginalLabel = c.OriginalLabel,
+                    Type = c.Type,
+                    IsVisible = c.IsVisible
+                }).ToList() ?? new List<ExportColumnConfig>(),
+                PdfConfig = source.PdfConfig?.Select(c => new ExportColumnConfig
+                {
+                    FieldId = c.FieldId,
+                    CustomHeader = c.CustomHeader,
+                    IsExportEnabled = c.IsExportEnabled,
+                    Order = c.Order,
+                    OriginalLabel = c.OriginalLabel,
+                    Type = c.Type,
+                    IsVisible = c.IsVisible
+                }).ToList() ?? new List<ExportColumnConfig>()
+            };
+
+            // Copiar la configuración de campos (estructura JSON)
+            var sourceFields = _storageService.LoadConfiguration(source.Id);
+            // IMPORTANTE: Los campos dentro de la configuración deben tener los mismos IDs para que el ExportConfig/PdfConfig funcionen
+            _storageService.SaveConfiguration(newPauta.Id, sourceFields);
+
+            // Agregar al índice
+            Pautas.Add(newPauta);
+            _storageService.SavePautas(Pautas.ToList());
+
+            EditingPauta = newPauta;
+            MessageBox.Show($"Pauta '{source.Name}' duplicada con éxito como '{newPauta.Name}'");
         }
 
         private void DeletePauta(PautaSchema? p)
@@ -683,6 +873,7 @@ namespace PautaDinamicaApp.ViewModels
 
                 // SAVE EXPORT CONFIG
                 EditingPauta.ExportConfig = ExportColumns.OrderBy(c => c.Order).ToList();
+                EditingPauta.PdfConfig = PdfColumns.OrderBy(c => c.Order).ToList();
 
                 _storageService.BackupConfiguration(EditingPauta.Id);
                 _storageService.SaveConfiguration(EditingPauta.Id, list);
