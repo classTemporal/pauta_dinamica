@@ -559,6 +559,7 @@ namespace PautaDinamicaApp.ViewModels
                 field.EnableZeroTrigger = vm.ResultEnableZeroTrigger;
                 field.ZeroTriggerFieldId = vm.ResultZeroTriggerFieldId;
                 field.ZeroTriggerValue = vm.ResultZeroTriggerValue;
+                field.ShowDecimals = vm.ResultShowDecimals;
 
                 OnPropertyChanged(nameof(Fields));
             }

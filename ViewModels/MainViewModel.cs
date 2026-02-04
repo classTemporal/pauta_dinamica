@@ -733,7 +733,7 @@ namespace PautaDinamicaApp.ViewModels
 
                             if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
                             {
-                                calcField.Value = "0.0%";
+                                calcField.Value = def.ShowDecimals ? "0.0%" : "0%";
                                 continue;
                             }
                         }
@@ -794,9 +794,10 @@ namespace PautaDinamicaApp.ViewModels
                         totalPossibleWeights += 1.0 * weight;
                     }
 
+                    string format = def.ShowDecimals ? "F1" : "F0";
                     calcField.Value = totalPossibleWeights > 0
-                        ? $"{(totalEarnedWeights / totalPossibleWeights * 100):F1}%"
-                        : "0.0%";
+                        ? $"{(totalEarnedWeights / totalPossibleWeights * 100).ToString(format)}%"
+                        : (def.ShowDecimals ? "0.0%" : "0%");
                 }
 
                 // 2. CÁLCULO DE PROMEDIOS (AVERAGE)
@@ -818,7 +819,7 @@ namespace PautaDinamicaApp.ViewModels
 
                             if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
                             {
-                                avgField.Value = "0.0%";
+                                avgField.Value = def.ShowDecimals ? "0.0%" : "0%";
                                 continue;
                             }
                         }
@@ -832,7 +833,8 @@ namespace PautaDinamicaApp.ViewModels
                         string valText = t.Value?.ToString()?.Replace("%", "") ?? "";
                         if (double.TryParse(valText, out double d)) { sum += d; count++; }
                     }
-                    avgField.Value = count > 0 ? $"{(sum / count):F1}%" : "0.0%";
+                    string avgFormat = def.ShowDecimals ? "F1" : "F0";
+                    avgField.Value = count > 0 ? $"{(sum / count).ToString(avgFormat)}%" : (def.ShowDecimals ? "0.0%" : "0%");
                 }
             }
             finally { _isCalculating = false; }

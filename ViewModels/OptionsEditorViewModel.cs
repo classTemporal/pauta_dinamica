@@ -157,6 +157,7 @@ namespace PautaDinamicaApp.ViewModels
         private string _zeroTriggerFieldId = string.Empty;
         private string _zeroTriggerValue = string.Empty;
         private ObservableCollection<string> _availableTriggerValues = new();
+        private bool _showDecimals;
 
         public FieldDefinition OriginalField { get; }
         public ObservableCollection<RuleEditorVM> CalculationRules { get; } = new();
@@ -169,6 +170,7 @@ namespace PautaDinamicaApp.ViewModels
             _timeFormat = field.TimeFormat;
             _maxLength = field.MaxLength;
             WarnOnDuplicate = field.WarnOnDuplicate;
+            ShowDecimals = field.ShowDecimals;
 
             var wrapped = (field.Options ?? new List<string>()).Select(s => new SelectableOptionVM(s));
             Options = new ObservableCollection<SelectableOptionVM>(wrapped);
@@ -426,6 +428,13 @@ namespace PautaDinamicaApp.ViewModels
         public bool ResultEnableZeroTrigger => EnableZeroTrigger;
         public string ResultZeroTriggerFieldId => ZeroTriggerFieldId;
         public string ResultZeroTriggerValue => ZeroTriggerValue;
+        public bool ResultShowDecimals => ShowDecimals;
+
+        public bool ShowDecimals
+        {
+            get => _showDecimals;
+            set => SetProperty(ref _showDecimals, value);
+        }
 
         public ICommand AddOptionCommand { get; }
         public ICommand RemoveOptionCommand { get; }

@@ -124,6 +124,7 @@
                             <StackPanel>
                                 <TextBlock Text="REGLAS DE EVALUACIÓN" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,0,8"/>
                                 <CheckBox IsChecked="{Binding UseCustomWeights}" Content="Activar Porcentajes Personalizados (Distribución sobre 100%)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                <CheckBox IsChecked="{Binding ShowDecimals}" Content="Mostrar decimales en el resultado (ej: 95.0% vs 95%)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,5,0,0"/>
                             </StackPanel>
                             <Button Grid.Column="1" Content="🔄 Restablecer todo" Command="{Binding ResetCalculationCommand}" Style="{StaticResource DangerButton}" Padding="10,5" VerticalAlignment="Bottom" FontSize="11"/>
                         </Grid>
@@ -187,7 +188,10 @@
             <!-- VISTA C: PROMEDIO (AVERAGE) -->
             <Grid Visibility="{Binding OriginalField.Type, Converter={StaticResource DictConverter}, ConverterParameter='Average:Visible|Default:Collapsed'}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="SELECCIONAR CÁLCULOS PARA PROMEDIAR" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" Margin="0,0,0,15"/>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                        <TextBlock Text="SELECCIONAR CÁLCULOS PARA PROMEDIAR" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <CheckBox IsChecked="{Binding ShowDecimals}" Content="Mostrar decimales" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" FontSize="11"/>
+                    </StackPanel>
 
                     <!-- BARRA DE ANULACIÓN CRÍTICA -->
                     <Border DockPanel.Dock="Bottom" Background="{DynamicResource BackgroundBrush}" CornerRadius="8" Padding="12" Margin="0,15,0,0" 
