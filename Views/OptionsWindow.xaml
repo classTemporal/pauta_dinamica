@@ -10,6 +10,36 @@
         <ResourceDictionary>
             <conv:FieldTypeDisplayNameConverter x:Key="FieldTypeDisplayNameConverter"/>
             <conv:CalculationRoundingDisplayNameConverter x:Key="RoundingConverter"/>
+            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <conv:BooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" Inverse="True" />
+
+            <Style x:Key="ModernListBoxItemStyle" TargetType="ListBoxItem">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="12,8"/>
+                <Setter Property="Margin" Value="0,2"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                    CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#15FFFFFF"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#20FFFFFF"/>
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="border" Property="BorderThickness" Value="0,0,0,2"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -48,16 +78,16 @@
                                 <TextBlock Text="ELEMENTOS DE LA LISTA" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                             Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
-                                    <Button Content="📥 Importar" Command="{Binding ImportOptionsCommand}" Style="{StaticResource GhostButton}" Padding="12,6" FontSize="11" Margin="0,0,8,0"/>
-                                    <Button Content="📊 Exportar" Command="{Binding ExportOptionsCommand}" Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="11" Margin="0,0,8,0"/>
-                                    <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Padding="12,6" FontSize="11"/>
+                                    <Button Content="Importar" Command="{Binding ImportOptionsCommand}" Style="{StaticResource GhostButton}" Padding="12,6" FontSize="11" Margin="0,0,8,0"/>
+                                    <Button Content="Exportar" Command="{Binding ExportOptionsCommand}" Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="11" Margin="0,0,8,0"/>
+                                    <Button Content="Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Padding="12,6" FontSize="11"/>
                                 </StackPanel>
                                 <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="8,4" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.2"
                                         Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                          <Button Content="Seleccionar Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Padding="12,0" Height="30" FontSize="11"/>
-                                         <Button Content="🗑️ Borrar Selección" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,0,8,0" Padding="12,0" Height="30" FontSize="11"/>
-                                         <Button Content="❌ Salir" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Padding="10,0" Height="30" FontSize="11"/>
+                                         <Button Content="Borrar Selección" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,0,8,0" Padding="12,0" Height="30" FontSize="11"/>
+                                         <Button Content="Cerrar" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Padding="10,0" Height="30" FontSize="11"/>
                                     </StackPanel>
                                 </Border>
                             </Grid>
@@ -73,31 +103,12 @@
                                 </Grid>
                             </StackPanel>
                             <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                <ListBox ItemsSource="{Binding Options}" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                    <ListBox.ItemContainerStyle>
-                                        <Style TargetType="ListBoxItem">
-                                            <Setter Property="Padding" Value="10,8"/>
-                                            <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="ListBoxItem">
-                                                        <Border x:Name="ItemBorder" Background="{TemplateBinding Background}" CornerRadius="6" Margin="4,2" Padding="{TemplateBinding Padding}">
-                                                            <ContentPresenter/>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource BackgroundBrush}"/>
-                                                            </Trigger>
-                                                            <Trigger Property="IsSelected" Value="True">
-                                                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                                                <Setter Property="Foreground" Value="White"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </ListBox.ItemContainerStyle>
+                                <ListBox ItemsSource="{Binding Options}" 
+                                     Background="Transparent" BorderThickness="0"
+                                     HorizontalContentAlignment="Stretch"
+                                     ItemContainerStyle="{StaticResource ModernListBoxItemStyle}"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     MaxHeight="350">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Margin="0,2">
@@ -107,10 +118,10 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <CheckBox IsChecked="{Binding IsSelected}" Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding Text}" VerticalAlignment="Center" FontSize="14" FontWeight="Medium"/>
-                                                 <Button Grid.Column="2" Content="🗑️" Command="{Binding DataContext.RemoveOptionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource DangerButton}" Width="32" Height="32" FontSize="12"
+                                                <TextBlock Grid.Column="1" Text="{Binding Text}" VerticalAlignment="Center" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource TextBrush}"/>
+                                                 <Button Grid.Column="2" Content="✕" Command="{Binding DataContext.RemoveOptionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource DangerButton}" Width="26" Height="26" FontSize="12" FontWeight="Bold" Padding="0"
                                                          ToolTip="Eliminar permanentemente"
-                                                         Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                         Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -125,7 +136,7 @@
                             <TextBlock DockPanel.Dock="Top" Text="Define reglas para que este campo se seleccione solo según otros valores." 
                                        FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15" TextWrapping="Wrap"/>
                             
-                            <Button DockPanel.Dock="Top" Content="➕ AGREGAR REGLA" Command="{Binding AddAutoSelectRuleCommand}" 
+                            <Button DockPanel.Dock="Top" Content="AÑADIR REGLA" Command="{Binding AddAutoSelectRuleCommand}" 
                                     Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Padding="15,5" Margin="0,0,0,10"/>
 
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -152,7 +163,7 @@
                                                                   MinHeight="38" Margin="0"/>
                                                     </StackPanel>
 
-                                                    <Button Grid.Row="0" Grid.Column="1" Content="&#x2715;" 
+                                                    <Button Grid.Row="0" Grid.Column="1" Content="✕" 
                                                             Command="{Binding DataContext.RemoveAutoSelectRuleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             CommandParameter="{Binding}" Style="{StaticResource DangerButton}" 
                                                             VerticalAlignment="Top" Width="32" Height="32" Padding="0" Margin="15,0,0,0"
@@ -220,7 +231,7 @@
 
                             <Grid Grid.Column="2">
                                 <ToggleButton x:Name="CalcTriggerToggle" Height="28" Margin="5,0" IsEnabled="{Binding EnableZeroTrigger}" Style="{StaticResource GhostToggleButtonStyle}" FontSize="10">
-                                    <TextBlock Text="Seleccionar Campos..." TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding TriggerSelectionsSummary}" TextTrimming="CharacterEllipsis"/>
                                 </ToggleButton>
                                 <Popup IsOpen="{Binding IsChecked, ElementName=CalcTriggerToggle}" StaysOpen="False" PlacementTarget="{Binding ElementName=CalcTriggerToggle}" AllowsTransparency="True" PopupAnimation="Slide">
                                     <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="10" CornerRadius="6" MaxHeight="300" Width="250">
@@ -263,7 +274,7 @@
                                     </ComboBox>
                                 </StackPanel>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="🔄 Restablecer todo" Command="{Binding ResetCalculationCommand}" Style="{StaticResource DangerButton}" Padding="10,5" VerticalAlignment="Bottom" FontSize="11"/>
+                            <Button Grid.Column="1" Content="Restablecer todo" Command="{Binding ResetCalculationCommand}" Style="{StaticResource DangerButton}" Padding="10,5" VerticalAlignment="Bottom" FontSize="11"/>
                         </Grid>
                     </Border>
 
@@ -361,7 +372,7 @@
 
                             <Grid Grid.Column="2">
                                 <ToggleButton x:Name="AvgTriggerToggle" Height="28" Margin="5,0" IsEnabled="{Binding EnableZeroTrigger}" Style="{StaticResource GhostToggleButtonStyle}" FontSize="10">
-                                    <TextBlock Text="Seleccionar Campos..." TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding TriggerSelectionsSummary}" TextTrimming="CharacterEllipsis"/>
                                 </ToggleButton>
                                 <Popup IsOpen="{Binding IsChecked, ElementName=AvgTriggerToggle}" StaysOpen="False" PlacementTarget="{Binding ElementName=AvgTriggerToggle}" AllowsTransparency="True" PopupAnimation="Slide">
                                     <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="10" CornerRadius="6" MaxHeight="300" Width="250">

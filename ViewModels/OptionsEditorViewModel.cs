@@ -24,7 +24,18 @@ namespace PautaDinamicaApp.ViewModels
         private bool _isSelected;
         public string Id { get; set; } = "";
         public string Label { get; set; } = "";
-        public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (SetProperty(ref _isSelected, value))
+                {
+                    OnChanged?.Invoke();
+                }
+            }
+        }
+        public Action? OnChanged { get; set; }
     }
 
     public class SelectableOptionVM : ViewModelBase
@@ -292,8 +303,21 @@ namespace PautaDinamicaApp.ViewModels
 
             foreach (var f in AvailableFields)
             {
-                TriggerFieldChoices.Add(new SelectableFieldVM { Id = f.Id, Label = f.Label, IsSelected = initialIds.Contains(f.Id) });
+                TriggerFieldChoices.Add(new SelectableFieldVM
+                {
+                    Id = f.Id,
+                    Label = f.Label,
+                    IsSelected = initialIds.Contains(f.Id),
+                    OnChanged = () =>
+                    {
+                        OnPropertyChanged(nameof(SelectedTriggerCount));
+                        OnPropertyChanged(nameof(TriggerSelectionsSummary));
+                    }
+                });
             }
+
+            OnPropertyChanged(nameof(SelectedTriggerCount));
+            OnPropertyChanged(nameof(TriggerSelectionsSummary));
 
             Options.CollectionChanged += (s, e) => OnPropertyChanged(nameof(ResultOptions));
 
@@ -472,6 +496,18 @@ namespace PautaDinamicaApp.ViewModels
         }
 
         public Array AvailableRoundingModes => Enum.GetValues(typeof(CalculationRounding));
+
+        public int SelectedTriggerCount => TriggerFieldChoices.Count(t => t.IsSelected);
+        public string TriggerSelectionsSummary
+        {
+            get
+            {
+                var selected = TriggerFieldChoices.Where(t => t.IsSelected).ToList();
+                if (selected.Count == 0) return "Seleccionar Campos...";
+                if (selected.Count == 1) return selected[0].Label;
+                return $"{selected.Count} campos seleccionados";
+            }
+        }
 
         public ICommand AddOptionCommand { get; }
         public ICommand RemoveOptionCommand { get; }

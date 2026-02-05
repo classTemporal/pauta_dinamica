@@ -28,7 +28,6 @@ namespace PautaDinamicaApp.ViewModels
         private readonly StorageService _storageService;
         private readonly PdfService _pdfService;
         private readonly EmailService _emailService;
-        private readonly System.Diagnostics.Stopwatch _auditStopwatch = new();
         private ObservableCollection<DynamicFieldVM> _currentFields = new();
         private ICollectionView? _groupedFields;
         private ObservableCollection<AuditEntry> _records = new();
@@ -58,8 +57,8 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ShowHelpCommand { get; }
         public ICommand ShowGeneralHelpCommand { get; }
         public ICommand LogoutCommand { get; }
-        public ICommand ToggleThemeCommand { get; }
         public ICommand CancelEditCommand { get; }
+        public ICommand ToggleThemeCommand { get; }
         public UserModel? CurrentUser => SessionService.CurrentUser;
 
         public MainViewModel()
@@ -67,7 +66,6 @@ namespace PautaDinamicaApp.ViewModels
             _storageService = new StorageService();
             _pdfService = new PdfService();
             _emailService = new EmailService();
-            _auditStopwatch.Start();
             LoadPautas();
             LoadData();
 
@@ -93,8 +91,8 @@ namespace PautaDinamicaApp.ViewModels
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
             ShowGeneralHelpCommand = new RelayCommand(_ => ShowGeneralHelp());
             LogoutCommand = new RelayCommand(_ => Logout());
-            ToggleThemeCommand = new RelayCommand(_ => ToggleTheme());
             CancelEditCommand = new RelayCommand(_ => CreateNewRecord());
+            ToggleThemeCommand = new RelayCommand(_ => ToggleTheme());
         }
 
         private void ToggleTheme()
@@ -128,55 +126,51 @@ namespace PautaDinamicaApp.ViewModels
         private void ShowGeneralHelp()
         {
             var content = new StringBuilder();
-            content.AppendLine("<h1>📘 CHECK-O - Documentación</h1>");
-            content.AppendLine("<h2>Versión 1.1.0</h2>");
-
-            content.AppendLine("<h3>📝 Resumen</h3>");
-            content.AppendLine("<p>CHECK-O es una herramienta versátil diseñada para optimizar el registro de llamadas y la realización de auditorías de calidad. A través de un sistema de formularios dinámicos, permite a los usuarios estructurar, recopilar y analizar datos de manera eficiente, automatizando la generación de reportes en PDF, exportaciones a Excel y el envío de correos electrónicos.</p>");
-
-            content.AppendLine("<h3>👤 Creador</h3>");
-            content.AppendLine("<p><strong>Angel Gustavo Pacheco Manzanero</strong></p>");
-            content.AppendLine("<p><a href='https://www.linkedin.com/in/angel-temporal-pacheco/'>🔗 LinkedIn Profile</a></p>");
-            content.AppendLine("<p><a href='https://github.com/classTemporal'>🔗 GitHub Profile</a></p>");
-
-            content.AppendLine("<hr/>");
-
-            content.AppendLine("<h2>📖 Guía de Uso</h2>");
-
-            content.AppendLine("<h3>1. Gestión de Pautas (Diseño)</h3>");
-            content.AppendLine("<p>En el botón <strong>CONFIG. PAUTA</strong> puedes crear la estructura de tus formularios:</p>");
-            content.AppendLine("<ul>");
-            content.AppendLine("<li><strong>Campos Dinámicos:</strong> Agrega textos, números, fechas, menús desplegables y campos de cálculo.</li>");
-            content.AppendLine("<li><strong>Agrupación:</strong> Usa el botón <strong>Nueva sección</strong> para crear bloques visuales que organizan los campos.</li>");
-            content.AppendLine("<li><strong>Personalización:</strong> Marca campos como obligatorios o haz que conserven su valor al limpiar el formulario.</li>");
-            content.AppendLine("<li><strong>Instrucciones:</strong> En la pestaña 'Instrucciones de Apoyo' puedes dejar guías específicas para cada pauta.</li>");
-            content.AppendLine("</ul>");
-
-            content.AppendLine("<h3>2. Registro de Datos</h3>");
-            content.AppendLine("<ul>");
-            content.AppendLine("<li>Selecciona una pauta en el menú superior izquierdo.</li>");
-            content.AppendLine("<li>Completa los campos en el panel izquierdo y presiona <strong>Guardar Registro</strong>.</li>");
-            content.AppendLine("<li>Los registros aparecerán en la tabla central de la derecha.</li>");
-            content.AppendLine("</ul>");
-
-            content.AppendLine("<h3>3. Exportación y Reportes</h3>");
-            content.AppendLine("<ul>");
-            content.AppendLine("<li><strong>Excel/JSON:</strong> Exporta toda la base de datos o registros seleccionados a formatos editables.</li>");
-            content.AppendLine("<li><strong>PDF:</strong> Genera reportes visuales con un solo clic. Puedes configurar la carpeta de salida en <strong>CONFIG. GENERAL</strong>.</li>");
-            content.AppendLine("</ul>");
-
-            content.AppendLine("<h3>4. Sistema de Correos y Directorio</h3>");
-            content.AppendLine("<ul>");
-            content.AppendLine("<li><strong>Envío Individual/Masivo:</strong> Selecciona registros y presiona el icono de sobre para enviar correos pre-formateados.</li>");
-            content.AppendLine("<li><strong>Directorio de Agentes:</strong> En la configuración general, puedes asociar nombres de agentes con sus correos para que el sistema los detecte automáticamente.</li>");
-            content.AppendLine("<li><strong>Plantillas:</strong> Personaliza el asunto y cuerpo del mensaje usando <code>[Nombre del Campo]</code> como comodín.</li>");
-            content.AppendLine("</ul>");
-
-            content.AppendLine("<h3>5. Resaltado Visual</h3>");
-            content.AppendLine("<p>Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en <strong>CONFIG. GENERAL &gt; Rutas</strong>.</p>");
-
-            content.AppendLine("<hr/>");
-            content.AppendLine("<p><em>Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.</em></p>");
+            content.AppendLine("# 📘 Documentación del Sistema");
+            content.AppendLine("");
+            content.AppendLine("**Versión:** 1.1.0");
+            content.AppendLine("**Creador:** Angel Gustavo Pacheco Manzanero");
+            content.AppendLine("");
+            content.AppendLine("### 🚀 Resumen del Sistema");
+            content.AppendLine("Pauta Dinámica es una herramienta avanzada diseñada para la **Auditoría de Calidad** y el **Control de Procesos**. Su objetivo principal es permitir la creación de formularios 100% dinámicos, eliminando la dependencia de hojas de cálculo estáticas y automatizando la generación de reportes y envío de métricas.");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("");
+            content.AppendLine("## 💡 Guía de Uso");
+            content.AppendLine("");
+            content.AppendLine("### 1. Gestión de Pautas (Diseño)");
+            content.AppendLine("En el botón **CONFIG. PAUTA** puedes crear la estructura de tus formularios:");
+            content.AppendLine("- **Campos Dinámicos:** Agrega textos, números, fechas, menús desplegables y campos de cálculo.");
+            content.AppendLine("- **Agrupación:** Usa el botón **BOX** para crear secciones visuales que organizan los campos.");
+            content.AppendLine("- **Personalización:** Marca campos como obligatorios o haz que conserven su valor al limpiar el formulario.");
+            content.AppendLine("- **Instrucciones:** En la pestaña 'Instrucciones de Apoyo' puedes dejar guías específicas para cada pauta.");
+            content.AppendLine("");
+            content.AppendLine("### 2. Registro de Datos");
+            content.AppendLine("- Selecciona una pauta en el menú superior izquierdo.");
+            content.AppendLine("- Completa los campos en el panel izquierdo y presiona **Guardar Registro**.");
+            content.AppendLine("- Los registros aparecerán en la tabla central de la derecha.");
+            content.AppendLine("");
+            content.AppendLine("### 3. Exportación y Reportes");
+            content.AppendLine("- **Excel/JSON:** Exporta toda la base de datos o registros seleccionados a formatos editables.");
+            content.AppendLine("- **PDF:** Genera reportes visuales con un solo clic. Puedes configurar la carpeta de salida en **CONFIG. GENERAL**.");
+            content.AppendLine("");
+            content.AppendLine("### 4. Sistema de Correos y Directorio");
+            content.AppendLine("- **Envío Individual/Masivo:** Selecciona registros y presiona el icono de sobre para enviar correos pre-formateados.");
+            content.AppendLine("- **Directorio de Agentes:** En la configuración general, puedes asociar nombres de agentes con sus correos para que el sistema los detecte automáticamente.");
+            content.AppendLine("- **Plantillas:** Personaliza el asunto y cuerpo del mensaje usando `[Nombre del Campo]` como comodín.");
+            content.AppendLine("");
+            content.AppendLine("### 5. Resaltado Visual");
+            content.AppendLine("- Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en **CONFIG. GENERAL > Rutas**.");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("");
+            content.AppendLine("## 🔗 Enlaces del Desarrollador");
+            content.AppendLine("");
+            content.AppendLine("- **LinkedIn:** [Angel Temporal Pacheco](https://www.linkedin.com/in/angel-temporal-pacheco/)");
+            content.AppendLine("- **GitHub:** [classTemporal](https://github.com/classTemporal)");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("*Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.*");
 
             var vm = new HelpViewModel("Documentación General", content.ToString());
             var win = new Views.HelpWindow { DataContext = vm };
@@ -213,11 +207,7 @@ namespace PautaDinamicaApp.ViewModels
 
             if (vm.IsSaved)
             {
-                // RECARGAR TODO para aplicar cambios de correo, rutas, etc.
-                var settings = _storageService.LoadSettings();
-                LoadPautas();
                 ApplyRowColoring();
-                new ThemeService().SetTheme(settings.Theme);
             }
         }
 
@@ -276,6 +266,19 @@ namespace PautaDinamicaApp.ViewModels
         // Duplicate constructor removed
         // Orphaned code block removed.
 
+        private void OpenSettings()
+        {
+            var vm = new SettingsViewModel();
+            var win = new Views.SettingsWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
+            vm.RequestClose += () => win.Close();
+            win.ShowDialog();
+
+            if (vm.IsSaved)
+            {
+                LoadPautas(); // Refrescar para tener los nuevos métodos de envío, etc.
+            }
+        }
+
         public bool ExportRecordsToExcel(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null, bool silent = false)
         {
             var data = (recordsToExport ?? Records).ToList();
@@ -284,7 +287,7 @@ namespace PautaDinamicaApp.ViewModels
             string filePath;
             if (silent)
             {
-                string backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PautaDinamica", "backups");
+                string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
                 if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
                 filePath = Path.Combine(backupDir, $"{customTitle ?? "Backup"}.xlsx");
             }
@@ -294,7 +297,9 @@ namespace PautaDinamicaApp.ViewModels
                 string exportDir = settings.ExcelExportPath;
                 if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
 
-                string fileName = (customTitle ?? $"Auditoria_{DateTime.Now:yyyyMMdd_HHmm}") + ".xlsx";
+                string pautaName = CurrentPauta?.Name ?? "Auditoria";
+                string safePautaName = string.Join("_", pautaName.Split(Path.GetInvalidFileNameChars()));
+                string fileName = (customTitle ?? $"{safePautaName}_{DateTime.Now:yyyyMMdd_HHmm}") + ".xlsx";
                 filePath = Path.Combine(exportDir, fileName);
             }
 
@@ -304,54 +309,11 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     var worksheet = workbook.Worksheets.Add("Auditoría");
 
-                    // --- PREPARAR COLUMNAS (ORDEN Y NOMBRES) ---
-                    var rawFields = CurrentFields.ToList();
-                    var exportCols = new List<(string Id, string Header, FieldType Type)>();
-
-                    if (CurrentPauta != null && CurrentPauta.ExportConfig != null && CurrentPauta.ExportConfig.Any())
-                    {
-                        // Usar orden personalizado
-                        var orderedConfig = CurrentPauta.ExportConfig.OrderBy(c => c.Order).ToList();
-                        var configuredIds = new HashSet<string>(CurrentPauta.ExportConfig.Select(x => x.FieldId)); // IDs que tienen configuración (activa o inactiva)
-
-                        foreach (var cfg in orderedConfig)
-                        {
-                            var f = rawFields.FirstOrDefault(rf => rf.Id == cfg.FieldId);
-                            // AHORA: Chequear tambien IsExportEnabled
-                            if (f != null && cfg.IsVisible && cfg.IsExportEnabled)
-                            {
-                                exportCols.Add((f.Id, cfg.CustomHeader, f.Type));
-                            }
-                        }
-
-                        // Agregar SOLO campos nuevos que no estén en la config (ni habilitados ni deshabilitados)
-                        // Si un campo existe en 'configuredIds' pero no se agregó arriba, es porque estaba deshabilitado intencionalmente.
-                        foreach (var f in rawFields)
-                        {
-                            if (!configuredIds.Contains(f.Id))
-                                exportCols.Add((f.Id, f.Label, f.Type));
-                        }
-                    }
-                    else
-                    {
-                        // Orden natural por defecto
-                        foreach (var f in rawFields) exportCols.Add((f.Id, f.Label, f.Type));
-                    }
-
                     // --- CABECERAS ---
-                    int headerStartCol = 1;
-                    var settings = _storageService.LoadSettings();
-
-                    if (settings.EnableInternalTimer)
+                    var fields = CurrentFields.ToList();
+                    for (int i = 0; i < fields.Count; i++)
                     {
-                        worksheet.Cell(1, 1).Value = "Duración";
-                        worksheet.Cell(1, 1).Style.Fill.BackgroundColor = XLColor.LightGray;
-                        headerStartCol = 2;
-                    }
-
-                    for (int i = 0; i < exportCols.Count; i++)
-                    {
-                        worksheet.Cell(1, i + headerStartCol).Value = exportCols[i].Header;
+                        worksheet.Cell(1, i + 1).Value = fields[i].Label;
                     }
 
                     // --- DATOS ---
@@ -359,23 +321,15 @@ namespace PautaDinamicaApp.ViewModels
                     foreach (var entry in data)
                     {
                         int col = 1;
-                        if (settings.EnableInternalTimer)
+                        foreach (var f in fields)
                         {
-                            // Excel almacena el tiempo como una fracción del día (1 día = 1440 min)
-                            worksheet.Cell(row, 1).Value = entry.InternalDurationMinutes / 1440.0;
-                            worksheet.Cell(row, 1).Style.NumberFormat.Format = "[mm]:ss";
-                            col = 2;
-                        }
-
-                        foreach (var colDef in exportCols)
-                        {
-                            if (entry.Values.TryGetValue(colDef.Id, out var val))
+                            if (entry.Values.TryGetValue(f.Id, out var val))
                             {
                                 string strVal = val?.ToString() ?? "";
                                 var cell = worksheet.Cell(row, col);
 
                                 // --- TIPADO DINÁMICO MEJORADO ---
-                                if (colDef.Type == FieldType.Boolean)
+                                if (f.Type == FieldType.Boolean)
                                 {
                                     // Boolean como número (1/0) con formato Entero
                                     bool? valResult = null;
@@ -392,7 +346,7 @@ namespace PautaDinamicaApp.ViewModels
                                     else
                                         cell.Value = strVal;
                                 }
-                                else if (colDef.Type == FieldType.Numeric || colDef.Type == FieldType.Calculation || colDef.Type == FieldType.Average)
+                                else if (f.Type == FieldType.Numeric || f.Type == FieldType.Calculation || f.Type == FieldType.Average)
                                 {
                                     // Detectar porcentaje
                                     if (strVal.Contains("%"))
@@ -401,7 +355,8 @@ namespace PautaDinamicaApp.ViewModels
                                         if (double.TryParse(cleanVal, out double pctVal))
                                         {
                                             cell.Value = pctVal / 100.0;
-                                            cell.Style.NumberFormat.Format = "0.0%";
+                                            string excelFormat = (f.Definition?.ShowDecimals ?? true) ? "0.0%" : "0%";
+                                            cell.Style.NumberFormat.Format = excelFormat;
                                         }
                                         else cell.Value = strVal;
                                     }
@@ -411,13 +366,14 @@ namespace PautaDinamicaApp.ViewModels
                                         if (double.TryParse(strVal, out double numVal))
                                         {
                                             cell.Value = numVal;
-                                            cell.Style.NumberFormat.Format = "0.00";
+                                            string excelFormat = (f.Definition?.ShowDecimals ?? true) ? "0.00" : "0";
+                                            cell.Style.NumberFormat.Format = excelFormat;
                                         }
                                         else
                                             cell.Value = strVal;
                                     }
                                 }
-                                else if (colDef.Type == FieldType.Date)
+                                else if (f.Type == FieldType.Date)
                                 {
                                     // Fecha real
                                     if (DateTime.TryParse(strVal, out DateTime dateVal))
@@ -425,7 +381,7 @@ namespace PautaDinamicaApp.ViewModels
                                     else
                                         cell.Value = strVal;
                                 }
-                                else if (colDef.Type == FieldType.Time)
+                                else if (f.Type == FieldType.Time)
                                 {
                                     // Tiempo: Usar TimeSpan para eliminar la fecha y los sufijos AM/PM del valor subyacente
                                     if (DateTime.TryParse(strVal, out DateTime timeVal))
@@ -442,7 +398,7 @@ namespace PautaDinamicaApp.ViewModels
                                     cell.Value = strVal;
                                 }
 
-                                if (colDef.Type == FieldType.TextArea || strVal.Contains("\n"))
+                                if (f.Type == FieldType.TextArea || strVal.Contains("\n"))
                                 {
                                     cell.Style.Alignment.SetWrapText(true);
                                 }
@@ -534,73 +490,16 @@ namespace PautaDinamicaApp.ViewModels
                         {
                             var entry = new AuditEntry();
                             bool rowHasData = false;
-
-                            // Support for 'Fecha' column (optional/standard)
                             if (headers.TryGetValue(1, out var firstHeader) && firstHeader.Equals("Fecha", StringComparison.OrdinalIgnoreCase))
                             {
-                                var dateCell = row.Cell(1);
-                                if (dateCell.Value.IsDateTime) entry.Timestamp = dateCell.Value.GetDateTime();
-                                else if (DateTime.TryParse(dateCell.Value.ToString(), out var dt)) entry.Timestamp = dt;
+                                if (DateTime.TryParse(row.Cell(1).Value.ToString(), out var dt)) entry.Timestamp = dt;
                             }
-
                             foreach (var header in headers)
                             {
-                                string cleanHeader = header.Value.Trim().TrimEnd(':');
-                                var field = fields.FirstOrDefault(f =>
-                                    f.Label.Trim().TrimEnd(':').Equals(cleanHeader, StringComparison.OrdinalIgnoreCase));
-
+                                var field = fields.FirstOrDefault(f => f.Label.Equals(header.Value, StringComparison.OrdinalIgnoreCase));
                                 if (field != null)
                                 {
-                                    var cell = row.Cell(header.Key);
-                                    object? processedVal = null;
-                                    string rawString = cell.Value.ToString();
-
-                                    if (field.Type == FieldType.Boolean)
-                                    {
-                                        if (cell.Value.IsBoolean) processedVal = cell.Value.GetBoolean();
-                                        else if (cell.Value.IsNumber) processedVal = cell.Value.GetNumber() == 1;
-                                        else processedVal = rawString.Equals("True", StringComparison.OrdinalIgnoreCase) || rawString == "1" || rawString.Equals("Sí", StringComparison.OrdinalIgnoreCase);
-                                    }
-                                    else if (field.Type == FieldType.Calculation || field.Type == FieldType.Average)
-                                    {
-                                        // Handle percentages from Excel (often raw decimals)
-                                        if (cell.Value.IsNumber)
-                                        {
-                                            double num = cell.Value.GetNumber();
-                                            // Scale to 0-100 range if it looks like a decimal-proportion
-                                            if (num <= 1.1 && !rawString.Contains("%")) num *= 100.0;
-                                            processedVal = num.ToString("N1") + "%";
-                                        }
-                                        else if (double.TryParse(rawString.Replace("%", "").Trim(), out double d))
-                                        {
-                                            processedVal = d.ToString("N1") + "%";
-                                        }
-                                        else processedVal = rawString;
-                                    }
-                                    else if (field.Type == FieldType.Date)
-                                    {
-                                        if (cell.Value.IsDateTime) processedVal = cell.Value.GetDateTime().ToString("dd/MM/yyyy");
-                                        else if (DateTime.TryParse(rawString, out DateTime dt)) processedVal = dt.ToString("dd/MM/yyyy");
-                                        else processedVal = rawString;
-                                    }
-                                    else if (field.Type == FieldType.Time)
-                                    {
-                                        string fmt = field.Definition.TimeFormat ?? "HH:mm";
-                                        // Avoid seconds if not explicitly asked
-                                        if (cell.Value.IsDateTime) processedVal = cell.Value.GetDateTime().ToString(fmt);
-                                        else if (DateTime.TryParse(rawString, out DateTime dt)) processedVal = dt.ToString(fmt);
-                                        else processedVal = rawString;
-                                    }
-                                    else if (field.Type == FieldType.Numeric && cell.Value.IsNumber)
-                                    {
-                                        processedVal = cell.Value.GetNumber().ToString();
-                                    }
-                                    else
-                                    {
-                                        processedVal = rawString;
-                                    }
-
-                                    entry.Values[field.Id] = processedVal;
+                                    entry.Values[field.Id] = row.Cell(header.Key).Value.ToString();
                                     rowHasData = true;
                                 }
                             }
@@ -611,44 +510,11 @@ namespace PautaDinamicaApp.ViewModels
                         RefreshCalculations();
                     }
                 }
-                catch (Exception ex) { MessageBox.Show("Error al importar registros: " + ex.Message); }
-                finally { RefreshFields(); _isCalculating = false; }
-            }
-        }
-
-        private string GetPdfBaseFileName(AuditEntry record, string pautaName)
-        {
-            if (CurrentPauta == null) return pautaName;
-
-            string part1 = "";
-            string part2 = "";
-
-            if (!string.IsNullOrEmpty(CurrentPauta.PdfFileNameFieldId1))
-            {
-                if (record.Values.TryGetValue(CurrentPauta.PdfFileNameFieldId1, out var val1) && val1 != null)
+                catch (Exception ex)
                 {
-                    part1 = val1.ToString() ?? "";
+                    MessageBox.Show($"Error al importar: {ex.Message}");
                 }
             }
-
-            if (!string.IsNullOrEmpty(CurrentPauta.PdfFileNameFieldId2))
-            {
-                if (record.Values.TryGetValue(CurrentPauta.PdfFileNameFieldId2, out var val2) && val2 != null)
-                {
-                    part2 = val2.ToString() ?? "";
-                }
-            }
-
-            // Si no hay campos configurados, usar el nombre de la pauta por defecto
-            if (string.IsNullOrWhiteSpace(part1) && string.IsNullOrWhiteSpace(part2))
-            {
-                return pautaName;
-            }
-
-            string combined = (part1 + " " + part2).Trim();
-            // Limpiar caracteres inválidos para Windows
-            string safe = string.Join("_", combined.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
-            return safe;
         }
 
         private void GenerateBatchPdfs(List<AuditEntry> records)
@@ -659,14 +525,14 @@ namespace PautaDinamicaApp.ViewModels
                 string folderPath = settings.PdfReportPath;
                 if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
                 string pautaName = CurrentPauta?.Name ?? "Auditoria";
-                var definitions = CurrentPauta != null ? _storageService.LoadConfiguration(CurrentPauta.Id) : new List<FieldDefinition>();
+                string safePautaName = string.Join("_", pautaName.Split(Path.GetInvalidFileNameChars()));
+                var definitions = CurrentFields.Select(f => f.Definition).ToList();
                 int count = 0;
 
                 foreach (var record in records)
                 {
-                    string customName = GetPdfBaseFileName(record, pautaName);
                     string timestamp = record.Timestamp.ToString("yyyyMMdd_HHmmss");
-                    string filename = $"Reporte_{customName}_{timestamp}_{count + 1}.pdf";
+                    string filename = $"Reporte_{safePautaName}_{timestamp}_{count + 1}.pdf";
                     string fullPath = Path.Combine(folderPath, filename);
 
                     _pdfService.GenerateAuditPdf(new List<AuditEntry> { record }, definitions, CurrentPauta?.PdfConfig, pautaName, fullPath);
@@ -689,18 +555,12 @@ namespace PautaDinamicaApp.ViewModels
             try
             {
                 string pautaName = CurrentPauta?.Name ?? "Auditoria";
-                var definitions = CurrentPauta != null ? _storageService.LoadConfiguration(CurrentPauta.Id) : new List<FieldDefinition>();
+                var definitions = CurrentFields.Select(f => f.Definition).ToList();
                 var settings = _storageService.LoadSettings();
                 string exportDir = settings.PdfReportPath;
                 if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
 
-                string customName = pautaName;
-                if (records.Count == 1)
-                {
-                    customName = GetPdfBaseFileName(records[0], pautaName);
-                }
-
-                string fileName = $"Reporte_{customName}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                string fileName = $"Reporte_{pautaName}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
                 string filePath = Path.Combine(exportDir, fileName);
 
                 _pdfService.GenerateAuditPdf(records, definitions, CurrentPauta?.PdfConfig, pautaName, filePath);
@@ -813,68 +673,6 @@ namespace PautaDinamicaApp.ViewModels
             FieldsRefreshed?.Invoke();
         }
 
-        private void ProcessAutoSelections()
-        {
-            foreach (var targetField in CurrentFields.Where(f => f.Type == FieldType.Dropdown))
-            {
-                var def = targetField.Definition;
-                if (def.AutoSelectRules == null || !def.AutoSelectRules.Any()) continue;
-
-                foreach (var rule in def.AutoSelectRules)
-                {
-                    if (string.IsNullOrWhiteSpace(rule.TargetValue)) continue;
-
-                    var sourceField = CurrentFields.FirstOrDefault(f => f.Id == rule.SourceFieldId);
-                    if (sourceField == null) continue;
-
-                    string sourceVal = sourceField.Value?.ToString() ?? "";
-                    if (sourceField.Type == FieldType.Boolean)
-                    {
-                        if (sourceField.Value is bool b) sourceVal = b ? "1" : "0";
-                    }
-
-                    if (EvaluateRule(sourceVal, rule.Operator, rule.Value))
-                    {
-                        if (targetField.Value?.ToString() != rule.TargetValue)
-                        {
-                            targetField.Value = rule.TargetValue;
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-
-        private bool EvaluateRule(string sourceValue, string op, string threshold)
-        {
-            if (string.IsNullOrWhiteSpace(sourceValue)) return false;
-
-            string cleanSource = sourceValue.Replace("%", "").Replace(",", ".").Trim();
-            string cleanThreshold = (threshold ?? "").Replace("%", "").Replace(",", ".").Trim();
-
-            bool isSourceNumeric = double.TryParse(cleanSource, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double sNum);
-            bool isThresholdNumeric = double.TryParse(cleanThreshold, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double tNum);
-
-            if (isSourceNumeric && isThresholdNumeric)
-            {
-                const double epsilon = 0.001;
-                switch (op)
-                {
-                    case "=": return Math.Abs(sNum - tNum) < epsilon;
-                    case ">": return sNum > tNum + epsilon;
-                    case "<": return sNum < tNum - epsilon;
-                    case ">=": return sNum >= tNum - epsilon;
-                    case "<=": return sNum <= tNum + epsilon;
-                    default: return false;
-                }
-            }
-            else
-            {
-                if (op == "=") return string.Equals(sourceValue.Trim(), (threshold ?? "").Trim(), StringComparison.OrdinalIgnoreCase);
-                return false;
-            }
-        }
-
         private bool _isCalculating;
         private void RefreshCalculations()
         {
@@ -893,34 +691,37 @@ namespace PautaDinamicaApp.ViewModels
                     // 1.1 Anulación Crítica (Zero Trigger)
                     if (def.EnableZeroTrigger)
                     {
-                        var triggerIds = def.ZeroTriggerFieldIds?.Any() == true
-                            ? def.ZeroTriggerFieldIds
-                            : (!string.IsNullOrEmpty(def.ZeroTriggerFieldId) ? new List<string> { def.ZeroTriggerFieldId } : new List<string>());
+                        var triggerIds = def.ZeroTriggerFieldIds ?? new List<string>();
+                        if (!triggerIds.Any() && !string.IsNullOrEmpty(def.ZeroTriggerFieldId))
+                            triggerIds = new List<string> { def.ZeroTriggerFieldId };
 
-                        bool triggerFired = false;
-                        foreach (var tId in triggerIds)
+                        if (triggerIds.Any())
                         {
-                            var triggerSource = CurrentFields.FirstOrDefault(f => f.Id == tId);
-                            if (triggerSource != null)
+                            bool triggered = false;
+                            foreach (var fid in triggerIds)
                             {
-                                string triggerVal = triggerSource.Value?.ToString() ?? "";
-                                if (triggerSource.Type == FieldType.Boolean)
+                                var triggerSource = CurrentFields.FirstOrDefault(f => f.Id == fid);
+                                if (triggerSource != null)
                                 {
-                                    if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
-                                }
+                                    string triggerVal = triggerSource.Value?.ToString() ?? "";
+                                    if (triggerSource.Type == FieldType.Boolean)
+                                    {
+                                        if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
+                                    }
 
-                                if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    triggerFired = true;
-                                    break;
+                                    if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        triggered = true;
+                                        break;
+                                    }
                                 }
                             }
-                        }
 
-                        if (triggerFired)
-                        {
-                            calcField.Value = def.ShowDecimals ? "0.0%" : "0%";
-                            continue;
+                            if (triggered)
+                            {
+                                calcField.Value = def.ShowDecimals ? "0.0%" : "0%";
+                                continue;
+                            }
                         }
                     }
 
@@ -979,15 +780,14 @@ namespace PautaDinamicaApp.ViewModels
                         totalPossibleWeights += 1.0 * weight;
                     }
 
-                    double rawPercentage = totalPossibleWeights > 0 ? (totalEarnedWeights / totalPossibleWeights * 100) : 0;
+                    double percentage = totalPossibleWeights > 0 ? (totalEarnedWeights / totalPossibleWeights * 100) : 0;
 
-                    if (def.Rounding == CalculationRounding.Up) rawPercentage = Math.Ceiling(rawPercentage);
-                    else if (def.Rounding == CalculationRounding.Down) rawPercentage = Math.Floor(rawPercentage);
+                    // Aplicar redondeo si es necesario
+                    if (def.Rounding == CalculationRounding.Up) percentage = Math.Ceiling(percentage);
+                    else if (def.Rounding == CalculationRounding.Down) percentage = Math.Floor(percentage);
 
                     string format = def.ShowDecimals ? "F1" : "F0";
-                    calcField.Value = totalPossibleWeights > 0
-                        ? $"{rawPercentage.ToString(format)}%"
-                        : (def.ShowDecimals ? "0.0%" : "0%");
+                    calcField.Value = $"{percentage.ToString(format)}%";
                 }
 
                 // 2. CÁLCULO DE PROMEDIOS (AVERAGE)
@@ -998,34 +798,37 @@ namespace PautaDinamicaApp.ViewModels
                     // 2.1 Anulación Crítica (Zero Trigger)
                     if (def.EnableZeroTrigger)
                     {
-                        var triggerIds = def.ZeroTriggerFieldIds?.Any() == true
-                            ? def.ZeroTriggerFieldIds
-                            : (!string.IsNullOrEmpty(def.ZeroTriggerFieldId) ? new List<string> { def.ZeroTriggerFieldId } : new List<string>());
+                        var triggerIds = def.ZeroTriggerFieldIds ?? new List<string>();
+                        if (!triggerIds.Any() && !string.IsNullOrEmpty(def.ZeroTriggerFieldId))
+                            triggerIds = new List<string> { def.ZeroTriggerFieldId };
 
-                        bool triggerFired = false;
-                        foreach (var tId in triggerIds)
+                        if (triggerIds.Any())
                         {
-                            var triggerSource = CurrentFields.FirstOrDefault(f => f.Id == tId);
-                            if (triggerSource != null)
+                            bool triggered = false;
+                            foreach (var fid in triggerIds)
                             {
-                                string triggerVal = triggerSource.Value?.ToString() ?? "";
-                                if (triggerSource.Type == FieldType.Boolean)
+                                var triggerSource = CurrentFields.FirstOrDefault(f => f.Id == fid);
+                                if (triggerSource != null)
                                 {
-                                    if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
-                                }
+                                    string triggerVal = triggerSource.Value?.ToString() ?? "";
+                                    if (triggerSource.Type == FieldType.Boolean)
+                                    {
+                                        if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
+                                    }
 
-                                if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    triggerFired = true;
-                                    break;
+                                    if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        triggered = true;
+                                        break;
+                                    }
                                 }
                             }
-                        }
 
-                        if (triggerFired)
-                        {
-                            avgField.Value = def.ShowDecimals ? "0.0%" : "0%";
-                            continue;
+                            if (triggered)
+                            {
+                                avgField.Value = def.ShowDecimals ? "0.0%" : "0%";
+                                continue;
+                            }
                         }
                     }
 
@@ -1037,19 +840,66 @@ namespace PautaDinamicaApp.ViewModels
                         string valText = t.Value?.ToString()?.Replace("%", "") ?? "";
                         if (double.TryParse(valText, out double d)) { sum += d; count++; }
                     }
-                    double rawAvg = count > 0 ? (sum / count) : 0;
 
-                    if (def.Rounding == CalculationRounding.Up) rawAvg = Math.Ceiling(rawAvg);
-                    else if (def.Rounding == CalculationRounding.Down) rawAvg = Math.Floor(rawAvg);
+                    double avg = count > 0 ? (sum / count) : 0;
 
-                    string avgFormat = def.ShowDecimals ? "F1" : "F0";
-                    avgField.Value = count > 0 ? $"{rawAvg.ToString(avgFormat)}%" : (def.ShowDecimals ? "0.0%" : "0%");
+                    // Redondeo de promedio
+                    if (def.Rounding == CalculationRounding.Up) avg = Math.Ceiling(avg);
+                    else if (def.Rounding == CalculationRounding.Down) avg = Math.Floor(avg);
+
+                    string format = def.ShowDecimals ? "F1" : "F0";
+                    avgField.Value = $"{avg.ToString(format)}%";
                 }
 
-                // Ejecutar auto-selecciones basadas en los nuevos resultados calculados
-                ProcessAutoSelections();
+                // 3. AUTO-SELECCIÓN (BASADA EN REGLAS)
+                ApplyAutoSelectRules();
             }
             finally { _isCalculating = false; }
+        }
+
+        private void ApplyAutoSelectRules()
+        {
+            foreach (var field in CurrentFields)
+            {
+                if (field.Definition.AutoSelectRules == null || !field.Definition.AutoSelectRules.Any()) continue;
+
+                foreach (var rule in field.Definition.AutoSelectRules)
+                {
+                    if (string.IsNullOrEmpty(rule.SourceFieldId)) continue;
+                    var source = CurrentFields.FirstOrDefault(f => f.Id == rule.SourceFieldId);
+                    if (source == null) continue;
+
+                    string sourceVal = source.Value?.ToString() ?? "";
+                    if (EvaluateRule(sourceVal, rule.Operator, rule.Value))
+                    {
+                        field.Value = rule.TargetValue;
+                        break; // Primera regla que cumple gana
+                    }
+                }
+            }
+        }
+
+        private bool EvaluateRule(string sourceVal, string op, string ruleVal)
+        {
+            if (string.IsNullOrEmpty(sourceVal) || string.IsNullOrEmpty(ruleVal)) return false;
+
+            // Limpieza básica para porcentajes y espacios
+            string s = sourceVal.Replace("%", "").Trim();
+            string r = ruleVal.Replace("%", "").Trim();
+
+            if (op == "=") return string.Equals(s, r, StringComparison.OrdinalIgnoreCase);
+
+            if (double.TryParse(s, out double sNum) && double.TryParse(r, out double rNum))
+            {
+                switch (op)
+                {
+                    case ">": return sNum > rNum;
+                    case "<": return sNum < rNum;
+                    case ">=": return sNum >= rNum;
+                    case "<=": return sNum <= rNum;
+                }
+            }
+            return false;
         }
 
         private void OpenConfiguration()
@@ -1111,14 +961,7 @@ namespace PautaDinamicaApp.ViewModels
                     }
                     else
                     {
-                        if (field.Type == FieldType.Boolean && value != null)
-                        {
-                            string valStr = value.ToString() ?? "";
-                            if (valStr == "1" || valStr.Equals("True", StringComparison.OrdinalIgnoreCase)) field.Value = true;
-                            else if (valStr == "0" || valStr.Equals("False", StringComparison.OrdinalIgnoreCase)) field.Value = false;
-                            else field.Value = value;
-                        }
-                        else field.Value = value;
+                        field.Value = value;
                     }
                 }
                 else
@@ -1174,16 +1017,6 @@ namespace PautaDinamicaApp.ViewModels
             }
 
             var entry = SelectedRecord ?? new AuditEntry();
-            if (SelectedRecord == null)
-            {
-                var settings = _storageService.LoadSettings();
-                if (settings.EnableInternalTimer)
-                {
-                    entry.InternalDurationMinutes = Math.Round(_auditStopwatch.Elapsed.TotalMinutes, 2);
-                    _auditStopwatch.Restart();
-                }
-            }
-
             foreach (var field in CurrentFields.Where(f => f.Type != FieldType.Separator))
             {
                 entry.Values[field.Id] = field.Value ?? "";

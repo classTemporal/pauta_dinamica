@@ -121,11 +121,34 @@ namespace PautaDinamicaApp.ViewModels
             get => _editingPauta;
             set
             {
-                // Antes de cambiar, podrías advertir si hay cambios sin guardar, 
-                // pero por ahora solo cargamos la nueva pauta.
-                if (SetProperty(ref _editingPauta, value) && value != null)
+                if (_editingPauta == value) return;
+
+                // 1. Antes de cambiar la pauta, cargamos sus campos de forma "silenciosa" (sin notificar a la UI todavía)
+                if (value != null)
                 {
-                    LoadPautaFields(value.Id);
+                    var config = _storageService.LoadConfiguration(value.Id).OrderBy(f => f.Order).ToList();
+                    foreach (var f in config) f.EnsureDefaultOptions();
+
+                    // Actualizar el campo privado directamente
+                    _fields = new ObservableCollection<FieldDefinition>(config);
+                    foreach (var f in _fields) f.PropertyChanged += OnFieldPropertyChanged;
+                    _initialFieldsJson = JsonSerializer.Serialize(_fields);
+                }
+
+                // 2. Cambiar la pauta actual
+                _editingPauta = value;
+
+                // 3. Notificar a la UI sobre ambos cambios para que los procese en el mismo ciclo.
+                // Es vital notificar que la lista de campos (ItemsSource) ha cambiado ANTES de notificar
+                // que la pauta (donde está el SelectedValue) ha cambiado.
+                OnPropertyChanged(nameof(Fields));
+                OnPropertyChanged(nameof(EditingPauta));
+
+                // 4. Refrescar columnas de exportación/PDF
+                if (value != null)
+                {
+                    LoadExportColumns();
+                    LoadPdfColumns();
                 }
             }
         }
@@ -679,19 +702,27 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ExportConfig()
         {
+            if (EditingPauta == null) return;
+
             var settings = _storageService.LoadSettings();
             string exportDir = settings.JsonBackupPath;
             if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
 
-            string fileName = $"Config_{EditingPauta?.Name}_{DateTime.Now:yyyyMMdd_HHmm}.json";
+            string fileName = $"Config_{EditingPauta.Name}_{DateTime.Now:yyyyMMdd_HHmm}.json";
             string filePath = Path.Combine(exportDir, fileName);
 
             try
             {
-                string json = JsonSerializer.Serialize(Fields, new JsonSerializerOptions { WriteIndented = true });
+                var package = new PautaFullExportPackage
+                {
+                    Metadata = EditingPauta,
+                    Fields = Fields.ToList()
+                };
+
+                string json = JsonSerializer.Serialize(package, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(filePath, json);
 
-                if (MessageBox.Show($"Configuración exportada con éxito en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                if (MessageBox.Show($"Configuración completa exportada con éxito en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
                 {
                     if (Directory.Exists(exportDir)) System.Diagnostics.Process.Start("explorer.exe", exportDir);
                 }
@@ -701,21 +732,75 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ImportConfig()
         {
+            if (EditingPauta == null) return;
+
             var ofd = new OpenFileDialog { Filter = "JSON Files (*.json)|*.json" };
             if (ofd.ShowDialog() == true)
             {
                 try
                 {
                     string json = File.ReadAllText(ofd.FileName);
-                    var imported = JsonSerializer.Deserialize<ObservableCollection<FieldDefinition>>(json);
-                    if (imported != null && MessageBox.Show("¿Reemplazar diseño actual?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+
+                    // Intentar detectar el formato
+                    using (JsonDocument doc = JsonDocument.Parse(json))
                     {
-                        Fields = imported;
-                        foreach (var f in Fields) f.EnsureDefaultOptions();
-                        LoadExportColumns(); // Refresh export columns to match new imported fields
+                        var root = doc.RootElement;
+
+                        if (root.ValueKind == JsonValueKind.Array)
+                        {
+                            // Formato antiguo: Solo lista de campos
+                            var importedFields = JsonSerializer.Deserialize<ObservableCollection<FieldDefinition>>(json);
+                            if (importedFields != null && MessageBox.Show("El archivo solo contiene el diseño de campos. ¿Reemplazar diseño actual?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                            {
+                                Fields = importedFields;
+                                foreach (var f in Fields) f.EnsureDefaultOptions();
+                                LoadExportColumns();
+                                LoadPdfColumns();
+                            }
+                        }
+                        else if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("Metadata", out _) && root.TryGetProperty("Fields", out _))
+                        {
+                            // Formato nuevo: Paquete completo
+                            var package = JsonSerializer.Deserialize<PautaFullExportPackage>(json);
+                            if (package != null && MessageBox.Show("El archivo contiene una configuración COMPLETA (Metadatos, Estructura, PDF, Excel). ¿Reemplazar configuración actual?", "Confirmar Importación Completa", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                            {
+                                // 1. Campos
+                                Fields = new ObservableCollection<FieldDefinition>(package.Fields);
+                                foreach (var f in Fields) f.EnsureDefaultOptions();
+
+                                // 2. Metadatos (Copiar propiedades al objeto actual para no romper referencias de UI)
+                                var m = package.Metadata;
+                                var ep = EditingPauta;
+                                ep.HelpContent = m.HelpContent;
+                                ep.EmailMethod = m.EmailMethod;
+                                ep.EmailToTemplate = m.EmailToTemplate;
+                                ep.EmailCcTemplate = m.EmailCcTemplate;
+                                ep.EmailSubjectTemplate = m.EmailSubjectTemplate;
+                                ep.EmailBodyTemplate = m.EmailBodyTemplate;
+                                ep.UseAutomatedRecipient = m.UseAutomatedRecipient;
+                                ep.EmailNameFieldId = m.EmailNameFieldId;
+                                ep.RecipientContacts = m.RecipientContacts ?? new List<RecipientContact>();
+                                ep.ExcludeByFieldId = m.ExcludeByFieldId;
+                                ep.ExcludeByFieldValue = m.ExcludeByFieldValue;
+                                ep.PdfFileNameFieldId1 = m.PdfFileNameFieldId1;
+                                ep.PdfFileNameFieldId2 = m.PdfFileNameFieldId2;
+                                ep.ExportConfig = m.ExportConfig ?? new List<ExportColumnConfig>();
+                                ep.PdfConfig = m.PdfConfig ?? new List<ExportColumnConfig>();
+
+                                // 3. Refresh UI de columnas
+                                LoadExportColumns();
+                                LoadPdfColumns();
+
+                                MessageBox.Show("Configuración importada con éxito.");
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show("El formato del archivo JSON no es reconocido.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
                     }
                 }
-                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+                catch (Exception ex) { MessageBox.Show("Error al importar: " + ex.Message); }
             }
         }
 
@@ -777,15 +862,32 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (source == null) return;
 
-            // Clonar el esquema básico
+            // Clonar el esquema completo
             var newPauta = new PautaSchema
             {
                 Id = Guid.NewGuid().ToString(),
                 Name = source.Name + " (Copia)",
                 CreatedAt = DateTime.Now,
-                HelpContent = source.HelpContent,
+
+                // Configuración de Correo
+                EmailMethod = source.EmailMethod,
+                EmailToTemplate = source.EmailToTemplate,
+                EmailCcTemplate = source.EmailCcTemplate,
+                EmailSubjectTemplate = source.EmailSubjectTemplate,
+                EmailBodyTemplate = source.EmailBodyTemplate,
+                UseAutomatedRecipient = source.UseAutomatedRecipient,
+                EmailNameFieldId = source.EmailNameFieldId,
+                RecipientContacts = source.RecipientContacts?.Select(c => new RecipientContact { Name = c.Name, Email = c.Email }).ToList() ?? new List<RecipientContact>(),
+
+                // Lógica de Exclusión
+                ExcludeByFieldId = source.ExcludeByFieldId,
+                ExcludeByFieldValue = source.ExcludeByFieldValue,
+
+                // Configuración de PDF
                 PdfFileNameFieldId1 = source.PdfFileNameFieldId1,
                 PdfFileNameFieldId2 = source.PdfFileNameFieldId2,
+                HelpContent = source.HelpContent,
+
                 // Clonar configuraciones de exportación
                 ExportConfig = source.ExportConfig?.Select(c => new ExportColumnConfig
                 {
@@ -797,6 +899,7 @@ namespace PautaDinamicaApp.ViewModels
                     Type = c.Type,
                     IsVisible = c.IsVisible
                 }).ToList() ?? new List<ExportColumnConfig>(),
+
                 PdfConfig = source.PdfConfig?.Select(c => new ExportColumnConfig
                 {
                     FieldId = c.FieldId,
@@ -1141,14 +1244,18 @@ namespace PautaDinamicaApp.ViewModels
                                     if (double.TryParse(cleanVal, out double pctVal))
                                     {
                                         cell.Value = pctVal / 100.0;
-                                        cell.Style.NumberFormat.Format = "0.0%";
+                                        var fieldDef = rawFields.FirstOrDefault(f => f.Id == colDef.Id);
+                                        string excelFormat = (fieldDef?.ShowDecimals ?? true) ? "0.0%" : "0%";
+                                        cell.Style.NumberFormat.Format = excelFormat;
                                     }
                                     else cell.Value = strVal;
                                 }
                                 else if (double.TryParse(strVal, out double numVal))
                                 {
                                     cell.Value = numVal;
-                                    cell.Style.NumberFormat.Format = "0.00";
+                                    var fieldDef = rawFields.FirstOrDefault(f => f.Id == colDef.Id);
+                                    string excelFormat = (fieldDef?.ShowDecimals ?? true) ? "0.00" : "0";
+                                    cell.Style.NumberFormat.Format = excelFormat;
                                 }
                                 else cell.Value = strVal;
                             }

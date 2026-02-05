@@ -7,12 +7,14 @@ namespace PautaDinamicaApp.Views.Converters
 {
     public class BooleanToVisibilityConverter : IValueConverter
     {
+        public bool Inverse { get; set; }
+
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            bool boolValue = (bool)value;
-            bool inverse = parameter?.ToString() == "Inverse";
+            if (!(value is bool boolValue)) return Visibility.Collapsed;
 
-            if (inverse) boolValue = !boolValue;
+            bool isInverse = Inverse || (parameter?.ToString() == "Inverse");
+            if (isInverse) boolValue = !boolValue;
 
             return boolValue ? Visibility.Visible : Visibility.Collapsed;
         }
