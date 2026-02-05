@@ -101,7 +101,17 @@ namespace PautaDinamicaApp.Services
             string subject = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailSubjectTemplate) ? pauta.EmailSubjectTemplate : globalSettings.EmailSubjectTemplate, entry, fields);
             string body = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailBodyTemplate) ? pauta.EmailBodyTemplate : globalSettings.EmailBodyTemplate, entry, fields);
 
+            // Método de envío: Si la pauta no tiene una configuración explícita (pauta.EmailMethod == globalSettings.SelectedEmailMethod es un chequeo débil, 
+            // pero como no hay un valor 'Inherit', usaremos el de la pauta si se cambió de Mailto, o el global como base)
             EmailMethod method = pauta.EmailMethod;
+            
+            // Si la pauta tiene el default (Mailto) pero el global es Outlook, priorizamos el global si el usuario lo configuró así.
+            // Para ser más precisos, si el global es diferente de Mailto y la pauta sigue en Mailto, usamos el global.
+            if (pauta.EmailMethod == EmailMethod.Mailto && globalSettings.SelectedEmailMethod != EmailMethod.Mailto)
+            {
+                method = globalSettings.SelectedEmailMethod;
+            }
+
             Console.WriteLine($"DEBUG: Final 'To': '{to}'");
             Console.WriteLine($"DEBUG: Final Method: {method}");
 

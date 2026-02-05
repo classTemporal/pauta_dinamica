@@ -213,7 +213,11 @@ namespace PautaDinamicaApp.ViewModels
 
             if (vm.IsSaved)
             {
+                // RECARGAR TODO para aplicar cambios de correo, rutas, etc.
+                var settings = _storageService.LoadSettings();
+                LoadPautas();
                 ApplyRowColoring();
+                new ThemeService().SetTheme(settings.Theme);
             }
         }
 
@@ -271,19 +275,6 @@ namespace PautaDinamicaApp.ViewModels
 
         // Duplicate constructor removed
         // Orphaned code block removed.
-
-        private void OpenSettings()
-        {
-            var vm = new SettingsViewModel();
-            var win = new Views.SettingsWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
-            vm.RequestClose += () => win.Close();
-            win.ShowDialog();
-
-            if (vm.IsSaved)
-            {
-                LoadPautas(); // Refrescar para tener los nuevos métodos de envío, etc.
-            }
-        }
 
         public bool ExportRecordsToExcel(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null, bool silent = false)
         {

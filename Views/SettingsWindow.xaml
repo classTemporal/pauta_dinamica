@@ -126,7 +126,29 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <Border Padding="15">
                         <StackPanel>
-                            <TextBlock Text="Configurar Envío por Pauta" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
+                            <TextBlock Text="Configuración Global (Predeterminada)" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource AccentBrush}"/>
+                            <TextBlock Text="Estos valores se usarán si una pauta específica no tiene su propia configuración." FontSize="12" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15" Opacity="0.7"/>
+
+                            <Grid Margin="0,0,0,15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="Método General:" Style="{StaticResource LabelStyle}"/>
+                                    <ComboBox ItemsSource="{Binding EmailMethods}" 
+                                              SelectedItem="{Binding Settings.SelectedEmailMethod}"
+                                              Height="35"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="Para (To) por defecto:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Settings.EmailToTemplate}" Margin="0,0,0,10"/>
+
+                            <Separator Background="{DynamicResource BorderBrush}" Margin="0,15,0,20"/>
+
+                            <TextBlock Text="Configurar Envío por Pauta (Específico)" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
                             
                             <!-- Selector de Pauta -->
                             <TextBlock Text="1. Seleccione la Pauta a Configurar:" Style="{StaticResource LabelStyle}"/>
