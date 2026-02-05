@@ -784,6 +784,8 @@ namespace PautaDinamicaApp.ViewModels
                 Name = source.Name + " (Copia)",
                 CreatedAt = DateTime.Now,
                 HelpContent = source.HelpContent,
+                PdfFileNameFieldId1 = source.PdfFileNameFieldId1,
+                PdfFileNameFieldId2 = source.PdfFileNameFieldId2,
                 // Clonar configuraciones de exportación
                 ExportConfig = source.ExportConfig?.Select(c => new ExportColumnConfig
                 {

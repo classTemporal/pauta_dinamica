@@ -180,5 +180,21 @@ namespace PautaDinamicaApp
             if (parent != null) return parent;
             return FindVisualParent<T>(parentObject);
         }
+
+        private void ClearPdfField1_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.DataContext is ViewModels.EditorViewModel vm && vm.EditingPauta != null)
+            {
+                vm.EditingPauta.PdfFileNameFieldId1 = "";
+            }
+        }
+
+        private void ClearPdfField2_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.DataContext is ViewModels.EditorViewModel vm && vm.EditingPauta != null)
+            {
+                vm.EditingPauta.PdfFileNameFieldId2 = "";
+            }
+        }
     }
 }

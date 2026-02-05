@@ -611,11 +611,44 @@ namespace PautaDinamicaApp.ViewModels
                         RefreshCalculations();
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) { MessageBox.Show("Error al importar registros: " + ex.Message); }
+                finally { RefreshFields(); _isCalculating = false; }
+            }
+        }
+
+        private string GetPdfBaseFileName(AuditEntry record, string pautaName)
+        {
+            if (CurrentPauta == null) return pautaName;
+
+            string part1 = "";
+            string part2 = "";
+
+            if (!string.IsNullOrEmpty(CurrentPauta.PdfFileNameFieldId1))
+            {
+                if (record.Values.TryGetValue(CurrentPauta.PdfFileNameFieldId1, out var val1) && val1 != null)
                 {
-                    MessageBox.Show($"Error al importar: {ex.Message}");
+                    part1 = val1.ToString() ?? "";
                 }
             }
+
+            if (!string.IsNullOrEmpty(CurrentPauta.PdfFileNameFieldId2))
+            {
+                if (record.Values.TryGetValue(CurrentPauta.PdfFileNameFieldId2, out var val2) && val2 != null)
+                {
+                    part2 = val2.ToString() ?? "";
+                }
+            }
+
+            // Si no hay campos configurados, usar el nombre de la pauta por defecto
+            if (string.IsNullOrWhiteSpace(part1) && string.IsNullOrWhiteSpace(part2))
+            {
+                return pautaName;
+            }
+
+            string combined = (part1 + " " + part2).Trim();
+            // Limpiar caracteres inválidos para Windows
+            string safe = string.Join("_", combined.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
+            return safe;
         }
 
         private void GenerateBatchPdfs(List<AuditEntry> records)
@@ -626,14 +659,14 @@ namespace PautaDinamicaApp.ViewModels
                 string folderPath = settings.PdfReportPath;
                 if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
                 string pautaName = CurrentPauta?.Name ?? "Auditoria";
-                string safePautaName = string.Join("_", pautaName.Split(Path.GetInvalidFileNameChars()));
                 var definitions = CurrentPauta != null ? _storageService.LoadConfiguration(CurrentPauta.Id) : new List<FieldDefinition>();
                 int count = 0;
 
                 foreach (var record in records)
                 {
+                    string customName = GetPdfBaseFileName(record, pautaName);
                     string timestamp = record.Timestamp.ToString("yyyyMMdd_HHmmss");
-                    string filename = $"Reporte_{safePautaName}_{timestamp}_{count + 1}.pdf";
+                    string filename = $"Reporte_{customName}_{timestamp}_{count + 1}.pdf";
                     string fullPath = Path.Combine(folderPath, filename);
 
                     _pdfService.GenerateAuditPdf(new List<AuditEntry> { record }, definitions, CurrentPauta?.PdfConfig, pautaName, fullPath);
@@ -661,7 +694,13 @@ namespace PautaDinamicaApp.ViewModels
                 string exportDir = settings.PdfReportPath;
                 if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
 
-                string fileName = $"Reporte_{pautaName}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                string customName = pautaName;
+                if (records.Count == 1)
+                {
+                    customName = GetPdfBaseFileName(records[0], pautaName);
+                }
+
+                string fileName = $"Reporte_{customName}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
                 string filePath = Path.Combine(exportDir, fileName);
 
                 _pdfService.GenerateAuditPdf(records, definitions, CurrentPauta?.PdfConfig, pautaName, filePath);
