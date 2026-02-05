@@ -128,11 +128,11 @@ namespace PautaDinamicaApp.ViewModels
         private void ShowGeneralHelp()
         {
             var content = new StringBuilder();
-            content.AppendLine("<h1>📘 Pauta Dinámica - Documentación</h1>");
+            content.AppendLine("<h1>📘 CHECK-O - Documentación</h1>");
             content.AppendLine("<h2>Versión 1.1.0</h2>");
 
             content.AppendLine("<h3>📝 Resumen</h3>");
-            content.AppendLine("<p>Pauta Dinámica es una herramienta versátil diseñada para optimizar el registro de llamadas y la realización de auditorías de calidad. A través de un sistema de formularios dinámicos, permite a los usuarios estructurar, recopilar y analizar datos de manera eficiente, automatizando la generación de reportes en PDF, exportaciones a Excel y el envío de correos electrónicos.</p>");
+            content.AppendLine("<p>CHECK-O es una herramienta versátil diseñada para optimizar el registro de llamadas y la realización de auditorías de calidad. A través de un sistema de formularios dinámicos, permite a los usuarios estructurar, recopilar y analizar datos de manera eficiente, automatizando la generación de reportes en PDF, exportaciones a Excel y el envío de correos electrónicos.</p>");
 
             content.AppendLine("<h3>👤 Creador</h3>");
             content.AppendLine("<p><strong>Angel Gustavo Pacheco Manzanero</strong></p>");
@@ -774,6 +774,68 @@ namespace PautaDinamicaApp.ViewModels
             FieldsRefreshed?.Invoke();
         }
 
+        private void ProcessAutoSelections()
+        {
+            foreach (var targetField in CurrentFields.Where(f => f.Type == FieldType.Dropdown))
+            {
+                var def = targetField.Definition;
+                if (def.AutoSelectRules == null || !def.AutoSelectRules.Any()) continue;
+
+                foreach (var rule in def.AutoSelectRules)
+                {
+                    if (string.IsNullOrWhiteSpace(rule.TargetValue)) continue;
+
+                    var sourceField = CurrentFields.FirstOrDefault(f => f.Id == rule.SourceFieldId);
+                    if (sourceField == null) continue;
+
+                    string sourceVal = sourceField.Value?.ToString() ?? "";
+                    if (sourceField.Type == FieldType.Boolean)
+                    {
+                        if (sourceField.Value is bool b) sourceVal = b ? "1" : "0";
+                    }
+
+                    if (EvaluateRule(sourceVal, rule.Operator, rule.Value))
+                    {
+                        if (targetField.Value?.ToString() != rule.TargetValue)
+                        {
+                            targetField.Value = rule.TargetValue;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        private bool EvaluateRule(string sourceValue, string op, string threshold)
+        {
+            if (string.IsNullOrWhiteSpace(sourceValue)) return false;
+
+            string cleanSource = sourceValue.Replace("%", "").Replace(",", ".").Trim();
+            string cleanThreshold = (threshold ?? "").Replace("%", "").Replace(",", ".").Trim();
+
+            bool isSourceNumeric = double.TryParse(cleanSource, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double sNum);
+            bool isThresholdNumeric = double.TryParse(cleanThreshold, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double tNum);
+
+            if (isSourceNumeric && isThresholdNumeric)
+            {
+                const double epsilon = 0.001;
+                switch (op)
+                {
+                    case "=": return Math.Abs(sNum - tNum) < epsilon;
+                    case ">": return sNum > tNum + epsilon;
+                    case "<": return sNum < tNum - epsilon;
+                    case ">=": return sNum >= tNum - epsilon;
+                    case "<=": return sNum <= tNum + epsilon;
+                    default: return false;
+                }
+            }
+            else
+            {
+                if (op == "=") return string.Equals(sourceValue.Trim(), (threshold ?? "").Trim(), StringComparison.OrdinalIgnoreCase);
+                return false;
+            }
+        }
+
         private bool _isCalculating;
         private void RefreshCalculations()
         {
@@ -944,6 +1006,9 @@ namespace PautaDinamicaApp.ViewModels
                     string avgFormat = def.ShowDecimals ? "F1" : "F0";
                     avgField.Value = count > 0 ? $"{rawAvg.ToString(avgFormat)}%" : (def.ShowDecimals ? "0.0%" : "0%");
                 }
+
+                // Ejecutar auto-selecciones basadas en los nuevos resultados calculados
+                ProcessAutoSelections();
             }
             finally { _isCalculating = false; }
         }

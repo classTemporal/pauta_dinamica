@@ -41,6 +41,14 @@ namespace PautaDinamicaApp.Models
         public double Score { get; set; } = 1.0;
     }
 
+    public class AutoSelectRule
+    {
+        public string SourceFieldId { get; set; } = string.Empty;
+        public string Operator { get; set; } = "="; // =, >, <, >=, <=
+        public string Value { get; set; } = string.Empty;
+        public string TargetValue { get; set; } = string.Empty; // Valor de la lista a seleccionar
+    }
+
     public class FieldDefinition : INotifyPropertyChanged
     {
         private string _id = Guid.NewGuid().ToString();
@@ -62,6 +70,7 @@ namespace PautaDinamicaApp.Models
         private bool _enableZeroTrigger;
         private bool _showDecimals = true;
         private CalculationRounding _rounding = CalculationRounding.None;
+        private List<AutoSelectRule> _autoSelectRules = new();
 
         public string Id { get => _id; set { _id = value; OnPropertyChanged(); } }
         public string Label { get => _label; set { _label = value; OnPropertyChanged(); } }
@@ -112,6 +121,7 @@ namespace PautaDinamicaApp.Models
 
         // --- LÓGICA DE CÁLCULO ---
         public List<ScoringRule> ScoringRules { get => _scoringRules; set { _scoringRules = value; OnPropertyChanged(); } }
+        public List<AutoSelectRule> AutoSelectRules { get => _autoSelectRules; set { _autoSelectRules = value; OnPropertyChanged(); } }
         public List<string> TargetIds { get => _targetIds; set { _targetIds = value; OnPropertyChanged(); } }
         public bool UseCustomWeights { get => _useCustomWeights; set { _useCustomWeights = value; OnPropertyChanged(); } }
 

@@ -638,7 +638,11 @@ namespace PautaDinamicaApp.ViewModels
                 field.MaxLength = vm.ResultMaxLength;
                 field.WarnOnDuplicate = vm.WarnOnDuplicate;
                 field.TimeFormat = vm.TimeFormat;
-                if (field.Type == FieldType.Dropdown) field.Options = vm.ResultOptions;
+                if (field.Type == FieldType.Dropdown)
+                {
+                    field.Options = vm.ResultOptions;
+                    field.AutoSelectRules = vm.ResultAutoSelectRules;
+                }
                 else if (field.Type == FieldType.Calculation) field.ScoringRules = vm.ResultRules;
                 else if (field.Type == FieldType.Average) field.TargetIds = vm.ResultAverageIds;
 

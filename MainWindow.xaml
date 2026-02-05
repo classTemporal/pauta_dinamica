@@ -9,7 +9,7 @@
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
         mc:Ignorable="d"
         x:Name="MainWin"
-        Title="Pauta Dinámica - Auditoría" Height="650" Width="1100"
+        Title="CHECK-O - Pauta Dinámica" Height="650" Width="1100"
         WindowStartupLocation="CenterScreen"
         Icon="pack://application:,,,/Assets/logo.ico">
 
@@ -71,7 +71,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Left: Title -->
-                <TextBlock Grid.Column="0" Text="Pauta Dinámica" Foreground="{DynamicResource AccentBrush}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                <TextBlock Grid.Column="0" Text="CHECK-O" Foreground="{DynamicResource AccentBrush}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,20,0"/>
                 
                 <!-- Center: Pauta Selector -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
@@ -367,7 +367,7 @@
                             Style="{StaticResource GhostButton}" Foreground="{DynamicResource DangerBrush}"
                             Padding="10,2" Margin="0" Height="25" Content="CERRAR SESIÓN"/>
 
-                    <TextBlock Text="Pauta Dinámica - Auditoría de Calidad" 
+                    <TextBlock Text="CHECK-O - Auditoría de Calidad" 
                                Margin="20,0,0,0"
                                VerticalAlignment="Center" 
                                FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic"/>

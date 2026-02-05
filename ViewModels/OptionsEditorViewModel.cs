@@ -151,6 +151,20 @@ namespace PautaDinamicaApp.ViewModels
         }
     }
 
+    public class AutoSelectRuleVM : ViewModelBase
+    {
+        private string _sourceFieldId = "";
+        private string _operator = "=";
+        private string _value = "";
+        private string _targetValue = "";
+
+        public string SourceFieldId { get => _sourceFieldId; set => SetProperty(ref _sourceFieldId, value); }
+        public string Operator { get => _operator; set => SetProperty(ref _operator, value); }
+        public string Value { get => _value; set => SetProperty(ref _value, value); }
+        public string TargetValue { get => _targetValue; set => SetProperty(ref _targetValue, value); }
+        public override bool IsValid => true;
+    }
+
     public class OptionsEditorViewModel : ViewModelBase
     {
         private readonly StorageService _storageService = new StorageService();
@@ -170,6 +184,8 @@ namespace PautaDinamicaApp.ViewModels
         public FieldDefinition OriginalField { get; }
         public ObservableCollection<RuleEditorVM> CalculationRules { get; } = new();
         public ObservableCollection<SelectableOptionVM> AverageTargets { get; } = new();
+        public ObservableCollection<AutoSelectRuleVM> AutoSelectRules { get; } = new();
+        public List<string> Operators { get; } = new() { "=", ">", "<", ">=", "<=" };
 
         public OptionsEditorViewModel(FieldDefinition field, List<FieldDefinition> allFields)
         {
@@ -180,6 +196,21 @@ namespace PautaDinamicaApp.ViewModels
             WarnOnDuplicate = field.WarnOnDuplicate;
             ShowDecimals = field.ShowDecimals;
             Rounding = field.Rounding;
+
+            // Initialize AutoSelectRules from field
+            if (field.AutoSelectRules != null)
+            {
+                foreach (var r in field.AutoSelectRules)
+                {
+                    AutoSelectRules.Add(new AutoSelectRuleVM
+                    {
+                        SourceFieldId = r.SourceFieldId,
+                        Operator = r.Operator,
+                        Value = r.Value,
+                        TargetValue = r.TargetValue
+                    });
+                }
+            }
 
             var wrapped = (field.Options ?? new List<string>()).Select(s => new SelectableOptionVM(s));
             Options = new ObservableCollection<SelectableOptionVM>(wrapped);
@@ -264,6 +295,8 @@ namespace PautaDinamicaApp.ViewModels
                 TriggerFieldChoices.Add(new SelectableFieldVM { Id = f.Id, Label = f.Label, IsSelected = initialIds.Contains(f.Id) });
             }
 
+            Options.CollectionChanged += (s, e) => OnPropertyChanged(nameof(ResultOptions));
+
 
 
             AddOptionCommand = new RelayCommand(_ => AddOption(), _ => !string.IsNullOrWhiteSpace(NewOptionText));
@@ -274,6 +307,9 @@ namespace PautaDinamicaApp.ViewModels
             ExportOptionsCommand = new RelayCommand(_ => ExportToExcel(Options, "Opciones"));
             ImportOptionsCommand = new RelayCommand(_ => ImportFromExcel());
             ResetCalculationCommand = new RelayCommand(_ => ResetCalculation());
+
+            AddAutoSelectRuleCommand = new RelayCommand(_ => AutoSelectRules.Add(new AutoSelectRuleVM()));
+            RemoveAutoSelectRuleCommand = new RelayCommand(r => { if (r is AutoSelectRuleVM vm) AutoSelectRules.Remove(vm); });
         }
 
         private bool needsInitialRedistribution(FieldDefinition f)
@@ -445,6 +481,17 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ExportOptionsCommand { get; }
         public ICommand ImportOptionsCommand { get; }
         public ICommand ResetCalculationCommand { get; }
+
+        public ICommand AddAutoSelectRuleCommand { get; }
+        public ICommand RemoveAutoSelectRuleCommand { get; }
+
+        public List<AutoSelectRule> ResultAutoSelectRules => AutoSelectRules.Select(r => new AutoSelectRule
+        {
+            SourceFieldId = r.SourceFieldId,
+            Operator = r.Operator,
+            Value = r.Value,
+            TargetValue = r.TargetValue
+        }).ToList();
 
         private void ExportToExcel(IEnumerable<SelectableOptionVM> list, string baseName)
         {
