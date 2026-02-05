@@ -28,6 +28,9 @@ namespace PautaDinamicaApp.Models
 
         // UI Theme
         public Services.AppTheme Theme { get; set; } = Services.ThemeService.GetSystemTheme();
+
+        // Admin Settings
+        public bool EnableInternalTimer { get; set; } = true;
     }
 }
 

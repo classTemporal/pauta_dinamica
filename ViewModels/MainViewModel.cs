@@ -28,6 +28,7 @@ namespace PautaDinamicaApp.ViewModels
         private readonly StorageService _storageService;
         private readonly PdfService _pdfService;
         private readonly EmailService _emailService;
+        private readonly System.Diagnostics.Stopwatch _auditStopwatch = new();
         private ObservableCollection<DynamicFieldVM> _currentFields = new();
         private ICollectionView? _groupedFields;
         private ObservableCollection<AuditEntry> _records = new();
@@ -66,6 +67,7 @@ namespace PautaDinamicaApp.ViewModels
             _storageService = new StorageService();
             _pdfService = new PdfService();
             _emailService = new EmailService();
+            _auditStopwatch.Start();
             LoadPautas();
             LoadData();
 
@@ -346,9 +348,19 @@ namespace PautaDinamicaApp.ViewModels
                     }
 
                     // --- CABECERAS ---
+                    int headerStartCol = 1;
+                    var settings = _storageService.LoadSettings();
+
+                    if (settings.EnableInternalTimer)
+                    {
+                        worksheet.Cell(1, 1).Value = "Duración";
+                        worksheet.Cell(1, 1).Style.Fill.BackgroundColor = XLColor.LightGray;
+                        headerStartCol = 2;
+                    }
+
                     for (int i = 0; i < exportCols.Count; i++)
                     {
-                        worksheet.Cell(1, i + 1).Value = exportCols[i].Header;
+                        worksheet.Cell(1, i + headerStartCol).Value = exportCols[i].Header;
                     }
 
                     // --- DATOS ---
@@ -356,6 +368,14 @@ namespace PautaDinamicaApp.ViewModels
                     foreach (var entry in data)
                     {
                         int col = 1;
+                        if (settings.EnableInternalTimer)
+                        {
+                            // Excel almacena el tiempo como una fracción del día (1 día = 1440 min)
+                            worksheet.Cell(row, 1).Value = entry.InternalDurationMinutes / 1440.0;
+                            worksheet.Cell(row, 1).Style.NumberFormat.Format = "[mm]:ss";
+                            col = 2;
+                        }
+
                         foreach (var colDef in exportCols)
                         {
                             if (entry.Values.TryGetValue(colDef.Id, out var val))
@@ -1059,6 +1079,16 @@ namespace PautaDinamicaApp.ViewModels
             }
 
             var entry = SelectedRecord ?? new AuditEntry();
+            if (SelectedRecord == null)
+            {
+                var settings = _storageService.LoadSettings();
+                if (settings.EnableInternalTimer)
+                {
+                    entry.InternalDurationMinutes = Math.Round(_auditStopwatch.Elapsed.TotalMinutes, 2);
+                    _auditStopwatch.Restart();
+                }
+            }
+
             foreach (var field in CurrentFields.Where(f => f.Type != FieldType.Separator))
             {
                 entry.Values[field.Id] = field.Value ?? "";

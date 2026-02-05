@@ -12,7 +12,10 @@ namespace PautaDinamicaApp.ViewModels
     public class SettingsViewModel : ViewModelBase
     {
         private readonly StorageService _storageService;
+        private readonly SessionService _sessionService;
         private AppSettings _settings;
+        private string _adminPassword = "";
+        private bool _isAdminSettingsUnlocked;
 
         public AppSettings Settings
         {
@@ -26,6 +29,23 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
         public ICommand OpenTemplateManagementCommand { get; }
+        public ICommand UnlockAdminSettingsCommand { get; }
+
+        public string AdminPassword { get => _adminPassword; set => SetProperty(ref _adminPassword, value); }
+        public bool IsAdminSettingsUnlocked { get => _isAdminSettingsUnlocked; set => SetProperty(ref _isAdminSettingsUnlocked, value); }
+
+        public bool EnableInternalTimer
+        {
+            get => Settings.EnableInternalTimer;
+            set
+            {
+                if (Settings.EnableInternalTimer != value)
+                {
+                    Settings.EnableInternalTimer = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         private ObservableCollection<PautaSchema> _pautas = new();
         private PautaSchema? _selectedPauta;
@@ -85,6 +105,7 @@ namespace PautaDinamicaApp.ViewModels
         public SettingsViewModel()
         {
             _storageService = new StorageService();
+            _sessionService = new SessionService();
             _settings = _storageService.LoadSettings();
             _pautas = new ObservableCollection<PautaSchema>(_storageService.LoadPautas());
             _selectedPauta = _pautas.FirstOrDefault();
@@ -107,6 +128,21 @@ namespace PautaDinamicaApp.ViewModels
             OpenEmailDirectoryCommand = new RelayCommand(_ => OpenEmailDirectory());
             ToggleContactMultiSelectCommand = new RelayCommand(_ => IsContactMultiSelectMode = !IsContactMultiSelectMode);
             OpenTemplateManagementCommand = new RelayCommand(_ => OpenTemplateManagement());
+            UnlockAdminSettingsCommand = new RelayCommand(_ => UnlockAdminSettings());
+        }
+
+        private void UnlockAdminSettings()
+        {
+            if (_sessionService.IsMasterPassword(AdminPassword))
+            {
+                IsAdminSettingsUnlocked = true;
+                AdminPassword = "";
+                System.Windows.MessageBox.Show("Opciones administrativas desbloqueadas.", "Acceso Concedido", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Contraseña administrativa incorrecta.", "Acceso Denegado", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void OpenTemplateManagement()

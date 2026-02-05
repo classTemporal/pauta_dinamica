@@ -1078,9 +1078,18 @@ namespace PautaDinamicaApp.ViewModels
                 }
 
                 // --- CABECERAS ---
+                int headerStartCol = 1;
+                var settings = _storageService.LoadSettings();
+                if (settings.EnableInternalTimer)
+                {
+                    worksheet.Cell(1, 1).Value = "Duración";
+                    worksheet.Cell(1, 1).Style.Fill.BackgroundColor = XLColor.LightGray;
+                    headerStartCol = 2;
+                }
+
                 for (int i = 0; i < exportCols.Count; i++)
                 {
-                    worksheet.Cell(1, i + 1).Value = exportCols[i].Header;
+                    worksheet.Cell(1, i + headerStartCol).Value = exportCols[i].Header;
                 }
 
                 // --- DATOS ---
@@ -1088,6 +1097,14 @@ namespace PautaDinamicaApp.ViewModels
                 foreach (var entry in records)
                 {
                     int col = 1;
+                    if (settings.EnableInternalTimer)
+                    {
+                        // Excel almacena el tiempo como una fracción del día (1 día = 1440 min)
+                        worksheet.Cell(row, 1).Value = entry.InternalDurationMinutes / 1440.0;
+                        worksheet.Cell(row, 1).Style.NumberFormat.Format = "[mm]:ss";
+                        col = 2;
+                    }
+
                     foreach (var colDef in exportCols)
                     {
                         if (entry.Values.TryGetValue(colDef.Id, out var val))

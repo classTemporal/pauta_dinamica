@@ -9,6 +9,7 @@ namespace PautaDinamicaApp.Models
     {
         public string RecordId { get; set; } = Guid.NewGuid().ToString();
         public DateTime Timestamp { get; set; } = DateTime.Now;
+        public double InternalDurationMinutes { get; set; }
         public Dictionary<string, object> Values { get; set; } = new Dictionary<string, object>();
 
         [System.Text.Json.Serialization.JsonIgnore]

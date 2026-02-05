@@ -8,6 +8,13 @@ namespace PautaDinamicaApp.Views
         public SettingsWindow()
         {
             InitializeComponent();
+            AdminPassBox.PasswordChanged += (s, e) =>
+            {
+                if (DataContext is ViewModels.SettingsViewModel vm)
+                {
+                    vm.AdminPassword = AdminPassBox.Password;
+                }
+            };
         }
     }
 }
