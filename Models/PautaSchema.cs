@@ -80,6 +80,21 @@ namespace PautaDinamicaApp.Models
         private string _helpContent = "";
         public string HelpContent { get => _helpContent; set => SetProperty(ref _helpContent, value); }
 
+        // --- Contadores Rápidos de Estadísticas ---
+        private string _counterField1 = "";
+        private string _counterValue1 = "";
+        private string _counterField2 = "";
+        private string _counterValue2 = "";
+        private string _counterField3 = "";
+        private string _counterValue3 = "";
+
+        public string CounterField1 { get => _counterField1; set => SetProperty(ref _counterField1, value); }
+        public string CounterValue1 { get => _counterValue1; set => SetProperty(ref _counterValue1, value); }
+        public string CounterField2 { get => _counterField2; set => SetProperty(ref _counterField2, value); }
+        public string CounterValue2 { get => _counterValue2; set => SetProperty(ref _counterValue2, value); }
+        public string CounterField3 { get => _counterField3; set => SetProperty(ref _counterField3, value); }
+        public string CounterValue3 { get => _counterValue3; set => SetProperty(ref _counterValue3, value); }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)

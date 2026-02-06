@@ -61,11 +61,18 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ToggleThemeCommand { get; }
         public UserModel? CurrentUser => SessionService.CurrentUser;
 
+        private DateTime _currentAuditStartTime = DateTime.Now;
+
         public MainViewModel()
         {
             _storageService = new StorageService();
             _pdfService = new PdfService();
             _emailService = new EmailService();
+
+            // Aplicar tema guardado del usuario al iniciar
+            var savedSettings = _storageService.LoadSettings();
+            new ThemeService().SetTheme(savedSettings.Theme);
+
             LoadPautas();
             LoadData();
 
@@ -98,9 +105,23 @@ namespace PautaDinamicaApp.ViewModels
         private void ToggleTheme()
         {
             var settings = _storageService.LoadSettings();
-            settings.Theme = settings.Theme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
+            var newTheme = settings.Theme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
+
+            // Guardar en perfil de usuario actual
+            settings.Theme = newTheme;
             _storageService.SaveSettings(settings);
-            new ThemeService().SetTheme(settings.Theme);
+
+            // Guardar también en perfil default para que persista en la pantalla de login
+            try
+            {
+                var defaultStorage = new StorageService("default");
+                var defaultSettings = defaultStorage.LoadSettings();
+                defaultSettings.Theme = newTheme;
+                defaultStorage.SaveSettings(defaultSettings);
+            }
+            catch { /* Ignorar error al guardar default */ }
+
+            new ThemeService().SetTheme(newTheme);
         }
 
 
@@ -207,7 +228,9 @@ namespace PautaDinamicaApp.ViewModels
 
             if (vm.IsSaved)
             {
+                LoadPautas();
                 ApplyRowColoring();
+                UpdateAuditStats();
             }
         }
 
@@ -266,6 +289,53 @@ namespace PautaDinamicaApp.ViewModels
         // Duplicate constructor removed
         // Orphaned code block removed.
 
+        private string _auditStatsText = "";
+        public string AuditStatsText
+        {
+            get => _auditStatsText;
+            set => SetProperty(ref _auditStatsText, value);
+        }
+
+        private void UpdateAuditStats()
+        {
+            if (CurrentPauta == null || Records == null) return;
+
+            var sb = new StringBuilder();
+            sb.Append($" Total: {Records.Count} ");
+
+            var counters = new[] {
+                (CurrentPauta.CounterField1, CurrentPauta.CounterValue1),
+                (CurrentPauta.CounterField2, CurrentPauta.CounterValue2),
+                (CurrentPauta.CounterField3, CurrentPauta.CounterValue3)
+            };
+
+            foreach (var (fieldLabel, value) in counters)
+            {
+                if (string.IsNullOrWhiteSpace(fieldLabel) || string.IsNullOrWhiteSpace(value)) continue;
+
+                if (CurrentPauta == null) break;
+
+                var fields = _storageService.LoadConfiguration(CurrentPauta.Id);
+                var targetField = fields.FirstOrDefault(f => f.Label.Equals(fieldLabel, StringComparison.OrdinalIgnoreCase));
+
+                if (targetField != null)
+                {
+                    int count = Records.Count(r =>
+                    {
+                        if (r.Values.TryGetValue(targetField.Id, out var val) && val != null)
+                        {
+                            string strVal = val.ToString() ?? "";
+                            if (val is System.Text.Json.JsonElement elem) strVal = elem.ToString();
+                            return string.Equals(strVal.Trim(), value.Trim(), StringComparison.OrdinalIgnoreCase);
+                        }
+                        return false;
+                    });
+                    sb.Append($" | {fieldLabel} ({value}): {count} ");
+                }
+            }
+            AuditStatsText = sb.ToString();
+        }
+
         private void OpenSettings()
         {
             var vm = new SettingsViewModel();
@@ -313,16 +383,43 @@ namespace PautaDinamicaApp.ViewModels
                     // Usar configuración de exportación si existe, de lo contrario usar campos actuales en orden
                     var columnsToExport = new List<(string FieldId, string Header, FieldType Type, FieldDefinition? Def)>();
 
-                    // Agregar siempre la fecha de registro y duración
-                    columnsToExport.Add(("System_Timestamp", "Fecha de evaluación", FieldType.Date, null));
-                    columnsToExport.Add(("System_Duration", "Duración (min)", FieldType.Numeric, null));
-
-                    var exportConfig = CurrentPauta?.ExportConfig?.Where(c => c.IsExportEnabled).OrderBy(c => c.Order).ToList();
+                    var settings = _storageService.LoadSettings();
+                    var allConfig = CurrentPauta?.ExportConfig ?? new System.Collections.Generic.List<ExportColumnConfig>();
+                    var exportConfig = allConfig.Where(c => c.IsExportEnabled).OrderBy(c => c.Order).ToList();
 
                     if (exportConfig != null && exportConfig.Any())
                     {
+                        // 1. Duración: Solo si está activada GLOBALMENTE
+                        if (settings.EnableInternalTimer)
+                        {
+                            var dConfig = allConfig.FirstOrDefault(c => c.FieldId == "System_Duration");
+                            // Si no existe configuración específica de pauta para duración, o si existe y está activada
+                            if (dConfig == null || dConfig.IsExportEnabled)
+                            {
+                                // Si no está en la lista de exportación (porque no se le dio un orden específico), se agrega al principio
+                                if (!exportConfig.Any(c => c.FieldId == "System_Duration"))
+                                {
+                                    columnsToExport.Add(("System_Duration", "Duración (min)", FieldType.Numeric, null));
+                                }
+                            }
+                        }
+
                         foreach (var config in exportConfig)
                         {
+                            // 2. Eliminar Fecha de evaluación (System_Timestamp)
+                            if (config.FieldId == "System_Timestamp") continue;
+
+                            // 3. Manejo de Duración (si ya está en la lista ordenada)
+                            if (config.FieldId == "System_Duration")
+                            {
+                                if (settings.EnableInternalTimer)
+                                {
+                                    columnsToExport.Add(("System_Duration", !string.IsNullOrWhiteSpace(config.CustomHeader) ? config.CustomHeader : "Duración (min)", FieldType.Numeric, null));
+                                }
+                                continue;
+                            }
+
+                            // 4. Campos dinámicos
                             var field = CurrentFields.FirstOrDefault(f => f.Id == config.FieldId);
                             if (field != null)
                             {
@@ -333,7 +430,12 @@ namespace PautaDinamicaApp.ViewModels
                     }
                     else
                     {
-                        // Fallback: Exportar todo lo visible
+                        // Fallback: Si no hay configuración manual, exportamos Duración (si aplica) y Campos Dinámicos
+                        if (settings.EnableInternalTimer)
+                        {
+                            columnsToExport.Add(("System_Duration", "Duración (min)", FieldType.Numeric, null));
+                        }
+
                         foreach (var field in CurrentFields)
                         {
                             columnsToExport.Add((field.Id, field.Label, field.Type, field.Definition));
@@ -364,8 +466,9 @@ namespace PautaDinamicaApp.ViewModels
                             }
                             if (fieldId == "System_Duration")
                             {
-                                cell.Value = entry.InternalDurationMinutes;
-                                cell.Style.NumberFormat.Format = "0.00";
+                                // Excel almacena el tiempo como una fracción del día (1 día = 1440 min)
+                                cell.Value = entry.InternalDurationMinutes / 1440.0;
+                                cell.Style.NumberFormat.Format = "[mm]:ss";
                                 continue;
                             }
 
@@ -765,6 +868,9 @@ namespace PautaDinamicaApp.ViewModels
             RefreshFields();
             var savedRecords = _storageService.LoadRecords(CurrentPauta.Id);
             Records = new ObservableCollection<AuditEntry>(savedRecords);
+            Records.CollectionChanged += (s, e) => UpdateAuditStats();
+            UpdateAuditStats();
+
             ApplyRowColoring();
             FieldsRefreshed?.Invoke();
             CreateNewRecord();
@@ -1057,6 +1163,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             SelectedRecord = null;
             foreach (var field in CurrentFields) field.Reset();
+            _currentAuditStartTime = DateTime.Now; // Reiniciar contador para nuevo registro
             OnPropertyChanged(nameof(IsEditMode));
         }
 
@@ -1145,12 +1252,24 @@ namespace PautaDinamicaApp.ViewModels
                 entry.Values[field.Id] = field.Value ?? "";
             }
 
-            if (SelectedRecord == null) Records.Add(entry);
+            if (SelectedRecord == null)
+            {
+                Records.Add(entry);
+
+                // Calcular duración solo para nuevos registros
+                var settings = _storageService.LoadSettings();
+                if (settings.EnableInternalTimer)
+                {
+                    entry.InternalDurationMinutes = (DateTime.Now - _currentAuditStartTime).TotalMinutes;
+                }
+            }
             entry.NotifyUpdate();
             if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
             ApplyRowColoring();
-            foreach (var field in CurrentFields) field.Reset();
-            SelectedRecord = null;
+
+            // Reiniciar todo para la siguiente auditoría (limpia campos y resetea el temporizador)
+            CreateNewRecord();
+
             MessageBox.Show("Registro guardado correctamente.");
         }
 

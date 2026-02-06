@@ -179,7 +179,10 @@
             <!-- Right: Records Grid -->
             <Border Grid.Column="1" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="Registros de Auditorías" Foreground="{DynamicResource TextBrush}" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,15" Orientation="Horizontal">
+                        <TextBlock Text="Registros de Auditorías" Foreground="{DynamicResource TextBrush}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,15,5"/>
+                        <TextBlock Text="{Binding AuditStatsText}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    </WrapPanel>
                     
                     <StackPanel DockPanel.Dock="Bottom" Margin="0,15,0,0">
                         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right"

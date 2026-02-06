@@ -63,7 +63,7 @@
                    Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center"/>
 
         <Viewbox Grid.Row="1">
-            <Calendar x:Name="MainCalendar" Background="White"/>
+            <Calendar x:Name="MainCalendar" Background="White" PreviewMouseUp="MainCalendar_PreviewMouseUp"/>
         </Viewbox>
 
         <StackPanel Grid.Row="2" Margin="0,20,0,0">

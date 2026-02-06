@@ -8,6 +8,7 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         Title="Diseñador de Pauta" Height="700" Width="1150"
         WindowStartupLocation="CenterOwner"
+        WindowState="Maximized"
         MinWidth="900" MinHeight="600"
         Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
     
@@ -83,7 +84,8 @@
             <!-- Templates for Default Value Column to fix binding/virtualization issues -->
             <DataTemplate x:Key="TextDefaultValueTemplate">
                  <TextBox Text="{Binding DefaultValue, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" 
-                          Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}" BorderThickness="0" Padding="5"/>
+                          Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}" 
+                          BorderThickness="1" BorderBrush="{DynamicResource InputBorder}" Padding="5"/>
             </DataTemplate>
 
             <DataTemplate x:Key="DropdownDefaultValueTemplate">
@@ -195,7 +197,7 @@
 
     <Grid Background="{DynamicResource BackgroundBrush}">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="300" MinWidth="250"/>
+            <ColumnDefinition Width="260" MinWidth="250"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
@@ -394,7 +396,7 @@
                             </DataGridTemplateColumn>
 
                             <!-- Mover -->
-                            <DataGridTemplateColumn Header="Mover" Width="85">
+                            <DataGridTemplateColumn Header="Mover" Width="60">
                                 <DataGridTemplateColumn.Visibility>
                                     <Binding Path="Data.IsMultiSelectMode" Source="{StaticResource Proxy}" Converter="{StaticResource BooleanToVisibilityConverter}" ConverterParameter="Inverse"/>
                                 </DataGridTemplateColumn.Visibility>
@@ -414,7 +416,7 @@
                             </DataGridTemplateColumn>
 
                              <!-- Etiqueta / Nombre del Cuadro -->
-                            <DataGridTemplateColumn Header="Etiqueta / Título del Cuadro" Width="250">
+                            <DataGridTemplateColumn Header="Etiqueta / Título del Cuadro" Width="*">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBox Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Margin="5,2"/>
@@ -423,7 +425,7 @@
                             </DataGridTemplateColumn>
                             
                             <!-- Tipo -->
-                            <DataGridTemplateColumn Header="Tipo" Width="140">
+                            <DataGridTemplateColumn Header="Tipo" Width="130">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid>
@@ -464,7 +466,7 @@
                             </DataGridTemplateColumn>
 
                             <!-- Configuración / Opciones -->
-                             <DataGridTemplateColumn Header="Ajustes" Width="120">
+                             <DataGridTemplateColumn Header="Ajustes" Width="90">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Content="⚙️ CONFIG" 
@@ -534,7 +536,7 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridTemplateColumn Header="Pers." Width="60">
+                            <DataGridTemplateColumn Header="Pers." Width="50">
                                  <DataGridTemplateColumn.HeaderStyle>
                                      <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                          <Setter Property="ToolTip" Value="El contenido persiste aunque agregues un nuevo registro (no se limpia)"/>
@@ -590,7 +592,7 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTemplateColumn Width="85">
+                            <DataGridTemplateColumn Width="50">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                          <Button Content="🗑️" Command="{Binding DataContext.RemoveFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}" 

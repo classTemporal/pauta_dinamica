@@ -62,11 +62,16 @@ namespace PautaDinamicaApp.ViewModels
             get => _selectedPauta;
             set
             {
-                if (SelectedPauta != null) SyncContacts();
-                if (SetProperty(ref _selectedPauta, value) && value != null)
+                if (_selectedPauta == value) return;
+                if (_selectedPauta != null) SyncContacts();
+
+                _selectedPauta = value;
+                if (value != null)
                 {
                     LoadPautaData(value);
                 }
+
+                OnPropertyChanged();
             }
         }
 
@@ -108,9 +113,7 @@ namespace PautaDinamicaApp.ViewModels
             _sessionService = new SessionService();
             _settings = _storageService.LoadSettings();
             _pautas = new ObservableCollection<PautaSchema>(_storageService.LoadPautas());
-            _selectedPauta = _pautas.FirstOrDefault();
-
-            if (_selectedPauta != null) LoadPautaData(_selectedPauta);
+            SelectedPauta = _pautas.FirstOrDefault();
 
             BrowseExcelPathCommand = new RelayCommand(_ => BrowseFolder(path => Settings.ExcelExportPath = path));
             BrowseJsonPathCommand = new RelayCommand(_ => BrowseFolder(path => Settings.JsonBackupPath = path));

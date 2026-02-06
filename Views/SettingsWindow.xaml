@@ -114,6 +114,90 @@
                                 </StackPanel>
                             </Border>
 
+                            <Separator Background="{DynamicResource BorderBrush}" Margin="0,15,0,20"/>
+
+                            <TextBlock Text="Contadores Rápidos (Estadísticas)" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
+                                <StackPanel>
+                                    <TextBlock Text="Configura qué conteos quieres ver sobre la tabla de registros." FontSize="13" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15"/>
+                                    
+                                    <TextBlock Text="1. Pauta de Referencia (para listar campos):" Style="{StaticResource LabelStyle}"/>
+                                    <ComboBox ItemsSource="{Binding Pautas}" 
+                                              SelectedItem="{Binding SelectedPauta}"
+                                              DisplayMemberPath="Name"
+                                              Margin="0,0,0,15" Height="35"/>
+
+                                    <TextBlock Text="2. Definir Contadores (Campo + Valor a contar):" Style="{StaticResource LabelStyle}" Margin="0,0,0,5"/>
+                                    
+                                    <!-- Contador 1 -->
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="15"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Campo 1:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
+                                                      SelectedValue="{Binding SelectedPauta.CounterField1}"
+                                                      SelectedValuePath="Label"
+                                                      DisplayMemberPath="Label"
+                                                      Height="35"
+                                                      IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Valor 1:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBox Text="{Binding SelectedPauta.CounterValue1}" Height="35" VerticalContentAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Contador 2 -->
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="15"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Campo 2:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
+                                                      SelectedValue="{Binding SelectedPauta.CounterField2}"
+                                                      SelectedValuePath="Label"
+                                                      DisplayMemberPath="Label"
+                                                      Height="35"
+                                                      IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Valor 2:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBox Text="{Binding SelectedPauta.CounterValue2}" Height="35" VerticalContentAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Contador 3 -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="15"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Campo 3:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
+                                                      SelectedValue="{Binding SelectedPauta.CounterField3}"
+                                                      SelectedValuePath="Label"
+                                                      DisplayMemberPath="Label"
+                                                      Height="35"
+                                                      IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Valor 3:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBox Text="{Binding SelectedPauta.CounterValue3}" Height="35" VerticalContentAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                </StackPanel>
+                            </Border>
+
                         </StackPanel>
                     </Border>
                 </ScrollViewer>
