@@ -309,108 +309,150 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     var worksheet = workbook.Worksheets.Add("Auditoría");
 
-                    // --- CABECERAS ---
-                    var fields = CurrentFields.ToList();
-                    for (int i = 0; i < fields.Count; i++)
+                    // --- DEFINIR COLUMNAS A EXPORTAR ---
+                    // Usar configuración de exportación si existe, de lo contrario usar campos actuales en orden
+                    var columnsToExport = new List<(string FieldId, string Header, FieldType Type, FieldDefinition? Def)>();
+
+                    // Agregar siempre la fecha de registro y duración
+                    columnsToExport.Add(("System_Timestamp", "Fecha de evaluación", FieldType.Date, null));
+                    columnsToExport.Add(("System_Duration", "Duración (min)", FieldType.Numeric, null));
+
+                    var exportConfig = CurrentPauta?.ExportConfig?.Where(c => c.IsExportEnabled).OrderBy(c => c.Order).ToList();
+
+                    if (exportConfig != null && exportConfig.Any())
                     {
-                        worksheet.Cell(1, i + 1).Value = fields[i].Label;
+                        foreach (var config in exportConfig)
+                        {
+                            var field = CurrentFields.FirstOrDefault(f => f.Id == config.FieldId);
+                            if (field != null)
+                            {
+                                string header = !string.IsNullOrWhiteSpace(config.CustomHeader) ? config.CustomHeader : field.Label;
+                                columnsToExport.Add((field.Id, header, field.Type, field.Definition));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Fallback: Exportar todo lo visible
+                        foreach (var field in CurrentFields)
+                        {
+                            columnsToExport.Add((field.Id, field.Label, field.Type, field.Definition));
+                        }
+                    }
+
+                    // --- CABECERAS ---
+                    for (int i = 0; i < columnsToExport.Count; i++)
+                    {
+                        worksheet.Cell(1, i + 1).Value = columnsToExport[i].Header;
                     }
 
                     // --- DATOS ---
                     int row = 2;
                     foreach (var entry in data)
                     {
-                        int col = 1;
-                        foreach (var f in fields)
+                        for (int i = 0; i < columnsToExport.Count; i++)
                         {
-                            if (entry.Values.TryGetValue(f.Id, out var val))
+                            var (fieldId, header, type, def) = columnsToExport[i];
+                            var cell = worksheet.Cell(row, i + 1);
+
+                            // Manejo especial campos sistema
+                            if (fieldId == "System_Timestamp")
+                            {
+                                cell.Value = entry.Timestamp;
+                                cell.Style.NumberFormat.Format = "dd/mm/yyyy hh:mm:ss am/pm";
+                                continue;
+                            }
+                            if (fieldId == "System_Duration")
+                            {
+                                cell.Value = entry.InternalDurationMinutes;
+                                cell.Style.NumberFormat.Format = "0.00";
+                                continue;
+                            }
+
+                            // Campos dinámicos
+                            if (entry.Values.TryGetValue(fieldId, out var val))
                             {
                                 string strVal = val?.ToString() ?? "";
-                                var cell = worksheet.Cell(row, col);
 
-                                // --- TIPADO DINÁMICO MEJORADO ---
-                                if (f.Type == FieldType.Boolean)
+                                if (type == FieldType.Boolean)
                                 {
-                                    // Boolean como número (1/0) con formato Entero
                                     bool? valResult = null;
                                     if (val is bool b) valResult = b;
-                                    else if (strVal == "1") valResult = true;
-                                    else if (strVal == "0") valResult = false;
-                                    else if (bool.TryParse(strVal, out bool boolVal)) valResult = boolVal;
+                                    else if (strVal == "1" || strVal.Equals("True", StringComparison.OrdinalIgnoreCase)) valResult = true;
+                                    else if (strVal == "0" || strVal.Equals("False", StringComparison.OrdinalIgnoreCase)) valResult = false;
 
                                     if (valResult.HasValue)
                                     {
                                         cell.Value = valResult.Value ? 1 : 0;
                                         cell.Style.NumberFormat.Format = "0";
                                     }
-                                    else
-                                        cell.Value = strVal;
+                                    else cell.Value = strVal;
                                 }
-                                else if (f.Type == FieldType.Numeric || f.Type == FieldType.Calculation || f.Type == FieldType.Average)
+                                else if (type == FieldType.Numeric)
                                 {
-                                    // Detectar porcentaje
+                                    if (double.TryParse(strVal, out double numVal))
+                                    {
+                                        cell.Value = numVal;
+                                        string excelFormat = (def?.ShowDecimals ?? true) ? "0.00" : "0";
+                                        cell.Style.NumberFormat.Format = excelFormat;
+                                    }
+                                    else cell.Value = strVal;
+                                }
+                                else if (type == FieldType.Calculation || type == FieldType.Average)
+                                {
                                     if (strVal.Contains("%"))
                                     {
                                         string cleanVal = strVal.Replace("%", "").Trim();
                                         if (double.TryParse(cleanVal, out double pctVal))
                                         {
                                             cell.Value = pctVal / 100.0;
-                                            string excelFormat = (f.Definition?.ShowDecimals ?? true) ? "0.0%" : "0%";
+                                            string excelFormat = (def?.ShowDecimals ?? true) ? "0.0%" : "0%";
                                             cell.Style.NumberFormat.Format = excelFormat;
                                         }
                                         else cell.Value = strVal;
                                     }
-                                    else
+                                    else if (double.TryParse(strVal, out double numVal))
                                     {
-                                        // Número puro forzado a 'Número' (2 decimales)
-                                        if (double.TryParse(strVal, out double numVal))
-                                        {
-                                            cell.Value = numVal;
-                                            string excelFormat = (f.Definition?.ShowDecimals ?? true) ? "0.00" : "0";
-                                            cell.Style.NumberFormat.Format = excelFormat;
-                                        }
-                                        else
-                                            cell.Value = strVal;
+                                        cell.Value = numVal;
+                                        cell.Style.NumberFormat.Format = "0.0%";
                                     }
+                                    else cell.Value = strVal;
                                 }
-                                else if (f.Type == FieldType.Date)
+                                else if (type == FieldType.Date)
                                 {
-                                    // Fecha real
                                     if (DateTime.TryParse(strVal, out DateTime dateVal))
+                                    {
                                         cell.Value = dateVal;
-                                    else
-                                        cell.Value = strVal;
+                                        cell.Style.NumberFormat.Format = "dd/mm/yyyy";
+                                    }
+                                    else cell.Value = strVal;
                                 }
-                                else if (f.Type == FieldType.Time)
+                                else if (type == FieldType.Time)
                                 {
-                                    // Tiempo: Usar TimeSpan para eliminar la fecha y los sufijos AM/PM del valor subyacente
                                     if (DateTime.TryParse(strVal, out DateTime timeVal))
                                     {
                                         cell.Value = timeVal.TimeOfDay;
-                                        cell.Style.NumberFormat.Format = "HH:mm:ss";
+                                        cell.Style.NumberFormat.Format = def?.TimeFormat ?? "hh:mm:ss am/pm";
                                     }
-                                    else
-                                        cell.Value = strVal;
+                                    else cell.Value = strVal;
                                 }
                                 else
                                 {
-                                    // Texto por defecto
                                     cell.Value = strVal;
                                 }
 
-                                if (f.Type == FieldType.TextArea || strVal.Contains("\n"))
+                                if (type == FieldType.TextArea || strVal.Contains("\n"))
                                 {
                                     cell.Style.Alignment.SetWrapText(true);
                                 }
                             }
-                            col++;
                         }
                         row++;
                     }
                     worksheet.Columns().AdjustToContents();
                     foreach (var col in worksheet.Columns())
                     {
-                        if (col.Width > 50) col.Width = 50;
+                        if (col.Width > 60) col.Width = 60;
                     }
                     workbook.SaveAs(filePath);
                 }
@@ -473,40 +515,121 @@ namespace PautaDinamicaApp.ViewModels
                         if (worksheet == null) return;
 
                         var rows = worksheet.RowsUsed().Skip(1);
-                        var headers = worksheet.Row(1).CellsUsed().ToDictionary(c => c.Address.ColumnNumber, c => c.Value.ToString().Trim());
-                        var fields = CurrentFields.ToList();
+                        var headerRow = worksheet.Row(1);
+                        var headers = headerRow.CellsUsed().ToDictionary(c => c.Address.ColumnNumber, c => c.Value.ToString().Trim());
 
-                        var excelHeaderNames = headers.Values.ToList();
-                        var appFieldNames = fields.Select(f => f.Label).ToList();
-                        var commonFields = appFieldNames.Intersect(excelHeaderNames, StringComparer.OrdinalIgnoreCase).ToList();
+                        // --- MAPEO DE COLUMNAS A IDs ---
+                        var columnMap = new Dictionary<int, string>(); // ColumnIndex -> FieldId
+                        int timestampColIndex = -1;
+                        int durationColIndex = -1;
 
-                        if (!commonFields.Any())
+                        var exportConfig = CurrentPauta?.ExportConfig ?? new List<ExportColumnConfig>();
+
+                        foreach (var h in headers)
                         {
-                            MessageBox.Show("El archivo Excel no es compatible con la pauta actual.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            string headerText = h.Value;
+
+                            // 1. Checar campos sistema
+                            if (headerText.Equals("Fecha de evaluación", StringComparison.OrdinalIgnoreCase)) { timestampColIndex = h.Key; continue; }
+                            if (headerText.Equals("Duración (min)", StringComparison.OrdinalIgnoreCase)) { durationColIndex = h.Key; continue; }
+
+                            // 2. Checar configuración de exportación (Header Personalizado)
+                            var configMatch = exportConfig.FirstOrDefault(c => string.Equals(c.CustomHeader, headerText, StringComparison.OrdinalIgnoreCase));
+                            if (configMatch != null)
+                            {
+                                columnMap[h.Key] = configMatch.FieldId;
+                                continue;
+                            }
+
+                            // 3. Checar Labels de campos actuales (Nombre original)
+                            var fieldMatch = CurrentFields.FirstOrDefault(f => string.Equals(f.Label, headerText, StringComparison.OrdinalIgnoreCase));
+                            if (fieldMatch != null)
+                            {
+                                columnMap[h.Key] = fieldMatch.Id;
+                            }
+                        }
+
+                        if (columnMap.Count == 0 && timestampColIndex == -1)
+                        {
+                            MessageBox.Show("No se pudieron mapear las columnas. Asegúrate de que los nombres de cabecera coincidan con la Pauta actual.", "Error Importación", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
 
+                        int importedCount = 0;
                         foreach (var row in rows)
                         {
                             var entry = new AuditEntry();
-                            bool rowHasData = false;
-                            if (headers.TryGetValue(1, out var firstHeader) && firstHeader.Equals("Fecha", StringComparison.OrdinalIgnoreCase))
+
+                            // Leer Timestamp
+                            if (timestampColIndex != -1 && !row.Cell(timestampColIndex).IsEmpty())
                             {
-                                if (DateTime.TryParse(row.Cell(1).Value.ToString(), out var dt)) entry.Timestamp = dt;
+                                string val = row.Cell(timestampColIndex).Value.ToString();
+                                if (DateTime.TryParse(val, out DateTime dt)) entry.Timestamp = dt;
                             }
-                            foreach (var header in headers)
+
+                            // Leer Duración
+                            if (durationColIndex != -1 && !row.Cell(durationColIndex).IsEmpty())
                             {
-                                var field = fields.FirstOrDefault(f => f.Label.Equals(header.Value, StringComparison.OrdinalIgnoreCase));
-                                if (field != null)
+                                string val = row.Cell(durationColIndex).Value.ToString();
+                                if (double.TryParse(val, out double d)) entry.InternalDurationMinutes = d;
+                            }
+
+                            bool hasContent = false;
+                            foreach (var kvp in columnMap)
+                            {
+                                int colIndex = kvp.Key;
+                                string fieldId = kvp.Value;
+                                var cell = row.Cell(colIndex);
+
+                                if (cell.IsEmpty()) continue;
+
+                                var fieldDef = CurrentFields.FirstOrDefault(f => f.Id == fieldId);
+                                if (fieldDef == null) continue; // Campo ya no existe en pauta actual
+
+                                string importedVal = cell.Value.ToString();
+
+                                // --- NORMALIZACIÓN DE TIPOS ---
+                                if (fieldDef.Type == FieldType.Date)
                                 {
-                                    entry.Values[field.Id] = row.Cell(header.Key).Value.ToString();
-                                    rowHasData = true;
+                                    if (DateTime.TryParse(importedVal, out DateTime dateVal))
+                                        importedVal = dateVal.ToString("dd/MM/yyyy");
                                 }
+                                else if (fieldDef.Type == FieldType.Time)
+                                {
+                                    if (DateTime.TryParse(importedVal, out DateTime timeVal))
+                                        importedVal = timeVal.ToString(fieldDef.Definition.TimeFormat ?? "HH:mm");
+                                    else if (TimeSpan.TryParse(importedVal, out TimeSpan tsVal))
+                                        importedVal = DateTime.Today.Add(tsVal).ToString(fieldDef.Definition.TimeFormat ?? "HH:mm");
+                                }
+                                else if (fieldDef.Type == FieldType.Calculation || fieldDef.Type == FieldType.Average)
+                                {
+                                    // Si Excel nos da 0.5, convertir a 50%
+                                    // Si Excel nos da "50%", dejar como está
+                                    if (!importedVal.Contains("%") && double.TryParse(importedVal, out double numVal))
+                                    {
+                                        if (numVal <= 1.0) numVal *= 100; // Asumir que < 1 es decimal (0.5 = 50%)
+                                        importedVal = $"{Math.Round(numVal, 1)}%";
+                                    }
+                                }
+                                else if (fieldDef.Type == FieldType.Boolean)
+                                {
+                                    if (importedVal == "1" || importedVal.Equals("TRUE", StringComparison.OrdinalIgnoreCase)) importedVal = "True";
+                                    else if (importedVal == "0" || importedVal.Equals("FALSE", StringComparison.OrdinalIgnoreCase)) importedVal = "False";
+                                }
+
+                                entry.Values[fieldId] = importedVal;
+                                hasContent = true;
                             }
-                            if (rowHasData) Records.Add(entry);
+
+                            if (hasContent || timestampColIndex != -1)
+                            {
+                                Records.Add(entry);
+                                importedCount++;
+                            }
                         }
+
                         if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
-                        MessageBox.Show("Importación exitosa.");
+                        MessageBox.Show($"Importación completada. Se importaron {importedCount} registros.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                         RefreshCalculations();
                     }
                 }
