@@ -66,6 +66,10 @@ namespace PautaDinamicaApp.ViewModels
             _sessionService = new SessionService();
             LoadUsers();
 
+            // Aplicar tema guardado al iniciar
+            var defaultSettings = new StorageService().LoadSettings();
+            new ThemeService().SetTheme(defaultSettings.Theme);
+
             LoginCommand = new RelayCommand(_ => Login());
             ToggleManageModeCommand = new RelayCommand(_ => ToggleManageMode());
             CreateUserCommand = new RelayCommand(_ => CreateUser());
@@ -126,6 +130,15 @@ namespace PautaDinamicaApp.ViewModels
 
             if (_sessionService.Login(SelectedUser.Username, Password))
             {
+                // Sincronizar tema: Copiar el tema de la pantalla de login (default) al perfil del usuario
+                var storageDefault = new StorageService("default");
+                var currentTheme = storageDefault.LoadSettings().Theme;
+
+                var storageUser = new StorageService(SelectedUser.Username);
+                var userSettings = storageUser.LoadSettings();
+                userSettings.Theme = currentTheme;
+                storageUser.SaveSettings(userSettings);
+
                 OnLoginSuccess?.Invoke();
             }
             else

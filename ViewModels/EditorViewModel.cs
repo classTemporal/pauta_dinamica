@@ -348,19 +348,7 @@ namespace PautaDinamicaApp.ViewModels
             // Solo mostrar campos reales, no secciones
             var validFields = Fields.Where(f => f.Type != FieldType.Separator).OrderBy(f => f.Order).ToList();
 
-            // Agregar campos de sistema a la lista de configuración
-            if (!existingConfig.Any(c => c.FieldId == "System_Duration"))
-            {
-                newConfig.Add(new ExportColumnConfig
-                {
-                    FieldId = "System_Duration",
-                    OriginalLabel = "Duración (min)",
-                    Type = FieldType.Numeric,
-                    CustomHeader = "Duración (min)",
-                    IsExportEnabled = true,
-                    Order = -1 // Al principio por defecto
-                });
-            }
+
 
             // Estrategia: 
             // 1. Tomar los que ya existen en la config y ordenarlos según su orden guardado

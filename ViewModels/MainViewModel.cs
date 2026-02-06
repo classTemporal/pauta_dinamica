@@ -389,19 +389,11 @@ namespace PautaDinamicaApp.ViewModels
 
                     if (exportConfig != null && exportConfig.Any())
                     {
-                        // 1. Duración: Solo si está activada GLOBALMENTE
+                        // 1. Duración: Solo si está activada GLOBALMENTE. 
+                        // Se agrega SIEMPRE al principio si está habilitada, ignorando config de pauta.
                         if (settings.EnableInternalTimer)
                         {
-                            var dConfig = allConfig.FirstOrDefault(c => c.FieldId == "System_Duration");
-                            // Si no existe configuración específica de pauta para duración, o si existe y está activada
-                            if (dConfig == null || dConfig.IsExportEnabled)
-                            {
-                                // Si no está en la lista de exportación (porque no se le dio un orden específico), se agrega al principio
-                                if (!exportConfig.Any(c => c.FieldId == "System_Duration"))
-                                {
-                                    columnsToExport.Add(("System_Duration", "Duración (min)", FieldType.Numeric, null));
-                                }
-                            }
+                            columnsToExport.Add(("System_Duration", "Duración (min)", FieldType.Numeric, null));
                         }
 
                         foreach (var config in exportConfig)
@@ -409,15 +401,8 @@ namespace PautaDinamicaApp.ViewModels
                             // 2. Eliminar Fecha de evaluación (System_Timestamp)
                             if (config.FieldId == "System_Timestamp") continue;
 
-                            // 3. Manejo de Duración (si ya está en la lista ordenada)
-                            if (config.FieldId == "System_Duration")
-                            {
-                                if (settings.EnableInternalTimer)
-                                {
-                                    columnsToExport.Add(("System_Duration", !string.IsNullOrWhiteSpace(config.CustomHeader) ? config.CustomHeader : "Duración (min)", FieldType.Numeric, null));
-                                }
-                                continue;
-                            }
+                            // 3. Omitir System_Duration si ya está en la config (ya la agregamos arriba fija)
+                            if (config.FieldId == "System_Duration") continue;
 
                             // 4. Campos dinámicos
                             var field = CurrentFields.FirstOrDefault(f => f.Id == config.FieldId);
