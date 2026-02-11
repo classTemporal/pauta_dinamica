@@ -16,5 +16,17 @@ namespace PautaDinamicaApp.Views
                 }
             };
         }
+
+        private void EmailBody_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+        {
+            if (EmailBodyTextBox != null)
+            {
+                double newHeight = EmailBodyTextBox.Height + e.VerticalChange;
+                if (newHeight >= EmailBodyTextBox.MinHeight)
+                {
+                    EmailBodyTextBox.Height = newHeight;
+                }
+            }
+        }
     }
 }

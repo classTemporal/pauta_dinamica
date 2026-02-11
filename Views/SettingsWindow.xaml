@@ -295,8 +295,25 @@
                                 <TextBox Text="{Binding SelectedPauta.EmailSubjectTemplate}" Margin="0,0,0,10"/>
 
                                 <TextBlock Text="Cuerpo del Correo:" Style="{StaticResource LabelStyle}"/>
-                                <TextBox Text="{Binding SelectedPauta.EmailBodyTemplate}" Margin="0,0,0,15" 
-                                         AcceptsReturn="True" Height="100" VerticalContentAlignment="Top" TextWrapping="Wrap"/>
+                                <Grid Margin="0,0,0,15">
+                                    <TextBox x:Name="EmailBodyTextBox" 
+                                             Text="{Binding SelectedPauta.EmailBodyTemplate}" 
+                                             AcceptsReturn="True" Height="200" MinHeight="100" 
+                                             VerticalContentAlignment="Top" TextWrapping="Wrap"
+                                             VerticalScrollBarVisibility="Auto"/>
+                                    <!-- Tirador para redimensionar en la esquina inferior derecha -->
+                                    <Thumb Width="15" Height="15" HorizontalAlignment="Right" VerticalAlignment="Bottom" 
+                                           Cursor="SizeNWSE" DragDelta="EmailBody_DragDelta">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Grid Background="Transparent">
+                                                    <Path Data="M10,0 L10,10 L0,10 Z" Fill="{DynamicResource AccentBrush}" Opacity="0.4" 
+                                                          HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,2"/>
+                                                </Grid>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Grid>
 
                                 <!-- Reglas de Envío (Movidas desde ConfigWindow) -->
                                 <TextBlock Text="Reglas de Envío (Exclusión)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,10,0,10"/>
