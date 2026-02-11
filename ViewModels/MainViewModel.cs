@@ -736,24 +736,14 @@ namespace PautaDinamicaApp.ViewModels
                 string folderPath = settings.PdfReportPath;
                 if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
 
-                string pautaName = CurrentPauta?.Name ?? "Auditoria";
-                var definitions = CurrentFields.Select(f => f.Definition).ToList();
                 int count = 0;
 
                 foreach (var record in records)
                 {
-                    string filename = GetPdfFileName(record);
-                    string fullPath = Path.Combine(folderPath, filename);
-
-                    // Si el archivo ya existe (ej: mismo ticket/analista en pocos segundos), agregamos un sufijo
-                    if (File.Exists(fullPath))
+                    if (GeneratePdfCommon(new List<AuditEntry> { record }, silent: true) != null)
                     {
-                        string nameOnly = Path.GetFileNameWithoutExtension(filename);
-                        fullPath = Path.Combine(folderPath, $"{nameOnly}_{count + 1}.pdf");
+                        count++;
                     }
-
-                    _pdfService.GenerateAuditPdf(new List<AuditEntry> { record }, definitions, CurrentPauta?.PdfConfig, pautaName, fullPath);
-                    count++;
                 }
 
                 if (MessageBox.Show($"Se generaron {count} PDFs en:\n{folderPath}\n\n¿Abrir carpeta?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
@@ -835,6 +825,19 @@ namespace PautaDinamicaApp.ViewModels
                 }
 
                 string filePath = Path.Combine(exportDir, fileName);
+
+                // Evitar colisiones de archivos y bloqueos (sobre todo en envíos masivos)
+                if (File.Exists(filePath))
+                {
+                    string directory = Path.GetDirectoryName(filePath) ?? exportDir;
+                    string nameOnly = Path.GetFileNameWithoutExtension(filePath);
+                    string extension = Path.GetExtension(filePath);
+                    int counter = 1;
+                    while (File.Exists(filePath))
+                    {
+                        filePath = Path.Combine(directory, $"{nameOnly}_{counter++}{extension}");
+                    }
+                }
 
                 _pdfService.GenerateAuditPdf(records, definitions, CurrentPauta?.PdfConfig, pautaName, filePath);
 
