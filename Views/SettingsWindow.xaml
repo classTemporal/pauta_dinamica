@@ -7,8 +7,13 @@
         xmlns:models="clr-namespace:PautaDinamicaApp.Models"
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
         mc:Ignorable="d"
-        Title="Configuración General" Height="650" Width="650"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Title="Configuración General" Height="700" Width="900"
+        WindowStartupLocation="CenterOwner" 
+        WindowState="Maximized"
+        ResizeMode="CanResizeWithGrip"
+        WindowStyle="SingleBorderWindow"
+        AllowsTransparency="False"
+        MinWidth="600" MinHeight="500"
         Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
 
     <Window.Resources>
