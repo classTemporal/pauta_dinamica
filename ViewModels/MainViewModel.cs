@@ -735,16 +735,22 @@ namespace PautaDinamicaApp.ViewModels
                 var settings = _storageService.LoadSettings();
                 string folderPath = settings.PdfReportPath;
                 if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+
                 string pautaName = CurrentPauta?.Name ?? "Auditoria";
-                string safePautaName = string.Join("_", pautaName.Split(Path.GetInvalidFileNameChars()));
                 var definitions = CurrentFields.Select(f => f.Definition).ToList();
                 int count = 0;
 
                 foreach (var record in records)
                 {
-                    string timestamp = record.Timestamp.ToString("yyyyMMdd_HHmmss");
-                    string filename = $"Reporte_{safePautaName}_{timestamp}_{count + 1}.pdf";
+                    string filename = GetPdfFileName(record);
                     string fullPath = Path.Combine(folderPath, filename);
+
+                    // Si el archivo ya existe (ej: mismo ticket/analista en pocos segundos), agregamos un sufijo
+                    if (File.Exists(fullPath))
+                    {
+                        string nameOnly = Path.GetFileNameWithoutExtension(filename);
+                        fullPath = Path.Combine(folderPath, $"{nameOnly}_{count + 1}.pdf");
+                    }
 
                     _pdfService.GenerateAuditPdf(new List<AuditEntry> { record }, definitions, CurrentPauta?.PdfConfig, pautaName, fullPath);
                     count++;
@@ -761,6 +767,53 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        private string GetPdfFileName(AuditEntry record)
+        {
+            string pautaName = CurrentPauta?.Name ?? "Auditoria";
+            string safePautaName = string.Join("_", pautaName.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
+            string timestamp = record.Timestamp.ToString("yyyyMMdd_HHmmss");
+
+            if (CurrentPauta != null)
+            {
+                var parts = new List<string>();
+                parts.Add("Reporte");
+                parts.Add(safePautaName);
+
+                bool hasCustomFields = false;
+
+                // Intentar obtener valor del Campo 1 (ej. Analista)
+                if (!string.IsNullOrEmpty(CurrentPauta.PdfFileNameFieldId1) && record.Values.TryGetValue(CurrentPauta.PdfFileNameFieldId1, out var val1) && val1 != null)
+                {
+                    string s1 = string.Join("_", val1.ToString()?.Split(Path.GetInvalidFileNameChars()) ?? Array.Empty<string>()).Trim().Replace(" ", "_");
+                    if (!string.IsNullOrEmpty(s1))
+                    {
+                        parts.Add(s1);
+                        hasCustomFields = true;
+                    }
+                }
+
+                // Intentar obtener valor del Campo 2 (ej. Ticket)
+                if (!string.IsNullOrEmpty(CurrentPauta.PdfFileNameFieldId2) && record.Values.TryGetValue(CurrentPauta.PdfFileNameFieldId2, out var val2) && val2 != null)
+                {
+                    string s2 = string.Join("_", val2.ToString()?.Split(Path.GetInvalidFileNameChars()) ?? Array.Empty<string>()).Trim().Replace(" ", "_");
+                    if (!string.IsNullOrEmpty(s2))
+                    {
+                        parts.Add(s2);
+                        hasCustomFields = true;
+                    }
+                }
+
+                if (hasCustomFields)
+                {
+                    parts.Add(timestamp);
+                    return string.Join("_", parts) + ".pdf";
+                }
+            }
+
+            // Fallback al nombre por defecto si no hay campos configurados o están vacíos
+            return $"Reporte_{safePautaName}_{timestamp}.pdf";
+        }
+
         private string? GeneratePdfCommon(List<AuditEntry> records, bool silent = false)
         {
             try
@@ -771,7 +824,16 @@ namespace PautaDinamicaApp.ViewModels
                 string exportDir = settings.PdfReportPath;
                 if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
 
-                string fileName = $"Reporte_{pautaName}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                string fileName;
+                if (records.Count == 1)
+                {
+                    fileName = GetPdfFileName(records[0]);
+                }
+                else
+                {
+                    fileName = $"Reporte_Multiple_{pautaName}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                }
+
                 string filePath = Path.Combine(exportDir, fileName);
 
                 _pdfService.GenerateAuditPdf(records, definitions, CurrentPauta?.PdfConfig, pautaName, filePath);
