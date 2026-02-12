@@ -6,6 +6,8 @@ using System.Linq;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using System.Windows;
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace PautaDinamicaApp.ViewModels
 {
@@ -385,11 +387,61 @@ namespace PautaDinamicaApp.ViewModels
         private void SaveAndClose()
         {
             SyncContacts();
+
+            // 1. Validar Global Templates
+            var allFields = Pautas.SelectMany(p => _storageService.LoadConfiguration(p.Id)).ToList();
+            var allLabels = new HashSet<string>(allFields.Select(f => f.Label), StringComparer.OrdinalIgnoreCase);
+            allLabels.Add("Fecha");
+
+            if (!ValidateTemplateString(Settings.EmailToTemplate, allLabels, "Global (Para)", out string errG1) ||
+                !ValidateTemplateString(Settings.EmailCcTemplate, allLabels, "Global (CC)", out errG1) ||
+                !ValidateTemplateString(Settings.EmailSubjectTemplate, allLabels, "Global (Asunto)", out errG1) ||
+                !ValidateTemplateString(Settings.EmailBodyTemplate, allLabels, "Global (Cuerpo)", out errG1))
+            {
+                System.Windows.MessageBox.Show(errG1, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 2. Validar Pauta Specific Templates
+            foreach (var pauta in Pautas)
+            {
+                var pautaFields = _storageService.LoadConfiguration(pauta.Id);
+                var pautaLabels = new HashSet<string>(pautaFields.Select(f => f.Label), StringComparer.OrdinalIgnoreCase);
+                pautaLabels.Add("Fecha");
+
+                if (!ValidateTemplateString(pauta.EmailToTemplate, pautaLabels, $"'{pauta.Name}' (Para)", out string err) ||
+                    !ValidateTemplateString(pauta.EmailCcTemplate, pautaLabels, $"'{pauta.Name}' (CC)", out err) ||
+                    !ValidateTemplateString(pauta.EmailSubjectTemplate, pautaLabels, $"'{pauta.Name}' (Asunto)", out err) ||
+                    !ValidateTemplateString(pauta.EmailBodyTemplate, pautaLabels, $"'{pauta.Name}' (Cuerpo)", out err))
+                {
+                    System.Windows.MessageBox.Show(err, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+            }
+
             _storageService.SaveSettings(Settings);
             _storageService.SavePautas(Pautas.ToList());
             System.Windows.MessageBox.Show("Configuración guardada correctamente.", "Éxito");
             IsSaved = true;
             RequestClose?.Invoke();
+        }
+
+        private bool ValidateTemplateString(string template, HashSet<string> validLabels, string context, out string error)
+        {
+            error = "";
+            if (string.IsNullOrWhiteSpace(template)) return true;
+
+            var matches = Regex.Matches(template, @"\[(.*?)\]");
+            foreach (Match match in matches)
+            {
+                string tag = match.Groups[1].Value;
+                if (!validLabels.Contains(tag))
+                {
+                    error = $"La etiqueta '[{tag}]' en el campo {context} no corresponde a ningún campo existente.";
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }
