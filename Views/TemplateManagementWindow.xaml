@@ -132,9 +132,11 @@
         <Border Grid.Row="3" Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="CANCELAR" Command="{Binding CancelCommand}" 
-                        Style="{StaticResource GhostButton}" Width="150" Height="45" Margin="0,0,15,0"/>
+                        Style="{StaticResource GhostButton}" Width="130" Height="45" Margin="0,0,10,0"/>
+                <Button Content="APLICAR" Command="{Binding ApplyChangesCommand}" 
+                        Style="{StaticResource SecondaryButton}" Width="130" Height="45" Margin="0,0,10,0"/>
                 <Button Content="💾 GUARDAR CAMBIOS" Command="{Binding SaveChangesCommand}" 
-                        Style="{StaticResource SuccessButton}" Width="220" Height="45"/>
+                        Style="{StaticResource SuccessButton}" Width="200" Height="45"/>
             </StackPanel>
         </Border>
     </Grid>

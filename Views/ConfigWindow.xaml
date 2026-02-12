@@ -996,6 +996,7 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="15,0,0,0">
                     <Button Content="CANCELAR" Click="CancelButton_Click" Margin="0,0,15,0" Style="{StaticResource GhostButton}" Padding="15,8"/>
+                    <Button Content="APLICAR" Click="ApplyButton_Click" Margin="0,0,15,0" Style="{StaticResource SecondaryButton}" Padding="15,8" Height="40"/>
                     <Button Content="💾 GUARDAR CAMBIOS" 
                             Click="SaveButton_Click" Height="40" Padding="25,0" 
                             Style="{StaticResource SuccessButton}"/>

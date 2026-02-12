@@ -444,7 +444,8 @@
 
         <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" Padding="30,15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancelar" Command="{Binding CancelCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,15,0" Width="120" Height="45"/>
+                <Button Content="CANCELAR" Command="{Binding CancelCommand}" Style="{StaticResource GhostButton}" Margin="0,0,15,0" Width="120" Height="45"/>
+                <Button Content="APLICAR" Command="{Binding ApplyCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,15,0" Width="120" Height="45"/>
                 <Button Content="💾 Guardar cambios" Command="{Binding SaveCommand}" Style="{StaticResource SuccessButton}" Width="190" Height="45" FontSize="15"/>
             </StackPanel>
         </Border>

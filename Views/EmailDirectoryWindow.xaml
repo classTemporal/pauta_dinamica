@@ -192,18 +192,16 @@
         </DockPanel>
 
         <!-- Pie -->
-        <Grid Grid.Row="3" Margin="0,20,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="CANCELAR" Click="CancelButton_Click" 
+                    Style="{StaticResource GhostButton}" Width="150" Height="45" Margin="0,0,10,0"/>
             
-            <Button Content="CANCELAR CAMBIOS" Click="CancelButton_Click" 
-                    Style="{StaticResource SecondaryButton}" Width="200" Height="45" Margin="0,0,15,0"/>
-            
-            <Button Grid.Column="1" Content="ACEPTAR Y REGRESAR" Click="OkButton_Click" 
-                    Style="{StaticResource SuccessButton}" Width="240" Height="45"/>
-        </Grid>
+            <Button Content="APLICAR" Command="{Binding ApplyCommand}" 
+                    Style="{StaticResource SecondaryButton}" Width="150" Height="45" Margin="0,0,10,0"/>
+
+            <Button Content="ACEPTAR Y REGRESAR" Click="OkButton_Click" 
+                    Style="{StaticResource SuccessButton}" Width="220" Height="45"/>
+        </StackPanel>
     </Grid>
 </Window>
 

@@ -49,6 +49,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ImportExcelCommand { get; }
         public ICommand SelectAllCommand { get; }
         public ICommand SaveChangesCommand { get; }
+        public ICommand ApplyChangesCommand { get; }
         public ICommand CancelCommand { get; }
 
         public event Action? RequestClose;
@@ -66,6 +67,7 @@ namespace PautaDinamicaApp.ViewModels
             ImportExcelCommand = new RelayCommand(_ => ImportFromExcel());
             SelectAllCommand = new RelayCommand(_ => SelectAll());
             SaveChangesCommand = new RelayCommand(_ => SaveAndClose());
+            ApplyChangesCommand = new RelayCommand(_ => { SaveTemplates(); System.Windows.MessageBox.Show("Plantillas aplicadas correctamente.", "Éxito"); });
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
         }
 

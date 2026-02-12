@@ -66,6 +66,7 @@ namespace PautaDinamicaApp.ViewModels
 
             ConfigureOptionsCommand = new RelayCommand(p => ConfigureOptions(p as FieldDefinition));
             SaveConfigCommand = new RelayCommand(_ => SaveConfig());
+            ApplyConfigCommand = new RelayCommand(_ => SaveConfig());
             ExportConfigCommand = new RelayCommand(_ => ExportConfig());
             ImportConfigCommand = new RelayCommand(_ => ImportConfig());
             ToggleMultiSelectCommand = new RelayCommand(_ => IsMultiSelectMode = !IsMultiSelectMode);
@@ -241,6 +242,7 @@ namespace PautaDinamicaApp.ViewModels
 
         public ICommand ConfigureOptionsCommand { get; }
         public ICommand SaveConfigCommand { get; }
+        public ICommand ApplyConfigCommand { get; }
         public ICommand ExportConfigCommand { get; }
         public ICommand ImportConfigCommand { get; }
         public ICommand ToggleMultiSelectCommand { get; }

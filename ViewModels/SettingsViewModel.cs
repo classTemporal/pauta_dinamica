@@ -29,6 +29,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand BrowseJsonPathCommand { get; }
         public ICommand BrowsePdfPathCommand { get; }
         public ICommand SaveCommand { get; }
+        public ICommand ApplyCommand { get; }
         public ICommand CancelCommand { get; }
         public ICommand OpenTemplateManagementCommand { get; }
         public ICommand UnlockAdminSettingsCommand { get; }
@@ -121,6 +122,7 @@ namespace PautaDinamicaApp.ViewModels
             BrowseJsonPathCommand = new RelayCommand(_ => BrowseFolder(path => Settings.JsonBackupPath = path));
             BrowsePdfPathCommand = new RelayCommand(_ => BrowseFolder(path => Settings.PdfReportPath = path));
             SaveCommand = new RelayCommand(_ => SaveAndClose());
+            ApplyCommand = new RelayCommand(_ => SaveSettings(false));
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
             PickColorCommand = new RelayCommand(_ => PickColor());
 
@@ -386,6 +388,11 @@ namespace PautaDinamicaApp.ViewModels
 
         private void SaveAndClose()
         {
+            SaveSettings(true);
+        }
+
+        private void SaveSettings(bool close)
+        {
             SyncContacts();
 
             // 1. Validar Global Templates
@@ -421,9 +428,17 @@ namespace PautaDinamicaApp.ViewModels
 
             _storageService.SaveSettings(Settings);
             _storageService.SavePautas(Pautas.ToList());
-            System.Windows.MessageBox.Show("Configuración guardada correctamente.", "Éxito");
-            IsSaved = true;
-            RequestClose?.Invoke();
+
+            if (close)
+            {
+                System.Windows.MessageBox.Show("Configuración guardada correctamente.", "Éxito");
+                IsSaved = true;
+                RequestClose?.Invoke();
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Cambios aplicados correctamente.", "Éxito");
+            }
         }
 
         private bool ValidateTemplateString(string template, HashSet<string> validLabels, string context, out string error)

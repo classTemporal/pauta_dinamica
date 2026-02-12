@@ -82,6 +82,22 @@ namespace PautaDinamicaApp
             }
         }
 
+        private void ApplyButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.DataContext is ViewModels.EditorViewModel vm)
+            {
+                if (vm.ApplyConfigCommand.CanExecute(null))
+                {
+                    vm.ApplyConfigCommand.Execute(null);
+                }
+
+                if (vm.IsSaveSuccessful)
+                {
+                    System.Windows.MessageBox.Show("Cambios aplicados correctamente.", "Éxito");
+                }
+            }
+        }
+
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             this.DialogResult = false;
