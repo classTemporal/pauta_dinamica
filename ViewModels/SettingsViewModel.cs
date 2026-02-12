@@ -110,13 +110,22 @@ namespace PautaDinamicaApp.ViewModels
         private bool _isContactMultiSelectMode;
         public bool IsContactMultiSelectMode { get => _isContactMultiSelectMode; set => SetProperty(ref _isContactMultiSelectMode, value); }
 
-        public SettingsViewModel()
+        public SettingsViewModel(string activePautaId = "")
         {
             _storageService = new StorageService();
             _sessionService = new SessionService();
             _settings = _storageService.LoadSettings();
             _pautas = new ObservableCollection<PautaSchema>(_storageService.LoadPautas());
-            SelectedPauta = _pautas.FirstOrDefault();
+
+            // Seleccionar la pauta activa en Main por defecto si existe
+            if (!string.IsNullOrEmpty(activePautaId))
+            {
+                SelectedPauta = _pautas.FirstOrDefault(p => p.Id == activePautaId) ?? _pautas.FirstOrDefault();
+            }
+            else
+            {
+                SelectedPauta = _pautas.FirstOrDefault();
+            }
 
             BrowseExcelPathCommand = new RelayCommand(_ => BrowseFolder(path => Settings.ExcelExportPath = path));
             BrowseJsonPathCommand = new RelayCommand(_ => BrowseFolder(path => Settings.JsonBackupPath = path));

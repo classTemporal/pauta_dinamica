@@ -219,7 +219,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void StartSettingsFlow()
         {
-            var vm = new SettingsViewModel();
+            var vm = new SettingsViewModel(CurrentPauta?.Id ?? "");
             var settingsWin = new Views.SettingsWindow { DataContext = vm };
             var owner = GetBestOwner();
             if (owner != null && owner != settingsWin) settingsWin.Owner = owner;
@@ -337,19 +337,6 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
             AuditStatsText = sb.ToString();
-        }
-
-        private void OpenSettings()
-        {
-            var vm = new SettingsViewModel();
-            var win = new Views.SettingsWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
-            vm.RequestClose += () => win.Close();
-            win.ShowDialog();
-
-            if (vm.IsSaved)
-            {
-                LoadPautas(); // Refrescar para tener los nuevos métodos de envío, etc.
-            }
         }
 
         public bool ExportRecordsToExcel(IEnumerable<AuditEntry>? recordsToExport = null, string? customTitle = null, bool silent = false)
