@@ -28,7 +28,28 @@ namespace PautaDinamicaApp.Services
             try
             {
                 string json = File.ReadAllText(_usersPath);
-                return JsonSerializer.Deserialize<List<UserModel>>(json) ?? new List<UserModel>();
+                var users = JsonSerializer.Deserialize<List<UserModel>>(json) ?? new List<UserModel>();
+
+                // Limpiar espacios de usuarios existentes (migración silenciosa)
+                bool changed = false;
+                foreach (var u in users)
+                {
+                    if (u.Username != u.Username.Trim())
+                    {
+                        u.Username = u.Username.Trim();
+                        changed = true;
+                    }
+                }
+
+                if (changed)
+                {
+                    // Eliminar duplicados que puedan haber quedado tras el Trim
+                    var uniqueUsers = users.GroupBy(u => u.Username.ToLower()).Select(g => g.First()).ToList();
+                    SaveUsers(uniqueUsers);
+                    return uniqueUsers;
+                }
+
+                return users;
             }
             catch { return new List<UserModel>(); }
         }
@@ -41,6 +62,10 @@ namespace PautaDinamicaApp.Services
 
         public void RegisterUser(string username, string? password)
         {
+            username = username?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(username)) throw new Exception("El nombre de usuario no puede estar vacío.");
+            if (username.Contains(" ")) throw new Exception("El nombre de usuario no puede contener espacios.");
+
             var users = LoadUsers();
             if (users.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
                 throw new Exception("El usuario ya existe.");
@@ -60,6 +85,7 @@ namespace PautaDinamicaApp.Services
 
         public bool Login(string username, string? password)
         {
+            username = username?.Trim() ?? "";
             var users = LoadUsers();
             var user = users.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
 

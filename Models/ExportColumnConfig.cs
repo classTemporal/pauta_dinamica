@@ -17,7 +17,7 @@ namespace PautaDinamicaApp.Models
             set => SetProperty(ref _fieldId, value);
         }
 
-        public string OriginalLabel // Not stored, just for UI reference if needed, but prob better in VM
+        public string OriginalLabel // Persistent: Used to detect if CustomHeader handles automatic sync with Field Label
         {
             get => _originalLabel;
             set => SetProperty(ref _originalLabel, value);

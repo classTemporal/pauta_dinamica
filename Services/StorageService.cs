@@ -18,7 +18,7 @@ namespace PautaDinamicaApp.Services
         public StorageService(string? username = null)
         {
             // Resolve base path based on provided username, current user, or default
-            string currentUser = username ?? SessionService.CurrentUser?.Username ?? "default";
+            string currentUser = (username ?? SessionService.CurrentUser?.Username ?? "default").Trim();
             string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PautaDinamica");
             _basePath = Path.Combine(appData, "users", currentUser);
 

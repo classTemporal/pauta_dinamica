@@ -310,9 +310,12 @@ namespace PautaDinamicaApp.ViewModels
                 var field = validFields.FirstOrDefault(f => f.Id == item.FieldId);
                 if (field != null)
                 {
+                    if (string.IsNullOrEmpty(item.CustomHeader) || item.CustomHeader == item.OriginalLabel)
+                    {
+                        item.CustomHeader = field.Label;
+                    }
                     item.OriginalLabel = field.Label;
                     item.Type = field.Type;
-                    if (string.IsNullOrEmpty(item.CustomHeader)) item.CustomHeader = field.Label;
                     newConfig.Add(item);
                 }
             }
@@ -361,10 +364,12 @@ namespace PautaDinamicaApp.ViewModels
                 var field = validFields.FirstOrDefault(f => f.Id == item.FieldId);
                 if (field != null)
                 {
+                    if (string.IsNullOrEmpty(item.CustomHeader) || item.CustomHeader == item.OriginalLabel)
+                    {
+                        item.CustomHeader = field.Label;
+                    }
                     item.OriginalLabel = field.Label;
                     item.Type = field.Type; // Update Type
-                    // Asegurar consistencia
-                    if (string.IsNullOrEmpty(item.CustomHeader)) item.CustomHeader = field.Label;
                     newConfig.Add(item);
                 }
             }
@@ -811,10 +816,24 @@ namespace PautaDinamicaApp.ViewModels
             if (sender is FieldDefinition f && e.PropertyName == nameof(FieldDefinition.Label))
             {
                 var exp = ExportColumns.FirstOrDefault(x => x.FieldId == f.Id);
-                if (exp != null) exp.OriginalLabel = f.Label;
+                if (exp != null)
+                {
+                    if (string.IsNullOrEmpty(exp.CustomHeader) || exp.CustomHeader == exp.OriginalLabel)
+                    {
+                        exp.CustomHeader = f.Label;
+                    }
+                    exp.OriginalLabel = f.Label;
+                }
 
                 var pdfItem = PdfColumns.FirstOrDefault(x => x.FieldId == f.Id);
-                if (pdfItem != null) pdfItem.OriginalLabel = f.Label;
+                if (pdfItem != null)
+                {
+                    if (string.IsNullOrEmpty(pdfItem.CustomHeader) || pdfItem.CustomHeader == pdfItem.OriginalLabel)
+                    {
+                        pdfItem.CustomHeader = f.Label;
+                    }
+                    pdfItem.OriginalLabel = f.Label;
+                }
             }
             if (sender is FieldDefinition f2 && e.PropertyName == nameof(FieldDefinition.Type))
             {

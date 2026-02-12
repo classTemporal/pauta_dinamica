@@ -156,6 +156,16 @@ namespace PautaDinamicaApp.ViewModels
                 return;
             }
 
+            // Limpiar espacios laterales y validar espacios internos
+            string cleanUsername = NewUsername.Trim();
+            if (cleanUsername.Contains(" "))
+            {
+                MessageBox.Show("El nombre de usuario no puede contener espacios.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            NewUsername = cleanUsername;
+
             try
             {
                 _sessionService.RegisterUser(NewUsername, NewPassword);
