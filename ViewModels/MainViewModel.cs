@@ -236,10 +236,11 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ApplyRowColoring()
         {
-            var settings = _storageService.LoadSettings();
-            string targetFieldLabel = settings.ColoringField;
-            string targetValue = settings.ColoringValue;
-            string targetColor = settings.ColoringColor;
+            if (CurrentPauta == null) return;
+
+            string targetFieldLabel = CurrentPauta.ColoringField;
+            string targetValue = CurrentPauta.ColoringValue;
+            string targetColor = CurrentPauta.ColoringColor;
 
             if (string.IsNullOrWhiteSpace(targetFieldLabel) || string.IsNullOrWhiteSpace(targetValue))
             {
@@ -249,13 +250,14 @@ namespace PautaDinamicaApp.ViewModels
             }
 
             // Buscar ID del campo basado en el Label (Nombre)
-            // Nota: Buscamos en CurrentFields, pero CurrentFields depende del registro seleccionado/nuevo.
-            // Mejor usar la definición de la pauta cargada.
-            if (CurrentPauta == null) return;
             var fields = _storageService.LoadConfiguration(CurrentPauta.Id);
             var targetField = fields.FirstOrDefault(f => f.Label.Equals(targetFieldLabel, StringComparison.OrdinalIgnoreCase));
 
-            if (targetField == null) return; // Campo no encontrado
+            if (targetField == null)
+            {
+                foreach (var r in Records) r.RowColor = null;
+                return; // Campo no encontrado
+            }
 
             foreach (var record in Records)
             {

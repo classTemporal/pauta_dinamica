@@ -355,13 +355,14 @@ namespace PautaDinamicaApp.ViewModels
 
         private void PickColor()
         {
+            if (SelectedPauta == null) return;
+
             using (var dialog = new ColorDialog())
             {
                 if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
                     var c = dialog.Color;
-                    Settings.ColoringColor = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
-                    OnPropertyChanged(nameof(Settings));
+                    SelectedPauta.ColoringColor = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
                 }
             }
         }

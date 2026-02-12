@@ -91,14 +91,14 @@
 
                                     <TextBlock Text="2. Si el campo con este Nombre:" Style="{StaticResource LabelStyle}"/>
                                     <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
-                                              SelectedValue="{Binding Settings.ColoringField}"
+                                              SelectedValue="{Binding SelectedPauta.ColoringField}"
                                               SelectedValuePath="Label"
                                               DisplayMemberPath="Label"
                                               Margin="0,0,0,15" Height="35"
                                               IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
 
                                     <TextBlock Text="3. Tiene este Valor Exacto:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Text="{Binding Settings.ColoringValue}" Margin="0,0,0,15" ToolTip="Ej: 100%, 0.0%"/>
+                                    <TextBox Text="{Binding SelectedPauta.ColoringValue}" Margin="0,0,0,15" ToolTip="Ej: 100%, 0.0%"/>
 
                                     <TextBlock Text="4. Pintar fila de este color:" Style="{StaticResource LabelStyle}"/>
                                     <Grid Margin="0,0,0,5">
@@ -106,11 +106,11 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Text="{Binding Settings.ColoringColor}" Margin="0,0,10,0" VerticalAlignment="Center" ToolTip="Código Hexadecimal"/>
+                                        <TextBox Text="{Binding SelectedPauta.ColoringColor}" Margin="0,0,10,0" VerticalAlignment="Center" ToolTip="Código Hexadecimal"/>
                                         <Button Grid.Column="1" Command="{Binding PickColorCommand}" Background="Transparent" Padding="0" BorderThickness="0" Height="36">
                                             <Border Width="60" Height="32" CornerRadius="4" BorderThickness="1" BorderBrush="White">
                                                 <Border.Background>
-                                                    <SolidColorBrush Color="{Binding Settings.ColoringColor, FallbackValue=#28a745}"/>
+                                                    <SolidColorBrush Color="{Binding SelectedPauta.ColoringColor, FallbackValue=#28a745}"/>
                                                 </Border.Background>
                                             </Border>
                                         </Button>

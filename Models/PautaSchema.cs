@@ -95,6 +95,15 @@ namespace PautaDinamicaApp.Models
         public string CounterField3 { get => _counterField3; set => SetProperty(ref _counterField3, value); }
         public string CounterValue3 { get => _counterValue3; set => SetProperty(ref _counterValue3, value); }
 
+        // --- Resaltado de Filas por Pauta ---
+        private string _coloringField = "";
+        private string _coloringValue = "";
+        private string _coloringColor = "#28a745";
+
+        public string ColoringField { get => _coloringField; set => SetProperty(ref _coloringField, value); }
+        public string ColoringValue { get => _coloringValue; set => SetProperty(ref _coloringValue, value); }
+        public string ColoringColor { get => _coloringColor; set => SetProperty(ref _coloringColor, value); }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
