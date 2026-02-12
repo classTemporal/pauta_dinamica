@@ -262,7 +262,7 @@
     <DataTemplate x:Key="BooleanTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,5">
             <CheckBox Content="{Binding Label}" 
-                      IsChecked="{Binding Value}" 
+                      IsChecked="{Binding Value, Converter={StaticResource FlexibleBooleanConverter}}" 
                       Foreground="{DynamicResource InputForeground}"
                       Margin="0,10"
                       VerticalContentAlignment="Center"/>

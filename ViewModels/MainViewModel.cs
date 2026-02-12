@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.IO;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
+using PautaDinamicaApp.Views;
 using ClosedXML.Excel;
 using Microsoft.Win32;
 using System.Collections.Generic;
@@ -386,7 +387,32 @@ namespace PautaDinamicaApp.ViewModels
                     var columnsToExport = new List<(string FieldId, string Header, FieldType Type, FieldDefinition? Def)>();
 
                     var settings = _storageService.LoadSettings();
-                    var allConfig = CurrentPauta?.ExportConfig ?? new System.Collections.Generic.List<ExportColumnConfig>();
+
+                    List<ExportColumnConfig>? allConfig = null;
+
+                    if (CurrentPauta != null)
+                    {
+                        if (CurrentPauta.ExportPresets != null && CurrentPauta.ExportPresets.Count > 1 && !silent)
+                        {
+                            var dialog = new ExportPresetSelectionWindow(CurrentPauta.ExportPresets);
+                            dialog.Owner = System.Windows.Application.Current.MainWindow;
+                            if (dialog.ShowDialog() == true)
+                            {
+                                allConfig = dialog.SelectedPreset?.Columns;
+                            }
+                            else
+                            {
+                                return false; // Usuario canceló la selección
+                            }
+                        }
+                        else
+                        {
+                            // Usar el único preset disponible, o caer en el config legacy si no hay presets
+                            allConfig = CurrentPauta.ExportPresets?.FirstOrDefault()?.Columns ?? CurrentPauta.ExportConfig;
+                        }
+                    }
+
+                    if (allConfig == null) allConfig = new System.Collections.Generic.List<ExportColumnConfig>();
                     var exportConfig = allConfig.Where(c => c.IsExportEnabled).OrderBy(c => c.Order).ToList();
 
                     if (exportConfig != null && exportConfig.Any())

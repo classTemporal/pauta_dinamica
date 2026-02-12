@@ -25,6 +25,7 @@ namespace PautaDinamicaApp.ViewModels
         private readonly StorageService _storageService;
         private ObservableCollection<FieldDefinition> _fields;
         private string _initialFieldsJson = string.Empty;
+        private List<string> _initialFieldIds = new();
         private string _activePautaIdInMain; // Track which pauta is currently open in Main window
 
         private ObservableCollection<PautaSchema> _pautas = new();
@@ -89,6 +90,10 @@ namespace PautaDinamicaApp.ViewModels
             ImportAllDatabaseCommand = new RelayCommand(_ => ImportAllDatabase());
             DuplicatePautaCommand = new RelayCommand(p => DuplicatePauta(p as PautaSchema));
 
+            AddPresetCommand = new RelayCommand(_ => AddPreset());
+            RemovePresetCommand = new RelayCommand(p => RemovePreset(p as ExportPreset));
+            RenamePresetCommand = new RelayCommand(p => RenamePreset(p as ExportPreset));
+
             AvailableTypes = Enum.GetValues(typeof(FieldType)).Cast<FieldType>()
                                 .Where(t => t != FieldType.Separator)
                                 .ToList();
@@ -134,6 +139,7 @@ namespace PautaDinamicaApp.ViewModels
                     _fields = new ObservableCollection<FieldDefinition>(config);
                     foreach (var f in _fields) f.PropertyChanged += OnFieldPropertyChanged;
                     _initialFieldsJson = JsonSerializer.Serialize(_fields);
+                    _initialFieldIds = _fields.Select(f => f.Id).OrderBy(id => id).ToList();
                 }
 
                 // 2. Cambiar la pauta actual
@@ -177,6 +183,31 @@ namespace PautaDinamicaApp.ViewModels
         {
             get => _exportColumns;
             set => SetProperty(ref _exportColumns, value);
+        }
+
+        private ObservableCollection<ExportPreset> _exportPresets = new();
+        public ObservableCollection<ExportPreset> ExportPresets
+        {
+            get => _exportPresets;
+            set => SetProperty(ref _exportPresets, value);
+        }
+
+        private ExportPreset? _selectedExportPreset;
+        public ExportPreset? SelectedExportPreset
+        {
+            get => _selectedExportPreset;
+            set
+            {
+                if (_selectedExportPreset != null && ExportColumns != null)
+                {
+                    _selectedExportPreset.Columns = ExportColumns.ToList();
+                }
+
+                if (SetProperty(ref _selectedExportPreset, value))
+                {
+                    LoadColumnsFromPreset(value);
+                }
+            }
         }
 
         private ObservableCollection<ExportColumnConfig> _pdfColumns = new();
@@ -248,6 +279,9 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ToggleMultiSelectCommand { get; }
         public ICommand ToggleExportMultiSelectCommand { get; }
         public ICommand TogglePdfMultiSelectCommand { get; }
+        public ICommand AddPresetCommand { get; }
+        public ICommand RemovePresetCommand { get; }
+        public ICommand RenamePresetCommand { get; }
         public ICommand SelectAllCommand { get; }
         public ICommand SelectAllExportCommand { get; }
         public ICommand SelectAllPdfCommand { get; }
@@ -290,6 +324,7 @@ namespace PautaDinamicaApp.ViewModels
             Fields = new ObservableCollection<FieldDefinition>(config);
             foreach (var f in Fields) f.PropertyChanged += OnFieldPropertyChanged;
             _initialFieldsJson = JsonSerializer.Serialize(Fields);
+            _initialFieldIds = Fields.Select(f => f.Id).OrderBy(id => id).ToList();
 
             LoadExportColumns();
             LoadPdfColumns();
@@ -347,57 +382,39 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (EditingPauta == null) return;
 
-            var existingConfig = EditingPauta.ExportConfig ?? new List<ExportColumnConfig>();
-            var newConfig = new ObservableCollection<ExportColumnConfig>();
-
-            // Solo mostrar campos reales, no secciones
-            var validFields = Fields.Where(f => f.Type != FieldType.Separator).OrderBy(f => f.Order).ToList();
-
-
-
-            // Estrategia: 
-            // 1. Tomar los que ya existen en la config y ordenarlos según su orden guardado
-            // 2. Agregar los nuevos al final
-
-            var sortedExisting = existingConfig.OrderBy(e => e.Order).ToList();
-
-            foreach (var item in sortedExisting)
+            // MIGRACIÓN: Si no hay presets pero hay ExportConfig vieja, crear el primer preset
+            if ((EditingPauta.ExportPresets == null || !EditingPauta.ExportPresets.Any()) &&
+                EditingPauta.ExportConfig != null && EditingPauta.ExportConfig.Any())
             {
-                var field = validFields.FirstOrDefault(f => f.Id == item.FieldId);
-                if (field != null)
+                var defaultPreset = new ExportPreset
                 {
-                    if (string.IsNullOrEmpty(item.CustomHeader) || item.CustomHeader == item.OriginalLabel)
+                    Name = "Predeterminada",
+                    Columns = EditingPauta.ExportConfig.Select(c => new ExportColumnConfig
                     {
-                        item.CustomHeader = field.Label;
-                    }
-                    item.OriginalLabel = field.Label;
-                    item.Type = field.Type; // Update Type
-                    newConfig.Add(item);
-                }
+                        FieldId = c.FieldId,
+                        CustomHeader = c.CustomHeader,
+                        IsExportEnabled = c.IsExportEnabled,
+                        Order = c.Order,
+                        OriginalLabel = c.OriginalLabel,
+                        Type = c.Type,
+                        IsVisible = c.IsVisible
+                    }).ToList()
+                };
+                EditingPauta.ExportPresets = new List<ExportPreset> { defaultPreset };
             }
 
-            // Agregar campos nuevos que no estaban en la config
-            foreach (var field in validFields)
+            // Cargar presets a la colección observable
+            ExportPresets = new ObservableCollection<ExportPreset>(EditingPauta.ExportPresets ?? new List<ExportPreset>());
+
+            if (!ExportPresets.Any())
             {
-                if (!newConfig.Any(x => x.FieldId == field.Id))
-                {
-                    newConfig.Add(new ExportColumnConfig
-                    {
-                        FieldId = field.Id,
-                        OriginalLabel = field.Label,
-                        Type = field.Type, // Set Type
-                        CustomHeader = field.Label,
-                        Order = newConfig.Count,
-                        IsVisible = true,
-                        IsExportEnabled = true
-                    });
-                }
+                // Si sigue vacío (pauta nueva), crear uno inicial
+                var initial = new ExportPreset { Name = "Configuración Base" };
+                ExportPresets.Add(initial);
+                EditingPauta.ExportPresets = ExportPresets.ToList();
             }
 
-            // Re-indexar para asegurar orden limpio
-            for (int i = 0; i < newConfig.Count; i++) newConfig[i].Order = i;
-
-            ExportColumns = newConfig;
+            SelectedExportPreset = ExportPresets.FirstOrDefault();
         }
 
         private void ResetExportConfig()
@@ -1068,14 +1085,17 @@ namespace PautaDinamicaApp.ViewModels
             if (EditingPauta != null)
             {
                 string currentFieldsJson = JsonSerializer.Serialize(Fields);
-                bool hasStructuralChanges = _initialFieldsJson != currentFieldsJson;
+                var currentFieldIds = Fields.Select(f => f.Id).OrderBy(id => id).ToList();
+
+                // Un cambio es estructural solo si se agregan o eliminan campos/secciones (IDs diferentes)
+                bool hasStructuralChanges = _initialFieldIds.Count != currentFieldIds.Count || !_initialFieldIds.SequenceEqual(currentFieldIds);
 
                 if (hasStructuralChanges)
                 {
                     var records = _storageService.LoadRecords(EditingPauta.Id);
                     if (records.Any())
                     {
-                        var res = MessageBox.Show($"La pauta '{EditingPauta.Name}' tiene {records.Count} registros.\n¿Reestrellar base de datos y respaldar a Excel?", "Cambio Estructural", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+                        var res = MessageBox.Show($"La pauta '{EditingPauta.Name}' tiene {records.Count} registros.\n¿Modificar base de datos y respaldar registros a Excel?", "Cambio Estructural", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
                         if (res == MessageBoxResult.Cancel) return;
                         if (res == MessageBoxResult.Yes)
                         {
@@ -1117,12 +1137,17 @@ namespace PautaDinamicaApp.ViewModels
                 }
 
                 // SAVE EXPORT CONFIG
-                EditingPauta.ExportConfig = ExportColumns.OrderBy(c => c.Order).ToList();
+                if (SelectedExportPreset != null)
+                {
+                    SelectedExportPreset.Columns = ExportColumns.OrderBy(c => c.Order).ToList();
+                }
+                EditingPauta.ExportPresets = ExportPresets.ToList();
                 EditingPauta.PdfConfig = PdfColumns.OrderBy(c => c.Order).ToList();
 
                 _storageService.BackupConfiguration(EditingPauta.Id);
                 _storageService.SaveConfiguration(EditingPauta.Id, list);
                 _initialFieldsJson = currentFieldsJson;
+                _initialFieldIds = currentFieldIds;
             }
 
             // 4. Procesar eliminaciones
@@ -1304,6 +1329,104 @@ namespace PautaDinamicaApp.ViewModels
                 foreach (var c in worksheet.Columns()) { if (c.Width > 50) c.Width = 50; }
                 workbook.SaveAs(filePath);
             }
+        }
+        private void LoadColumnsFromPreset(ExportPreset? preset)
+        {
+            if (preset == null || EditingPauta == null) return;
+
+            var existingConfig = preset.Columns ?? new List<ExportColumnConfig>();
+            var newConfig = new ObservableCollection<ExportColumnConfig>();
+
+            // Solo mostrar campos reales, no secciones
+            var validFields = Fields.Where(f => f.Type != FieldType.Separator).OrderBy(f => f.Order).ToList();
+
+            var sortedExisting = existingConfig.OrderBy(e => e.Order).ToList();
+
+            foreach (var item in sortedExisting)
+            {
+                var field = validFields.FirstOrDefault(f => f.Id == item.FieldId);
+                if (field != null)
+                {
+                    if (string.IsNullOrEmpty(item.CustomHeader) || item.CustomHeader == item.OriginalLabel)
+                    {
+                        item.CustomHeader = field.Label;
+                    }
+                    item.OriginalLabel = field.Label;
+                    item.Type = field.Type; // Update Type
+                    newConfig.Add(item);
+                }
+            }
+
+            // Agregar campos nuevos que no estaban en la config
+            foreach (var field in validFields)
+            {
+                if (!newConfig.Any(x => x.FieldId == field.Id))
+                {
+                    newConfig.Add(new ExportColumnConfig
+                    {
+                        FieldId = field.Id,
+                        OriginalLabel = field.Label,
+                        Type = field.Type, // Set Type
+                        CustomHeader = field.Label,
+                        Order = newConfig.Count,
+                        IsVisible = true,
+                        IsExportEnabled = true
+                    });
+                }
+            }
+
+            // Re-indexar para asegurar orden limpio
+            for (int i = 0; i < newConfig.Count; i++) newConfig[i].Order = i;
+
+            ExportColumns = newConfig;
+        }
+
+        private void AddPreset()
+        {
+            if (EditingPauta == null) return;
+            var newPreset = new ExportPreset { Name = "Nueva Configuración " + (ExportPresets.Count + 1) };
+
+            // Copiar la configuración actual como base
+            if (SelectedExportPreset != null)
+            {
+                newPreset.Columns = ExportColumns.Select(c => new ExportColumnConfig
+                {
+                    FieldId = c.FieldId,
+                    CustomHeader = c.CustomHeader,
+                    IsExportEnabled = c.IsExportEnabled,
+                    Order = c.Order,
+                    OriginalLabel = c.OriginalLabel,
+                    Type = c.Type,
+                    IsVisible = c.IsVisible
+                }).ToList();
+            }
+
+            ExportPresets.Add(newPreset);
+            SelectedExportPreset = newPreset;
+        }
+
+        private void RemovePreset(ExportPreset? preset)
+        {
+            if (preset == null) return;
+            if (ExportPresets.Count <= 1)
+            {
+                MessageBox.Show("Debe existir al menos una configuración de exportación.");
+                return;
+            }
+
+            if (MessageBox.Show($"¿Eliminar la configuración '{preset.Name}'?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            {
+                ExportPresets.Remove(preset);
+                SelectedExportPreset = ExportPresets.FirstOrDefault();
+            }
+        }
+
+        private void RenamePreset(ExportPreset? preset)
+        {
+            if (preset == null) return;
+
+            // Por simplicidad, usamos un InputBox improvisado o solo permitimos editar el nombre si tuviéramos un TextBox bindeado.
+            // En la UI de ConfigWindow usaremos un TextBox bindeado al nombre del preset seleccionado.
         }
     }
 }

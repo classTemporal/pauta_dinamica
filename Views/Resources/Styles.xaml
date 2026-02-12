@@ -5,7 +5,10 @@
     <conv:DictConverter x:Key="DictConverter"/>
     <conv:DictionaryValueConverter x:Key="DictionaryValueConverter"/>
     <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    <conv:NotNullToVisibilityConverter x:Key="NotNullToVisibilityConverter"/>
     <conv:NotNullToBooleanConverter x:Key="NotNullToBooleanConverter"/>
+    <conv:StringSwitchConverter x:Key="StringSwitchConverter"/>
+    <conv:FlexibleBooleanConverter x:Key="FlexibleBooleanConverter"/>
     <conv:StringToBrushConverter x:Key="StringToBrushConverter"/>
 
 

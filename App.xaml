@@ -11,11 +11,6 @@
                 <ResourceDictionary Source="Views/Resources/Styles.xaml"/>
                 <ResourceDictionary Source="Views/Resources/FieldTemplates.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-
-            
-            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-            <conv:NotNullToVisibilityConverter x:Key="NotNullToVisibilityConverter"/>
-            <conv:StringSwitchConverter x:Key="StringSwitchConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
