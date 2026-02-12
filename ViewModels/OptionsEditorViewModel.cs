@@ -334,6 +334,9 @@ namespace PautaDinamicaApp.ViewModels
 
             AddAutoSelectRuleCommand = new RelayCommand(_ => AutoSelectRules.Add(new AutoSelectRuleVM()));
             RemoveAutoSelectRuleCommand = new RelayCommand(r => { if (r is AutoSelectRuleVM vm) AutoSelectRules.Remove(vm); });
+
+            MoveUpCommand = new RelayCommand(p => MoveUp(p as SelectableOptionVM));
+            MoveDownCommand = new RelayCommand(p => MoveDown(p as SelectableOptionVM));
         }
 
         private bool needsInitialRedistribution(FieldDefinition f)
@@ -520,6 +523,8 @@ namespace PautaDinamicaApp.ViewModels
 
         public ICommand AddAutoSelectRuleCommand { get; }
         public ICommand RemoveAutoSelectRuleCommand { get; }
+        public ICommand MoveUpCommand { get; }
+        public ICommand MoveDownCommand { get; }
 
         public List<AutoSelectRule> ResultAutoSelectRules => AutoSelectRules.Select(r => new AutoSelectRule
         {
@@ -659,6 +664,46 @@ namespace PautaDinamicaApp.ViewModels
                 if (result == MessageBoxResult.Yes)
                 {
                     foreach (var s in sel) Options.Remove(s);
+                }
+            }
+        }
+
+        private void MoveUp(SelectableOptionVM? item)
+        {
+            var selected = Options.Where(o => o.IsSelected).ToList();
+            if (!selected.Any())
+            {
+                if (item != null) selected.Add(item);
+                else return;
+            }
+
+            var orderedSelected = selected.OrderBy(o => Options.IndexOf(o)).ToList();
+            foreach (var o in orderedSelected)
+            {
+                int idx = Options.IndexOf(o);
+                if (idx > 0 && !Options[idx - 1].IsSelected)
+                {
+                    Options.Move(idx, idx - 1);
+                }
+            }
+        }
+
+        private void MoveDown(SelectableOptionVM? item)
+        {
+            var selected = Options.Where(o => o.IsSelected).ToList();
+            if (!selected.Any())
+            {
+                if (item != null) selected.Add(item);
+                else return;
+            }
+
+            var orderedSelected = selected.OrderByDescending(o => Options.IndexOf(o)).ToList();
+            foreach (var o in orderedSelected)
+            {
+                int idx = Options.IndexOf(o);
+                if (idx < Options.Count - 1 && !Options[idx + 1].IsSelected)
+                {
+                    Options.Move(idx, idx + 1);
                 }
             }
         }

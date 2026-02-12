@@ -82,14 +82,17 @@
                                     <Button Content="Exportar" Command="{Binding ExportOptionsCommand}" Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="11" Margin="0,0,8,0"/>
                                     <Button Content="Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Padding="12,6" FontSize="11"/>
                                 </StackPanel>
-                                <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="8,4" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.2"
-                                        Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                         <Button Content="Seleccionar Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Padding="12,0" Height="30" FontSize="11"/>
-                                         <Button Content="Borrar Selección" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,0,8,0" Padding="12,0" Height="30" FontSize="11"/>
-                                         <Button Content="Cerrar" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Padding="10,0" Height="30" FontSize="11"/>
-                                    </StackPanel>
-                                </Border>
+                                 <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="8,4" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.2"
+                                         Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                          <Button Content="▲ Mover" Command="{Binding MoveUpCommand}" Style="{StaticResource GhostButton}" Margin="0,0,4,0" Padding="10,0" Height="30" FontSize="11" ToolTip="Subir seleccionados"/>
+                                          <Button Content="▼ Mover" Command="{Binding MoveDownCommand}" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Padding="10,0" Height="30" FontSize="11" ToolTip="Bajar seleccionados"/>
+                                          <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,2,8,2" Background="{DynamicResource BorderBrush}"/>
+                                          <Button Content="Seleccionar Todo" Command="{Binding SelectAllCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Padding="12,0" Height="30" FontSize="11"/>
+                                          <Button Content="Borrar Selección" Command="{Binding DeleteSelectedCommand}" Style="{StaticResource DangerButton}" Margin="0,0,8,0" Padding="12,0" Height="30" FontSize="11"/>
+                                          <Button Content="Cerrar" Command="{Binding ToggleMultiSelectCommand}" Style="{StaticResource GhostButton}" Padding="10,0" Height="30" FontSize="11"/>
+                                     </StackPanel>
+                                 </Border>
                             </Grid>
                             <StackPanel DockPanel.Dock="Bottom" Margin="0,20,0,0">
                                 <TextBlock Text="Añadir nueva opción a la lista:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,8"/>
@@ -117,12 +120,15 @@
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <CheckBox IsChecked="{Binding IsSelected}" Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding Text}" VerticalAlignment="Center" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource TextBrush}"/>
-                                                 <Button Grid.Column="2" Content="✕" Command="{Binding DataContext.RemoveOptionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource DangerButton}" Width="26" Height="26" FontSize="12" FontWeight="Bold" Padding="0"
-                                                         ToolTip="Eliminar permanentemente"
-                                                         Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
-                                            </Grid>
+                                                 <CheckBox IsChecked="{Binding IsSelected}" Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                                 <TextBlock Grid.Column="1" Text="{Binding Text}" VerticalAlignment="Center" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource TextBrush}"/>
+                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                                     <Button Content="▲" Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource GhostButton}" Width="28" Height="28" FontSize="14" Padding="0" Margin="0,0,4,0" ToolTip="Subir elemento"/>
+                                                     <Button Content="▼" Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource GhostButton}" Width="28" Height="28" FontSize="14" Padding="0" Margin="0,0,4,0" ToolTip="Bajar elemento"/>
+                                                     <Button Content="✕" Command="{Binding DataContext.RemoveOptionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource DangerButton}" Width="28" Height="28" FontSize="12" FontWeight="Bold" Padding="0"
+                                                             ToolTip="Eliminar permanentemente"/>
+                                                 </StackPanel>
+                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
