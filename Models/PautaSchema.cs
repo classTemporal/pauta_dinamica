@@ -107,6 +107,10 @@ namespace PautaDinamicaApp.Models
         public string ColoringValue { get => _coloringValue; set => SetProperty(ref _coloringValue, value); }
         public string ColoringColor { get => _coloringColor; set => SetProperty(ref _coloringColor, value); }
 
+        // --- Reglas de Reemplazo para Correos ---
+        private System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule> _emailReplacementRules = new();
+        public System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule> EmailReplacementRules { get => _emailReplacementRules; set => SetProperty(ref _emailReplacementRules, value); }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)

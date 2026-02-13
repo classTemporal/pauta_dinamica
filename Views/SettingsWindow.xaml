@@ -23,9 +23,11 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
-
-        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:FieldTypeDisplayNameConverter x:Key="FieldTypeDisplayNameConverter"/>
+        <conv:DictConverter x:Key="DictConverter"/>
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BoolToVisCustom"/>
+        <conv:FieldIdsToNamesConverter x:Key="FieldIdsToNamesConverter"/>
         <conv:NotNullToBooleanConverter x:Key="NotNullToBool"/>
     </Window.Resources>
 
@@ -330,6 +332,142 @@
                                         <TextBox Text="{Binding SelectedPauta.ExcludeByFieldValue}" Margin="0,0,0,5"/>
                                         <TextBlock Text="Ejemplo: Excluir si 'Calificación' tiene el valor '100%'" 
                                                    FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Reglas de Reemplazo -->
+                                <TextBlock Text="Reglas de Reemplazo de Valor (Traducción)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,15,0,10"/>
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                                    <StackPanel>
+                                        <TextBlock Text="Si un campo tiene X valor, mostrar Y en el correo final." FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15"/>
+                                        
+                                        <!-- Botones de Acción -->
+                                        <Grid Margin="0,0,0,10">
+                                            <!-- Modo Normal -->
+                                            <StackPanel Orientation="Horizontal" Visibility="{Binding IsEmailRuleMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                <Button Content="+ Nueva Regla" 
+                                                        Command="{Binding AddEmailReplacementRuleCommand}"
+                                                        Style="{StaticResource GhostButton}" Margin="0,0,10,0"/>
+                                                
+                                                <Button Content="Selección Múltiple" 
+                                                        Command="{Binding ToggleEmailRuleMultiSelectCommand}"
+                                                        Style="{StaticResource SecondaryButton}" 
+                                                        Visibility="{Binding SelectedPauta.EmailReplacementRules.Count, Converter={StaticResource DictConverter}, ConverterParameter='0:Collapsed|Default:Visible'}"/>
+                                            </StackPanel>
+                                            
+                                            <!-- Modo Selección Múltiple -->
+                                            <StackPanel Orientation="Horizontal" Visibility="{Binding IsEmailRuleMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <Button Content="Eliminar Seleccionadas" 
+                                                        Command="{Binding DeleteSelectedEmailRulesCommand}"
+                                                        Style="{StaticResource DangerButton}" Margin="0,0,10,0"/>
+                                                
+                                                <Button Content="Seleccionar Todo" 
+                                                        Command="{Binding SelectAllEmailRulesCommand}"
+                                                        Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
+
+                                                <Button Content="Cancelar" 
+                                                        Command="{Binding ToggleEmailRuleMultiSelectCommand}"
+                                                        Style="{StaticResource GhostButton}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        
+                                        <DataGrid ItemsSource="{Binding SelectedPauta.EmailReplacementRules}" 
+                                                  AutoGenerateColumns="False" 
+                                                  CanUserAddRows="False"
+                                                  BorderThickness="1" 
+                                                  BorderBrush="{DynamicResource BorderBrush}" 
+                                                  Background="{DynamicResource InputBackground}" 
+                                                  HeadersVisibility="Column" 
+                                                  Height="200"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  RowBackground="{DynamicResource InputBackground}" 
+                                                  AlternatingRowBackground="{DynamicResource CardBackgroundBrush}"
+                                                  GridLinesVisibility="Horizontal"
+                                                  Foreground="{DynamicResource TextBrush}">
+                                            
+                                            <DataGrid.Resources>
+                                                <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
+                                                 <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                     <Setter Property="BorderThickness" Value="0"/>
+                                                     <Setter Property="Padding" Value="5"/>
+                                                     <Setter Property="VerticalAlignment" Value="Center"/>
+                                                     <Setter Property="Background" Value="Transparent"/>
+                                                     <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                                 </Style>
+                                                 <Style TargetType="DataGridCell">
+                                                     <Setter Property="BorderThickness" Value="0"/>
+                                                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                                     <Style.Triggers>
+                                                         <Trigger Property="IsSelected" Value="True">
+                                                             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                                             <Setter Property="Foreground" Value="White"/>
+                                                         </Trigger>
+                                                     </Style.Triggers>
+                                                 </Style>
+                                            </DataGrid.Resources>
+
+                                            <DataGrid.Columns>
+                                                <!-- Selección (Solo visible en modo multiselect usando Proxy) -->
+                                                <DataGridTemplateColumn Width="40" Visibility="{Binding Data.IsEmailRuleMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- Campo Origen (Botón clickable) -->
+                                                <DataGridTemplateColumn Header="Campos Origen" Width="1.5*">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Command="{Binding Data.EditEmailRuleFieldsCommand, Source={StaticResource Proxy}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Style="{StaticResource GhostButton}"
+                                                                    HorizontalContentAlignment="Stretch"
+                                                                    VerticalContentAlignment="Center"
+                                                                    Padding="8,4" Margin="2"
+                                                                    ToolTip="Click para editar campos afectados">
+                                                                 <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <TextBlock TextTrimming="CharacterEllipsis" VerticalAlignment="Center" 
+                                                                               Foreground="{DynamicResource TextBrush}">
+                                                                        <TextBlock.Text>
+                                                                            <MultiBinding Converter="{StaticResource FieldIdsToNamesConverter}">
+                                                                                <Binding Path="TargetFieldIds" />
+                                                                                <Binding Path="Data.CurrentPautaFields" Source="{StaticResource Proxy}" />
+                                                                                <Binding Path="TargetFieldIds.Count" />
+                                                                            </MultiBinding>
+                                                                        </TextBlock.Text>
+                                                                    </TextBlock>
+                                                                    <TextBlock Grid.Column="1" Text="✏️" Margin="10,0,0,0" VerticalAlignment="Center" Opacity="0.5"/>
+                                                                </Grid>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- Valor Original -->
+                                                <DataGridTextColumn Header="Si Valor es..." Binding="{Binding TargetValue, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+
+                                                <!-- Flecha -->
+                                                <DataGridTemplateColumn Width="30">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="➡" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- Reemplazo -->
+                                                <DataGridTextColumn Header="Mostrar Texto..." Binding="{Binding ReplacementValue, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                                
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+
                                     </StackPanel>
                                 </Border>
 

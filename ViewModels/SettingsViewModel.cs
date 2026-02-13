@@ -106,9 +106,18 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand OpenEmailDirectoryCommand { get; }
         public ICommand ToggleContactMultiSelectCommand { get; }
         public ICommand PickColorCommand { get; }
+        public ICommand AddEmailReplacementRuleCommand { get; }
+        public ICommand RemoveEmailReplacementRuleCommand { get; }
+        public ICommand ToggleEmailRuleMultiSelectCommand { get; }
+        public ICommand DeleteSelectedEmailRulesCommand { get; }
+        public ICommand SelectAllEmailRulesCommand { get; }
+        public ICommand EditEmailRuleFieldsCommand { get; }
 
         private bool _isContactMultiSelectMode;
         public bool IsContactMultiSelectMode { get => _isContactMultiSelectMode; set => SetProperty(ref _isContactMultiSelectMode, value); }
+
+        private bool _isEmailRuleMultiSelectMode;
+        public bool IsEmailRuleMultiSelectMode { get => _isEmailRuleMultiSelectMode; set => SetProperty(ref _isEmailRuleMultiSelectMode, value); }
 
         public SettingsViewModel(string activePautaId = "")
         {
@@ -145,6 +154,19 @@ namespace PautaDinamicaApp.ViewModels
             ToggleContactMultiSelectCommand = new RelayCommand(_ => IsContactMultiSelectMode = !IsContactMultiSelectMode);
             OpenTemplateManagementCommand = new RelayCommand(_ => OpenTemplateManagement());
             UnlockAdminSettingsCommand = new RelayCommand(_ => UnlockAdminSettings());
+
+            AddEmailReplacementRuleCommand = new RelayCommand(_ => AddEmailReplacementRule());
+            RemoveEmailReplacementRuleCommand = new RelayCommand(r => RemoveEmailReplacementRule(r as EmailReplacementRule));
+            DeleteSelectedEmailRulesCommand = new RelayCommand(_ => DeleteSelectedEmailRules());
+            EditEmailRuleFieldsCommand = new RelayCommand(r => EditEmailRuleFields(r as EmailReplacementRule));
+            ToggleEmailRuleMultiSelectCommand = new RelayCommand(_ => IsEmailRuleMultiSelectMode = !IsEmailRuleMultiSelectMode);
+            SelectAllEmailRulesCommand = new RelayCommand(_ =>
+            {
+                if (SelectedPauta != null)
+                {
+                    foreach (var r in SelectedPauta.EmailReplacementRules) r.IsSelected = true;
+                }
+            });
         }
 
         private void UnlockAdminSettings()
@@ -224,6 +246,77 @@ namespace PautaDinamicaApp.ViewModels
             {
                 foreach (var c in toRemove) CurrentContacts.Remove(c);
                 SyncContacts();
+            }
+        }
+
+        // --- Gestión de Reglas de Email ---
+
+        private void AddEmailReplacementRule()
+        {
+            if (SelectedPauta == null) return;
+            var rule = new EmailReplacementRule
+            {
+                TargetValue = "1",
+                ReplacementValue = "Cumple"
+            };
+
+            // Pre-select first field if available
+            var firstField = CurrentPautaFields.FirstOrDefault();
+            if (firstField != null) rule.TargetFieldIds.Add(firstField.Id);
+
+            SelectedPauta.EmailReplacementRules.Add(rule);
+        }
+
+        private void RemoveEmailReplacementRule(EmailReplacementRule? rule)
+        {
+            if (SelectedPauta != null && rule != null)
+            {
+                if (System.Windows.MessageBox.Show("¿Eliminar esta regla?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                {
+                    SelectedPauta.EmailReplacementRules.Remove(rule);
+                }
+            }
+        }
+
+        private void DeleteSelectedEmailRules()
+        {
+            if (SelectedPauta == null) return;
+            var toRemove = SelectedPauta.EmailReplacementRules.Where(r => r.IsSelected).ToList();
+            if (toRemove.Count == 0) return;
+
+            if (System.Windows.MessageBox.Show($"¿Eliminar las {toRemove.Count} reglas seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            {
+                foreach (var r in toRemove) SelectedPauta.EmailReplacementRules.Remove(r);
+            }
+        }
+
+        private void EditEmailRuleFields(EmailReplacementRule? rule)
+        {
+            if (rule == null) return;
+
+            // 1. Preparar ViewModels según selección actual
+            var selectableFields = CurrentPautaFields.Select(f => new SelectableFieldViewModel
+            {
+                Id = f.Id,
+                Label = f.Label,
+                IsSelected = rule.TargetFieldIds.Contains(f.Id)
+            }).ToList();
+
+            // 2. Abrir ventana
+            var win = new Views.MultiFieldSelectorWindow(selectableFields);
+            win.Owner = System.Windows.Application.Current.MainWindow; // Ensure owner is set for centering
+
+            if (win.ShowDialog() == true)
+            {
+                // 3. Aplicar cambios
+                rule.TargetFieldIds.Clear();
+                foreach (var sf in selectableFields.Where(x => x.IsSelected))
+                {
+                    rule.TargetFieldIds.Add(sf.Id);
+                }
+
+                // Forzar actualización de UI si es necesario (el PropertyChanged de TargetFieldIds debería bastar)
+                // Pero como TargetFieldIds es ObservableCollection, Add dispara CollectionChanged.
             }
         }
 

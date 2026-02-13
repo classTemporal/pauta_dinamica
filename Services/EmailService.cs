@@ -11,16 +11,16 @@ namespace PautaDinamicaApp.Services
 {
     public class EmailService
     {
-        public string ProcessTemplate(string template, AuditEntry entry, List<FieldDefinition> fields)
+        public string ProcessTemplate(string template, AuditEntry entry, List<FieldDefinition> fields, IEnumerable<EmailReplacementRule>? rules = null)
         {
             if (string.IsNullOrWhiteSpace(template)) return "";
 
             string result = template;
 
-            // 1. Reemplazar [Fecha] (Campo especial reservado)
+            // 1. Reemplazar [Fecha]
             result = result.Replace("[Fecha]", entry.Timestamp.ToString("dd/MM/yyyy HH:mm"), StringComparison.OrdinalIgnoreCase);
 
-            // 2. Reemplazar placeholders por etiqueta de campo: [Nombre del Campo]
+            // 2. Reemplazar placeholders por etiqueta de campo
             if (fields != null)
             {
                 foreach (var field in fields)
@@ -29,17 +29,29 @@ namespace PautaDinamicaApp.Services
 
                     string placeholder = $"[{field.Label}]";
 
-                    // Solo intentamos reemplazar si el placeholder existe en el texto (ignoring case)
                     if (result.Contains(placeholder, StringComparison.OrdinalIgnoreCase))
                     {
-                        // Obtener valor, si no existe o es null, usar vacío
                         string value = "";
                         if (entry.Values.TryGetValue(field.Id, out var val) && val != null)
                         {
                             value = val.ToString() ?? "";
                         }
 
-                        // Reemplazo literal (sin Regex para evitar problemas con caracteres especiales en el valor)
+                        // --- REGLAS DE REEMPLAZO (Multi-Campo) ---
+                        if (rules != null)
+                        {
+                            var rule = rules.FirstOrDefault(r =>
+                                r.TargetFieldIds != null &&
+                                r.TargetFieldIds.Contains(field.Id) &&
+                                string.Equals(r.TargetValue, value, StringComparison.OrdinalIgnoreCase));
+
+                            if (rule != null)
+                            {
+                                value = rule.ReplacementValue;
+                            }
+                        }
+                        // ---------------------------
+
                         result = result.Replace(placeholder, value, StringComparison.OrdinalIgnoreCase);
                     }
                 }
@@ -81,7 +93,7 @@ namespace PautaDinamicaApp.Services
             // Si no se encontró en el directorio (porque falló o estaba desactivado), usamos el template de la pauta.
             if (!directoryFound)
             {
-                string pautaManual = ProcessTemplate(pauta.EmailToTemplate, entry, fields);
+                string pautaManual = ProcessTemplate(pauta.EmailToTemplate, entry, fields, pauta.EmailReplacementRules);
                 if (!string.IsNullOrWhiteSpace(pautaManual))
                 {
                     to = pautaManual;
@@ -91,20 +103,21 @@ namespace PautaDinamicaApp.Services
                 {
                     // 3. PRIORIDAD 3: FALLBACK GLOBAL
                     // Solo si la pauta no tiene nada, usamos la configuración general.
-                    to = ProcessTemplate(globalSettings.EmailToTemplate, entry, fields);
+                    // (Las reglas de la pauta también aplican al global si se usa como fallback para esta pauta)
+                    to = ProcessTemplate(globalSettings.EmailToTemplate, entry, fields, pauta.EmailReplacementRules);
                     Console.WriteLine($"DEBUG: Using Global Fallback template: {to}");
                 }
             }
 
             // Procesar el resto de campos (CC, Asunto, Cuerpo) con herencia simple (Pauta > Global)
-            string cc = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailCcTemplate) ? pauta.EmailCcTemplate : globalSettings.EmailCcTemplate, entry, fields);
-            string subject = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailSubjectTemplate) ? pauta.EmailSubjectTemplate : globalSettings.EmailSubjectTemplate, entry, fields);
-            string body = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailBodyTemplate) ? pauta.EmailBodyTemplate : globalSettings.EmailBodyTemplate, entry, fields);
+            string cc = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailCcTemplate) ? pauta.EmailCcTemplate : globalSettings.EmailCcTemplate, entry, fields, pauta.EmailReplacementRules);
+            string subject = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailSubjectTemplate) ? pauta.EmailSubjectTemplate : globalSettings.EmailSubjectTemplate, entry, fields, pauta.EmailReplacementRules);
+            string body = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailBodyTemplate) ? pauta.EmailBodyTemplate : globalSettings.EmailBodyTemplate, entry, fields, pauta.EmailReplacementRules);
 
             // Método de envío: Si la pauta no tiene una configuración explícita (pauta.EmailMethod == globalSettings.SelectedEmailMethod es un chequeo débil, 
             // pero como no hay un valor 'Inherit', usaremos el de la pauta si se cambió de Mailto, o el global como base)
             EmailMethod method = pauta.EmailMethod;
-            
+
             // Si la pauta tiene el default (Mailto) pero el global es Outlook, priorizamos el global si el usuario lo configuró así.
             // Para ser más precisos, si el global es diferente de Mailto y la pauta sigue en Mailto, usamos el global.
             if (pauta.EmailMethod == EmailMethod.Mailto && globalSettings.SelectedEmailMethod != EmailMethod.Mailto)
