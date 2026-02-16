@@ -165,7 +165,7 @@
                                         <Setter Property="Margin" Value="10,15,10,5"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding Type}" Value="TextArea">
-                                        <Setter Property="Width" Value="520"/>
+                                        <Setter Property="Width" Value="790"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>

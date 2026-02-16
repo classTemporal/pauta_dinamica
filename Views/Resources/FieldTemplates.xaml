@@ -30,11 +30,21 @@
 
     <!-- Label Template with Required Asterisk -->
     <DataTemplate x:Key="FieldLabelTemplate">
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-            <TextBlock Text="{Binding Label}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
-            <TextBlock Text=" *" Foreground="{StaticResource ErrorBrush}" FontSize="12" 
-                       Visibility="{Binding IsRequired, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-        </StackPanel>
+        <TextBlock Margin="0,0,0,5" TextWrapping="Wrap" MaxWidth="240" HorizontalAlignment="Left" TextAlignment="Left">
+            <Run Text="{Binding Label, Mode=OneWay}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+            <Run Foreground="{StaticResource ErrorBrush}" FontSize="12">
+                <Run.Style>
+                    <Style TargetType="Run">
+                        <Setter Property="Text" Value=""/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsRequired}" Value="True">
+                                <Setter Property="Text" Value=" *"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Run.Style>
+            </Run>
+        </TextBlock>
     </DataTemplate>
 
 
@@ -261,11 +271,12 @@
     <!-- Template para Booleano -->
     <DataTemplate x:Key="BooleanTemplate" DataType="{x:Type vm:DynamicFieldVM}">
         <StackPanel Margin="0,5">
-            <CheckBox Content="{Binding Label}" 
-                      IsChecked="{Binding Value, Converter={StaticResource FlexibleBooleanConverter}}" 
+            <CheckBox IsChecked="{Binding Value, Converter={StaticResource FlexibleBooleanConverter}}" 
                       Foreground="{DynamicResource InputForeground}"
-                      Margin="0,10"
-                      VerticalContentAlignment="Center"/>
+                      Margin="0,8"
+                      VerticalContentAlignment="Top">
+                <TextBlock Text="{Binding Label}" TextWrapping="Wrap" Margin="0,-1,0,0" FontSize="12" MaxWidth="210" HorizontalAlignment="Left" TextAlignment="Left"/>
+            </CheckBox>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
         </StackPanel>
     </DataTemplate>

@@ -800,14 +800,14 @@
                     </Grid.RowDefinitions>
 
                     <!-- Header & Filename Builder -->
-                    <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                        <TextBlock Text="Generación de Reporte PDF" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,5"/>
-                        <TextBlock Text="Configure cómo se nombrará el archivo y qué campos incluir en el documento." 
-                                   FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15"/>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,5">
+                        <TextBlock Text="Generación de Reporte PDF" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2"/>
+                        <TextBlock Text="Configure el nombre del archivo y los campos a incluir." 
+                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,10"/>
 
-                        <Border Background="{DynamicResource CardBackgroundBrush}" Padding="20" CornerRadius="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <Border Background="{DynamicResource CardBackgroundBrush}" Padding="8,10" CornerRadius="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="Composición del Nombre del Archivo" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15"/>
+                                <TextBlock Text="Composición del Nombre del Archivo" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
                                 
                                 <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <Border Background="{DynamicResource CardBackgroundBrush}" Padding="12,6" CornerRadius="8" Margin="0,0,8,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
@@ -815,7 +815,7 @@
                                     </Border>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,8,8">
-                                        <ComboBox Width="180" Height="36" 
+                                        <ComboBox Width="180" Height="32" 
                                                   ItemsSource="{Binding Fields}"
                                                   SelectedValue="{Binding EditingPauta.PdfFileNameFieldId1}"
                                                   SelectedValuePath="Id"
@@ -826,19 +826,19 @@
                                                 </ItemsPanelTemplate>
                                             </ComboBox.ItemsPanel>
                                         </ComboBox>
-                                         <Button Content="✕" Width="30" Height="36" Style="{StaticResource GhostButton}" Padding="0"
+                                         <Button Content="✕" Width="30" Height="32" Style="{StaticResource GhostButton}" Padding="0"
                                                  Click="ClearPdfField1_Click" ToolTip="Quitar campo" Margin="2,0,0,0" Foreground="{DynamicResource DangerBrush}"/>
                                     </StackPanel>
 
                                     <TextBlock Text="_" FontSize="20" FontWeight="Bold" Margin="4,0,12,8" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" Opacity="0.5"/>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,8,8">
-                                        <ComboBox Width="180" Height="36" 
+                                        <ComboBox Width="180" Height="32" 
                                                   ItemsSource="{Binding Fields}"
                                                   SelectedValue="{Binding EditingPauta.PdfFileNameFieldId2}"
                                                   SelectedValuePath="Id"
                                                   DisplayMemberPath="Label"/>
-                                        <Button Content="✕" Width="30" Height="36" Style="{StaticResource GhostButton}" Padding="0"
+                                        <Button Content="✕" Width="30" Height="32" Style="{StaticResource GhostButton}" Padding="0"
                                                 Click="ClearPdfField2_Click" ToolTip="Quitar campo" Margin="2,0,0,0" Foreground="{DynamicResource DangerBrush}"/>
                                     </StackPanel>
 
@@ -854,7 +854,7 @@
                     </StackPanel>
 
                     <!-- Actions Bar -->
-                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                    <Grid Grid.Row="1" Margin="0,0,0,5">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
