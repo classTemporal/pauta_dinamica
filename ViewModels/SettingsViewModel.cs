@@ -50,6 +50,28 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        public string SpellCheckLanguage
+        {
+            get => Settings.SpellCheckLanguage;
+            set
+            {
+                if (Settings.SpellCheckLanguage != value)
+                {
+                    Settings.SpellCheckLanguage = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public Dictionary<string, string> SpellCheckLanguages { get; } = new()
+        {
+            { "", "Desactivado" },
+            { "es-ES", "Español" },
+            { "en-US", "Inglés" },
+            { "pt-PT", "Portugués" },
+            { "fr-FR", "Francés" }
+        };
+
         private ObservableCollection<PautaSchema> _pautas = new();
         private PautaSchema? _selectedPauta;
         public event Action? RequestClose;

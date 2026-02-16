@@ -10,6 +10,7 @@
     <conv:StringSwitchConverter x:Key="StringSwitchConverter"/>
     <conv:FlexibleBooleanConverter x:Key="FlexibleBooleanConverter"/>
     <conv:StringToBrushConverter x:Key="StringToBrushConverter"/>
+    <conv:StringToLanguageConverter x:Key="StringToLanguageConverter"/>
 
 
     <!-- Design Tokens / Brushes -->

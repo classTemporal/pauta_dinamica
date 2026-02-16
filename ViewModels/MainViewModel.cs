@@ -35,6 +35,13 @@ namespace PautaDinamicaApp.ViewModels
         private AuditEntry? _selectedRecord;
         private ObservableCollection<PautaSchema> _pautas = new();
         private PautaSchema? _currentPauta;
+        private AppSettings _settings = new();
+
+        public AppSettings Settings
+        {
+            get => _settings;
+            set => SetProperty(ref _settings, value);
+        }
 
         public ICommand OpenSettingsCommand { get; }
 
@@ -71,8 +78,8 @@ namespace PautaDinamicaApp.ViewModels
             _emailService = new EmailService();
 
             // Aplicar tema guardado del usuario al iniciar
-            var savedSettings = _storageService.LoadSettings();
-            new ThemeService().SetTheme(savedSettings.Theme);
+            _settings = _storageService.LoadSettings();
+            new ThemeService().SetTheme(_settings.Theme);
 
             LoadPautas();
             LoadData();
@@ -229,6 +236,7 @@ namespace PautaDinamicaApp.ViewModels
 
             if (vm.IsSaved)
             {
+                Settings = vm.Settings;
                 LoadPautas();
                 ApplyRowColoring();
                 UpdateAuditStats();

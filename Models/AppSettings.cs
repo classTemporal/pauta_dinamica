@@ -27,6 +27,9 @@ namespace PautaDinamicaApp.Models
 
         // Admin Settings
         public bool EnableInternalTimer { get; set; } = true;
+
+        // Spellcheck Settings
+        public string SpellCheckLanguage { get; set; } = "es-ES"; // Default to Spanish
     }
 }
 
