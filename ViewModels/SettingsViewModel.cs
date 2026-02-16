@@ -63,6 +63,22 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        public Services.AppTheme SelectedTheme
+        {
+            get => Settings.Theme;
+            set
+            {
+                if (Settings.Theme != value)
+                {
+                    Settings.Theme = value;
+                    OnPropertyChanged();
+                    new ThemeService().SetTheme(value);
+                }
+            }
+        }
+
+        public Array Themes => Enum.GetValues(typeof(Services.AppTheme));
+
         public Dictionary<string, string> SpellCheckLanguages { get; } = new()
         {
             { "", "Desactivado" },
@@ -541,21 +557,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             SyncContacts();
 
-            // 1. Validar Global Templates
-            var allFields = Pautas.SelectMany(p => _storageService.LoadConfiguration(p.Id)).ToList();
-            var allLabels = new HashSet<string>(allFields.Select(f => f.Label), StringComparer.OrdinalIgnoreCase);
-            allLabels.Add("Fecha");
-
-            if (!ValidateTemplateString(Settings.EmailToTemplate, allLabels, "Global (Para)", out string errG1) ||
-                !ValidateTemplateString(Settings.EmailCcTemplate, allLabels, "Global (CC)", out errG1) ||
-                !ValidateTemplateString(Settings.EmailSubjectTemplate, allLabels, "Global (Asunto)", out errG1) ||
-                !ValidateTemplateString(Settings.EmailBodyTemplate, allLabels, "Global (Cuerpo)", out errG1))
-            {
-                System.Windows.MessageBox.Show(errG1, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // 2. Validar Pauta Specific Templates
+            // 1. Validar Pauta Specific Templates
             foreach (var pauta in Pautas)
             {
                 var pautaFields = _storageService.LoadConfiguration(pauta.Id);

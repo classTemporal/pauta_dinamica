@@ -90,40 +90,18 @@ namespace PautaDinamicaApp.Services
             }
 
             // 2. PRIORIDAD 2: CAMPO MANUAL DE LA PAUTA
-            // Si no se encontró en el directorio (porque falló o estaba desactivado), usamos el template de la pauta.
             if (!directoryFound)
             {
-                string pautaManual = ProcessTemplate(pauta.EmailToTemplate, entry, fields, pauta.EmailReplacementRules);
-                if (!string.IsNullOrWhiteSpace(pautaManual))
-                {
-                    to = pautaManual;
-                    Console.WriteLine($"DEBUG: Using Pauta Manual template: {to}");
-                }
-                else
-                {
-                    // 3. PRIORIDAD 3: FALLBACK GLOBAL
-                    // Solo si la pauta no tiene nada, usamos la configuración general.
-                    // (Las reglas de la pauta también aplican al global si se usa como fallback para esta pauta)
-                    to = ProcessTemplate(globalSettings.EmailToTemplate, entry, fields, pauta.EmailReplacementRules);
-                    Console.WriteLine($"DEBUG: Using Global Fallback template: {to}");
-                }
+                to = ProcessTemplate(pauta.EmailToTemplate, entry, fields, pauta.EmailReplacementRules);
+                Console.WriteLine($"DEBUG: Using Pauta Manual template: {to}");
             }
 
-            // Procesar el resto de campos (CC, Asunto, Cuerpo) con herencia simple (Pauta > Global)
-            string cc = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailCcTemplate) ? pauta.EmailCcTemplate : globalSettings.EmailCcTemplate, entry, fields, pauta.EmailReplacementRules);
-            string subject = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailSubjectTemplate) ? pauta.EmailSubjectTemplate : globalSettings.EmailSubjectTemplate, entry, fields, pauta.EmailReplacementRules);
-            string body = ProcessTemplate(!string.IsNullOrWhiteSpace(pauta.EmailBodyTemplate) ? pauta.EmailBodyTemplate : globalSettings.EmailBodyTemplate, entry, fields, pauta.EmailReplacementRules);
+            // Procesar el resto de campos (CC, Asunto, Cuerpo)
+            string cc = ProcessTemplate(pauta.EmailCcTemplate, entry, fields, pauta.EmailReplacementRules);
+            string subject = ProcessTemplate(pauta.EmailSubjectTemplate, entry, fields, pauta.EmailReplacementRules);
+            string body = ProcessTemplate(pauta.EmailBodyTemplate, entry, fields, pauta.EmailReplacementRules);
 
-            // Método de envío: Si la pauta no tiene una configuración explícita (pauta.EmailMethod == globalSettings.SelectedEmailMethod es un chequeo débil, 
-            // pero como no hay un valor 'Inherit', usaremos el de la pauta si se cambió de Mailto, o el global como base)
             EmailMethod method = pauta.EmailMethod;
-
-            // Si la pauta tiene el default (Mailto) pero el global es Outlook, priorizamos el global si el usuario lo configuró así.
-            // Para ser más precisos, si el global es diferente de Mailto y la pauta sigue en Mailto, usamos el global.
-            if (pauta.EmailMethod == EmailMethod.Mailto && globalSettings.SelectedEmailMethod != EmailMethod.Mailto)
-            {
-                method = globalSettings.SelectedEmailMethod;
-            }
 
             Console.WriteLine($"DEBUG: Final 'To': '{to}'");
             Console.WriteLine($"DEBUG: Final Method: {method}");

@@ -14,14 +14,6 @@ namespace PautaDinamicaApp.Models
         public string JsonBackupPath { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         public string PdfReportPath { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
-        // Email Settings
-        public EmailMethod SelectedEmailMethod { get; set; } = EmailMethod.Mailto;
-        public string EmailToTemplate { get; set; } = "";
-        public string EmailCcTemplate { get; set; } = "";
-        public string EmailSubjectTemplate { get; set; } = "";
-        public string EmailBodyTemplate { get; set; } = "";
-
-
         // UI Theme
         public Services.AppTheme Theme { get; set; } = Services.ThemeService.GetSystemTheme();
 
