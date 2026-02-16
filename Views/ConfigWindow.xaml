@@ -19,6 +19,9 @@
             <conv:PrependOptionConverter x:Key="PrependOptionConverter"/>
             <conv:NotNullToBooleanConverter x:Key="NotNullToBooleanConverter"/>
             <conv:FieldTypeDisplayNameConverter x:Key="FieldTypeDisplayNameConverter"/>
+            <conv:DictConverter x:Key="DictConverter"/>
+            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <conv:FieldIdsToNamesConverter x:Key="FieldIdsToNamesConverter"/>
             <x:Array x:Key="BooleanOptions" Type="{x:Type sys:String}">
                 <sys:String>1</sys:String>
                 <sys:String>0</sys:String>
@@ -61,9 +64,10 @@
             </Style>
 
 
-            <Style TargetType="DataGridRow">
+            <Style x:Key="FieldRowStyle" TargetType="DataGridRow">
                 <Setter Property="Margin" Value="0,1"/>
                 <Style.Triggers>
+                    <!-- Solo aplicar si el objeto tiene propiedad Type (para FieldDefinition y ExportColumnConfig) -->
                     <DataTrigger Binding="{Binding Type}" Value="Separator">
                         <Setter Property="Background" Value="{StaticResource SeparatorBackground}"/>
                         <Setter Property="FontWeight" Value="Bold"/>
@@ -375,6 +379,7 @@
                               AllowDrop="True" HeadersVisibility="Column"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Auto"
+                              ItemContainerStyle="{StaticResource FieldRowStyle}"
                               ScrollViewer.CanContentScroll="False"
                               EnableRowVirtualization="False"
                               PreviewMouseLeftButtonDown="EditorGrid_PreviewMouseLeftButtonDown"
@@ -696,6 +701,7 @@
                         <DataGrid x:Name="ExportGrid" ItemsSource="{Binding ExportColumns}" AutoGenerateColumns="False" 
                                   CanUserAddRows="False" CanUserDeleteRows="False"
                                   HeadersVisibility="Column" SelectionUnit="FullRow"
+                                  ItemContainerStyle="{StaticResource FieldRowStyle}"
                                   ScrollViewer.CanContentScroll="False"
                                   EnableRowVirtualization="False"
                                   RowHeight="42">
@@ -879,6 +885,7 @@
                         <DataGrid x:Name="PdfGrid" ItemsSource="{Binding PdfColumns}" AutoGenerateColumns="False" 
                                   CanUserAddRows="False" CanUserDeleteRows="False"
                                   HeadersVisibility="Column" SelectionUnit="FullRow"
+                                  ItemContainerStyle="{StaticResource FieldRowStyle}"
                                   ScrollViewer.CanContentScroll="False"
                                   EnableRowVirtualization="False"
                                   RowHeight="42">
@@ -992,6 +999,163 @@
                             </DataGrid.Columns>
                         </DataGrid>
                     </Border>
+                </Grid>
+            </TabItem>
+            <!-- TAB: PDF REPLACEMENT RULES -->
+            <TabItem Header="REGLAS PDF">
+                <Grid Margin="20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Margin="0,0,0,15">
+                        <TextBlock Text="Reglas de Reemplazo PDF" FontSize="20" FontWeight="Bold" Margin="0,0,0,5" Foreground="{DynamicResource AccentBrush}"/>
+                        <TextBlock Text="Configure reglas para reemplazar valores y aplicar colores específicos en el reporte PDF." Foreground="{DynamicResource SecondaryTextBrush}"/>
+                    </StackPanel>
+
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Toolbar -->
+                        <Grid Margin="0,0,0,10">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Visibility="{Binding IsPdfRuleMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                <Button Content="+ Nueva Regla" 
+                                        Command="{Binding AddPdfReplacementRuleCommand}"
+                                        Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Height="36" Padding="15,0"/>
+                                
+                                <Button Content="Selección Múltiple" 
+                                        Command="{Binding TogglePdfRuleMultiSelectCommand}"
+                                        Style="{StaticResource SecondaryButton}" Height="36" Padding="15,0"
+                                        Visibility="{Binding EditingPauta.PdfReplacementRules.Count, Converter={StaticResource DictConverter}, ConverterParameter=0:Collapsed|Default:Visible}"/>
+                            </StackPanel>
+                            
+                            <StackPanel Orientation="Horizontal" Visibility="{Binding IsPdfRuleMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Button Content="Eliminar Seleccionadas" 
+                                        Command="{Binding DeleteSelectedPdfRulesCommand}"
+                                        Style="{StaticResource DangerButton}" Margin="0,0,10,0" Height="36" Padding="15,0"/>
+                                
+                                <Button Content="Seleccionar Todo" 
+                                        Command="{Binding SelectAllPdfRulesCommand}"
+                                        Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Height="36" Padding="15,0"/>
+
+                                <Button Content="Cancelar" 
+                                        Command="{Binding TogglePdfRuleMultiSelectCommand}"
+                                        Style="{StaticResource GhostButton}" Height="36" Padding="15,0"/>
+                            </StackPanel>
+                        </Grid>
+                        
+                        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <DataGrid ItemsSource="{Binding EditingPauta.PdfReplacementRules}" 
+                                      AutoGenerateColumns="False" 
+                                      CanUserAddRows="False"
+                                      HeadersVisibility="Column" 
+                                      RowHeight="42"
+                                      Background="Transparent"
+                                      BorderThickness="0">
+                                
+                                <DataGrid.Columns>
+                                    <!-- Checkbox -->
+                                    <DataGridTemplateColumn Width="45" Visibility="{Binding Data.IsPdfRuleMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <!-- Campos Origen -->
+                                    <DataGridTemplateColumn Header="Campos Afectados" Width="1.5*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Command="{Binding Data.EditPdfRuleFieldsCommand, Source={StaticResource Proxy}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource GhostButton}"
+                                                        HorizontalContentAlignment="Stretch"
+                                                        VerticalContentAlignment="Center"
+                                                        Padding="8,4" Margin="2"
+                                                        ToolTip="Click para seleccionar los campos a los que aplica esta regla">
+                                                     <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock TextTrimming="CharacterEllipsis" VerticalAlignment="Center" 
+                                                                   Foreground="{DynamicResource TextBrush}">
+                                                            <TextBlock.Text>
+                                                                <MultiBinding Converter="{StaticResource FieldIdsToNamesConverter}">
+                                                                    <Binding Path="TargetFieldIds" />
+                                                                    <Binding Path="Data.Fields" Source="{StaticResource Proxy}" />
+                                                                    <Binding Path="TargetFieldIds.Count" />
+                                                                </MultiBinding>
+                                                            </TextBlock.Text>
+                                                        </TextBlock>
+                                                        <TextBlock Grid.Column="1" Text="✏️" Margin="10,0,0,0" VerticalAlignment="Center" Opacity="0.5"/>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <!-- Si Valor es... -->
+                                    <DataGridTemplateColumn Header="Si el valor es..." Width="*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBox Text="{Binding TargetValue, UpdateSourceTrigger=PropertyChanged}" 
+                                                         Background="Transparent" BorderThickness="0" Padding="8,4" VerticalAlignment="Center"
+                                                         Foreground="{DynamicResource TextBrush}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    
+                                    <!-- Mostrar Texto... -->
+                                    <DataGridTemplateColumn Header="Reemplazar por..." Width="*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                 <TextBox Text="{Binding ReplacementValue, UpdateSourceTrigger=PropertyChanged}" 
+                                                         Background="Transparent" BorderThickness="0" Padding="8,4" VerticalAlignment="Center"
+                                                         Foreground="{DynamicResource TextBrush}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    
+                                    <!-- Color -->
+                                    <DataGridTemplateColumn Header="Color en PDF" Width="150">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ComboBox SelectedValue="{Binding TextColor, UpdateSourceTrigger=PropertyChanged}" 
+                                                          SelectedValuePath="Tag"
+                                                          Height="32" VerticalContentAlignment="Center">
+                                                    <ComboBoxItem Tag="#000000"><StackPanel Orientation="Horizontal"><Border Width="12" Height="12" Background="#000000" Margin="0,0,8,0" BorderBrush="Gray" BorderThickness="1"/><TextBlock Text="Negro"/></StackPanel></ComboBoxItem>
+                                                    <ComboBoxItem Tag="#28a745"><StackPanel Orientation="Horizontal"><Border Width="12" Height="12" Background="#28a745" Margin="0,0,8,0" BorderBrush="Gray" BorderThickness="1"/><TextBlock Text="Verde"/></StackPanel></ComboBoxItem>
+                                                    <ComboBoxItem Tag="#dc3545"><StackPanel Orientation="Horizontal"><Border Width="12" Height="12" Background="#dc3545" Margin="0,0,8,0" BorderBrush="Gray" BorderThickness="1"/><TextBlock Text="Rojo"/></StackPanel></ComboBoxItem>
+                                                    <ComboBoxItem Tag="#007bff"><StackPanel Orientation="Horizontal"><Border Width="12" Height="12" Background="#007bff" Margin="0,0,8,0" BorderBrush="Gray" BorderThickness="1"/><TextBlock Text="Azul"/></StackPanel></ComboBoxItem>
+                                                    <ComboBoxItem Tag="#fd7e14"><StackPanel Orientation="Horizontal"><Border Width="12" Height="12" Background="#fd7e14" Margin="0,0,8,0" BorderBrush="Gray" BorderThickness="1"/><TextBlock Text="Naranja"/></StackPanel></ComboBoxItem>
+                                                    <ComboBoxItem Tag="#6c757d"><StackPanel Orientation="Horizontal"><Border Width="12" Height="12" Background="#6c757d" Margin="0,0,8,0" BorderBrush="Gray" BorderThickness="1"/><TextBlock Text="Gris"/></StackPanel></ComboBoxItem>
+                                                </ComboBox>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    
+                                    <!-- Actions -->
+                                    <DataGridTemplateColumn Width="50">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="🗑️" Command="{Binding Data.RemovePdfReplacementRuleCommand, Source={StaticResource Proxy}}" 
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource DangerButton}" Padding="0" Width="30" Height="30"
+                                                        ToolTip="Eliminar regla"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Border>
+                    </Grid>
                 </Grid>
             </TabItem>
         </TabControl>

@@ -98,6 +98,20 @@ namespace PautaDinamicaApp.ViewModels
                                 .Where(t => t != FieldType.Separator)
                                 .ToList();
             EmailMethods = Enum.GetValues(typeof(EmailMethod));
+
+            // Comandos de Reglas PDF
+            AddPdfReplacementRuleCommand = new RelayCommand(_ => AddPdfReplacementRule());
+            RemovePdfReplacementRuleCommand = new RelayCommand(r => RemovePdfReplacementRule(r as PdfReplacementRule));
+            DeleteSelectedPdfRulesCommand = new RelayCommand(_ => DeleteSelectedPdfRules());
+            EditPdfRuleFieldsCommand = new RelayCommand(r => EditPdfRuleFields(r as PdfReplacementRule));
+            TogglePdfRuleMultiSelectCommand = new RelayCommand(_ => IsPdfRuleMultiSelectMode = !IsPdfRuleMultiSelectMode);
+            SelectAllPdfRulesCommand = new RelayCommand(_ =>
+            {
+                if (EditingPauta != null)
+                {
+                    foreach (var r in EditingPauta.PdfReplacementRules) r.IsSelected = true;
+                }
+            });
         }
 
         public Array EmailMethods { get; }
@@ -1427,6 +1441,81 @@ namespace PautaDinamicaApp.ViewModels
 
             // Por simplicidad, usamos un InputBox improvisado o solo permitimos editar el nombre si tuviéramos un TextBox bindeado.
             // En la UI de ConfigWindow usaremos un TextBox bindeado al nombre del preset seleccionado.
+        }
+        // --- Comandos de Reglas PDF ---
+        public ICommand AddPdfReplacementRuleCommand { get; }
+        public ICommand RemovePdfReplacementRuleCommand { get; }
+        public ICommand TogglePdfRuleMultiSelectCommand { get; }
+        public ICommand DeleteSelectedPdfRulesCommand { get; }
+        public ICommand SelectAllPdfRulesCommand { get; }
+        public ICommand EditPdfRuleFieldsCommand { get; }
+
+        private bool _isPdfRuleMultiSelectMode;
+        public bool IsPdfRuleMultiSelectMode { get => _isPdfRuleMultiSelectMode; set => SetProperty(ref _isPdfRuleMultiSelectMode, value); }
+
+
+        private void AddPdfReplacementRule()
+        {
+            if (EditingPauta == null) return;
+            var rule = new PdfReplacementRule
+            {
+                TargetValue = "1",
+                ReplacementValue = "Cumple",
+                TextColor = "#28a745" // Verde por defecto
+            };
+
+            // Pre-seleccionar primer campo si hay
+            var firstField = Fields.FirstOrDefault(f => f.Type != FieldType.Separator);
+            if (firstField != null) rule.TargetFieldIds.Add(firstField.Id);
+
+            EditingPauta.PdfReplacementRules.Add(rule);
+        }
+
+        private void RemovePdfReplacementRule(PdfReplacementRule? rule)
+        {
+            if (EditingPauta != null && rule != null)
+            {
+                if (MessageBox.Show("¿Eliminar esta regla de reemplazo PDF?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                {
+                    EditingPauta.PdfReplacementRules.Remove(rule);
+                }
+            }
+        }
+
+        private void DeleteSelectedPdfRules()
+        {
+            if (EditingPauta == null) return;
+            var toRemove = EditingPauta.PdfReplacementRules.Where(r => r.IsSelected).ToList();
+            if (toRemove.Count == 0) return;
+
+            if (MessageBox.Show($"¿Eliminar las {toRemove.Count} reglas PDF seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            {
+                foreach (var r in toRemove) EditingPauta.PdfReplacementRules.Remove(r);
+            }
+        }
+
+        private void EditPdfRuleFields(PdfReplacementRule? rule)
+        {
+            if (rule == null) return;
+
+            var selectableFields = Fields.Where(f => f.Type != FieldType.Separator).Select(f => new SelectableFieldViewModel
+            {
+                Id = f.Id,
+                Label = f.Label,
+                IsSelected = rule.TargetFieldIds.Contains(f.Id)
+            }).ToList();
+
+            var win = new MultiFieldSelectorWindow(selectableFields);
+            win.Owner = System.Windows.Application.Current.Windows.OfType<ConfigWindow>().FirstOrDefault();
+
+            if (win.ShowDialog() == true)
+            {
+                rule.TargetFieldIds.Clear();
+                foreach (var sf in selectableFields.Where(x => x.IsSelected))
+                {
+                    rule.TargetFieldIds.Add(sf.Id);
+                }
+            }
         }
     }
 }

@@ -111,6 +111,10 @@ namespace PautaDinamicaApp.Models
         private System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule> _emailReplacementRules = new();
         public System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule> EmailReplacementRules { get => _emailReplacementRules; set => SetProperty(ref _emailReplacementRules, value); }
 
+        // --- Reglas de Reemplazo para PDF ---
+        private System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule> _pdfReplacementRules = new();
+        public System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule> PdfReplacementRules { get => _pdfReplacementRules; set => SetProperty(ref _pdfReplacementRules, value); }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)

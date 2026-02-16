@@ -854,7 +854,7 @@ namespace PautaDinamicaApp.ViewModels
                     }
                 }
 
-                _pdfService.GenerateAuditPdf(records, definitions, CurrentPauta?.PdfConfig, pautaName, filePath);
+                _pdfService.GenerateAuditPdf(records, definitions, CurrentPauta?.PdfConfig, pautaName, filePath, CurrentPauta?.PdfReplacementRules?.ToList());
 
                 if (!silent)
                 {

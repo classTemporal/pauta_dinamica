@@ -113,11 +113,13 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand SelectAllEmailRulesCommand { get; }
         public ICommand EditEmailRuleFieldsCommand { get; }
 
+
         private bool _isContactMultiSelectMode;
         public bool IsContactMultiSelectMode { get => _isContactMultiSelectMode; set => SetProperty(ref _isContactMultiSelectMode, value); }
 
         private bool _isEmailRuleMultiSelectMode;
         public bool IsEmailRuleMultiSelectMode { get => _isEmailRuleMultiSelectMode; set => SetProperty(ref _isEmailRuleMultiSelectMode, value); }
+
 
         public SettingsViewModel(string activePautaId = "")
         {
@@ -167,6 +169,7 @@ namespace PautaDinamicaApp.ViewModels
                     foreach (var r in SelectedPauta.EmailReplacementRules) r.IsSelected = true;
                 }
             });
+
         }
 
         private void UnlockAdminSettings()
@@ -319,6 +322,25 @@ namespace PautaDinamicaApp.ViewModels
                 // Pero como TargetFieldIds es ObservableCollection, Add dispara CollectionChanged.
             }
         }
+
+        // --- Gestión de Reglas de PDF ---
+
+        private void AddPdfReplacementRule()
+        {
+            if (SelectedPauta == null) return;
+            var rule = new PdfReplacementRule
+            {
+                TargetValue = "1",
+                ReplacementValue = "Cumple",
+                TextColor = "#28a745" // Verde por defecto
+            };
+
+            var firstField = CurrentPautaFields.FirstOrDefault();
+            if (firstField != null) rule.TargetFieldIds.Add(firstField.Id);
+
+            SelectedPauta.PdfReplacementRules.Add(rule);
+        }
+
 
         private void SyncContacts()
         {

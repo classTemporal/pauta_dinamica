@@ -522,6 +522,7 @@
                 </Border>
             </TabItem>
 
+
             <!-- TAB ADMIN -->
             <TabItem Header="🔐 Opción Administrativa">
                 <Border Padding="20">

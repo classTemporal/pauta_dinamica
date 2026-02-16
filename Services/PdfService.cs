@@ -19,7 +19,7 @@ namespace PautaDinamicaApp.Services
             QuestPDF.Settings.License = LicenseType.Community;
         }
 
-        public void GenerateAuditPdf(List<AuditEntry> records, List<FieldDefinition> fields, List<ExportColumnConfig>? pdfConfig, string pautaName, string outputPath)
+        public void GenerateAuditPdf(List<AuditEntry> records, List<FieldDefinition> fields, List<ExportColumnConfig>? pdfConfig, string pautaName, string outputPath, List<PdfReplacementRule>? replacementRules = null)
         {
             // Mapeo de tipos real de los campos (ID -> Definición)
             var fieldMeta = fields.ToDictionary(f => f.Id, f => f);
@@ -83,7 +83,7 @@ namespace PautaDinamicaApp.Services
                                 {
                                     if (currentSection.Any())
                                     {
-                                        RenderSection(col, sectionTitle, currentSection, record, fieldMeta);
+                                        RenderSection(col, sectionTitle, currentSection, record, fieldMeta, replacementRules);
                                         currentSection.Clear();
                                     }
                                     sectionTitle = configItem.CustomHeader;
@@ -96,7 +96,7 @@ namespace PautaDinamicaApp.Services
 
                             if (currentSection.Any())
                             {
-                                RenderSection(col, sectionTitle, currentSection, record, fieldMeta);
+                                RenderSection(col, sectionTitle, currentSection, record, fieldMeta, replacementRules);
                             }
 
                             if (records.Count > 1 && record != records.Last())
@@ -132,7 +132,7 @@ namespace PautaDinamicaApp.Services
             return s;
         }
 
-        private void RenderSection(ColumnDescriptor col, string title, List<ExportColumnConfig> items, AuditEntry record, Dictionary<string, FieldDefinition> fieldMeta)
+        private void RenderSection(ColumnDescriptor col, string title, List<ExportColumnConfig> items, AuditEntry record, Dictionary<string, FieldDefinition> fieldMeta, List<PdfReplacementRule>? replacementRules)
         {
             col.Item().PaddingBottom(15).Table(table =>
             {
@@ -149,26 +149,54 @@ namespace PautaDinamicaApp.Services
                 {
                     var rawVal = record.Values.TryGetValue(item.FieldId, out var val) ? val : null;
 
-                    // Prioridad absoluta al tipo de la definición
-                    FieldType actualType = fieldMeta.TryGetValue(item.FieldId, out var def) ? def.Type : FieldType.Text;
-                    var value = FormatValue(rawVal, actualType);
+                    string? customText = null;
+                    string? customColor = null;
+
+                    if (replacementRules != null)
+                    {
+                        string valStr = rawVal?.ToString() ?? "";
+                        var rule = replacementRules.FirstOrDefault(r => r.TargetFieldIds.Contains(item.FieldId) && string.Equals(r.TargetValue, valStr, StringComparison.OrdinalIgnoreCase));
+
+                        if (rule != null)
+                        {
+                            customText = rule.ReplacementValue;
+                            customColor = rule.TextColor;
+                        }
+                    }
+
+                    string value;
+                    if (customText != null)
+                    {
+                        value = customText;
+                    }
+                    else
+                    {
+                        // Prioridad absoluta al tipo de la definición
+                        FieldType actualType = fieldMeta.TryGetValue(item.FieldId, out var def) ? def.Type : FieldType.Text;
+                        value = FormatValue(rawVal, actualType);
+                    }
 
                     table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(5).Background(Colors.Grey.Lighten4).Text(item.CustomHeader).SemiBold();
 
-                    var cell = table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(5).Text(value);
+                    var cellContainer = table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(5);
+                    var textDesc = cellContainer.Text(value);
 
-                    // Colores especiales: verdes para Sí/Cumple, rojos para No/No cumple
-                    if (value.Equals("Cumple", StringComparison.OrdinalIgnoreCase) || value.Equals("Sí", StringComparison.OrdinalIgnoreCase))
+                    // Colores especiales
+                    if (customColor != null)
                     {
-                        cell.FontColor(Colors.Green.Medium).Bold();
+                        textDesc.FontColor(customColor).Bold();
+                    }
+                    else if (value.Equals("Cumple", StringComparison.OrdinalIgnoreCase) || value.Equals("Sí", StringComparison.OrdinalIgnoreCase))
+                    {
+                        textDesc.FontColor(Colors.Green.Medium).Bold();
                     }
                     else if (value.Equals("No cumple", StringComparison.OrdinalIgnoreCase) || value.Equals("No", StringComparison.OrdinalIgnoreCase))
                     {
-                        cell.FontColor(Colors.Red.Medium).Bold();
+                        textDesc.FontColor(Colors.Red.Medium).Bold();
                     }
                     else if (value.Contains("%"))
                     {
-                        cell.Bold();
+                        textDesc.Bold();
                     }
                 }
             });

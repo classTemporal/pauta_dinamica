@@ -45,7 +45,8 @@ namespace PautaDinamicaApp
                         ConverterParameter = field.Id
                     },
                     Width = DataGridLength.Auto,
-                    MinWidth = 180 // Suficiente espacio para que no se vea apretado
+                    MinWidth = 180,
+                    CanUserSort = false // Evitar crash por comparación de diccionarios
                 };
 
                 RecordsGrid.Columns.Add(column);
