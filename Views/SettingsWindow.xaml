@@ -29,6 +29,7 @@
         <conv:BooleanToVisibilityConverter x:Key="BoolToVisCustom"/>
         <conv:FieldIdsToNamesConverter x:Key="FieldIdsToNamesConverter"/>
         <conv:NotNullToBooleanConverter x:Key="NotNullToBool"/>
+        <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
     </Window.Resources>
 
     <Grid>
@@ -36,399 +37,309 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-
         <TabControl Background="Transparent" BorderThickness="0" Margin="10">
-            <!-- Global styles for TabControl and TabItem from Styles.xaml will be used implicitly -->
-
-            <!-- TAB GENERAL -->
-            <TabItem Header="General">
+            <!-- TAB GENERAL: Interfaz y Ortografía -->
+            <TabItem Header="✨ General">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <Border Padding="15">
+                    <Border Padding="20">
                         <StackPanel>
-                            <TextBlock Text="Rutas Predeterminadas" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
-
-                            <TextBlock Text="Carpeta para Exportaciones Excel:" Style="{StaticResource LabelStyle}"/>
-                            <Grid Margin="0,0,0,15">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Text="{Binding Settings.ExcelExportPath}" IsReadOnly="True"/>
-                                <Button Grid.Column="1" Content="..." Command="{Binding BrowseExcelPathCommand}" 
-                                        Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Width="45" Height="36"/>
-                            </Grid>
-
-                            <TextBlock Text="Carpeta para Respaldos (JSON):" Style="{StaticResource LabelStyle}"/>
-                            <Grid Margin="0,0,0,15">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Text="{Binding Settings.JsonBackupPath}" IsReadOnly="True"/>
-                                <Button Grid.Column="1" Content="..." Command="{Binding BrowseJsonPathCommand}" 
-                                        Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Width="45" Height="36"/>
-                            </Grid>
-
-                            <TextBlock Text="Carpeta para Reportes PDF:" Style="{StaticResource LabelStyle}"/>
-                            <Grid Margin="0,0,0,15">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Text="{Binding Settings.PdfReportPath}" IsReadOnly="True"/>
-                                <Button Grid.Column="1" Content="..." Command="{Binding BrowsePdfPathCommand}" 
-                                        Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Width="45" Height="36"/>
-                            </Grid>
-
-                            <Separator Background="{DynamicResource BorderBrush}" Margin="0,10,0,20"/>
-
-                            <TextBlock Text="Resaltado de Filas (Visual)" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
-                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
+                            <TextBlock Text="Personalización y Escritura" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
+                            
+                            <!-- Tema Visual -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
                                 <StackPanel>
-                                    <TextBlock Text="1. Seleccione una Pauta para ver sus campos:" Style="{StaticResource LabelStyle}"/>
-                                    <ComboBox ItemsSource="{Binding Pautas}" 
-                                              SelectedItem="{Binding SelectedPauta}"
-                                              DisplayMemberPath="Name"
-                                              Margin="0,0,0,15" Height="35"/>
-
-                                    <TextBlock Text="2. Si el campo con este Nombre:" Style="{StaticResource LabelStyle}"/>
-                                    <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
-                                              SelectedValue="{Binding SelectedPauta.ColoringField}"
-                                              SelectedValuePath="Label"
-                                              DisplayMemberPath="Label"
-                                              Margin="0,0,0,15" Height="35"
-                                              IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
-
-                                    <TextBlock Text="3. Tiene este Valor Exacto:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Text="{Binding SelectedPauta.ColoringValue}" Margin="0,0,0,15" ToolTip="Ej: 100%, 0.0%"/>
-
-                                    <TextBlock Text="4. Pintar fila de este color:" Style="{StaticResource LabelStyle}"/>
-                                    <Grid Margin="0,0,0,5">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBox Text="{Binding SelectedPauta.ColoringColor}" Margin="0,0,10,0" VerticalAlignment="Center" ToolTip="Código Hexadecimal"/>
-                                        <Button Grid.Column="1" Command="{Binding PickColorCommand}" Background="Transparent" Padding="0" BorderThickness="0" Height="36">
-                                            <Border Width="60" Height="32" CornerRadius="4" BorderThickness="1" BorderBrush="White">
-                                                <Border.Background>
-                                                    <SolidColorBrush Color="{Binding SelectedPauta.ColoringColor, FallbackValue=#28a745}"/>
-                                                </Border.Background>
-                                            </Border>
-                                        </Button>
-                                    </Grid>
-                                    <TextBlock Text="Tip: Haga clic en el cuadro de color para abrir el selector visual." FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="0,5,0,0"/>
+                                    <TextBlock Text="Tema de la Aplicación:" Style="{StaticResource LabelStyle}"/>
+                                    <TextBlock Text="Cambie entre modo claro y oscuro para mejorar la visibilidad." 
+                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,10"/>
+                                    <ComboBox ItemsSource="{Binding Themes}" 
+                                              SelectedItem="{Binding SelectedTheme}"
+                                              Height="35" Width="150" HorizontalAlignment="Left"/>
                                 </StackPanel>
                             </Border>
 
-                            <Separator Background="{DynamicResource BorderBrush}" Margin="0,15,0,20"/>
-
-                            <TextBlock Text="Contadores Rápidos (Estadísticas)" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
+                            <!-- Ortografía -->
                             <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
                                 <StackPanel>
-                                    <TextBlock Text="Configura qué conteos quieres ver sobre la tabla de registros." FontSize="13" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15"/>
-                                    
-                                    <TextBlock Text="1. Pauta de Referencia (para listar campos):" Style="{StaticResource LabelStyle}"/>
-                                    <ComboBox ItemsSource="{Binding Pautas}" 
-                                              SelectedItem="{Binding SelectedPauta}"
-                                              DisplayMemberPath="Name"
-                                              Margin="0,0,0,15" Height="35"/>
-
-                                    <TextBlock Text="2. Definir Contadores (Campo + Valor a contar):" Style="{StaticResource LabelStyle}" Margin="0,0,0,5"/>
-                                    
-                                    <!-- Contador 1 -->
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="15"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="Campo 1:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                            <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
-                                                      SelectedValue="{Binding SelectedPauta.CounterField1}"
-                                                      SelectedValuePath="Label"
-                                                      DisplayMemberPath="Label"
-                                                      Height="35"
-                                                      IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="Valor 1:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                            <TextBox Text="{Binding SelectedPauta.CounterValue1}" Height="35" VerticalContentAlignment="Center"/>
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <!-- Contador 2 -->
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="15"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="Campo 2:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                            <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
-                                                      SelectedValue="{Binding SelectedPauta.CounterField2}"
-                                                      SelectedValuePath="Label"
-                                                      DisplayMemberPath="Label"
-                                                      Height="35"
-                                                      IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="Valor 2:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                            <TextBox Text="{Binding SelectedPauta.CounterValue2}" Height="35" VerticalContentAlignment="Center"/>
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <!-- Contador 3 -->
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="15"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="Campo 3:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                            <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
-                                                      SelectedValue="{Binding SelectedPauta.CounterField3}"
-                                                      SelectedValuePath="Label"
-                                                      DisplayMemberPath="Label"
-                                                      Height="35"
-                                                      IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="Valor 3:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                            <TextBox Text="{Binding SelectedPauta.CounterValue3}" Height="35" VerticalContentAlignment="Center"/>
-                                        </StackPanel>
-                                    </Grid>
-
-                                </StackPanel>
-                            </Border>
-
-                            <Separator Background="{DynamicResource BorderBrush}" Margin="0,15,0,20"/>
-
-                            <TextBlock Text="Ortografía y Escritura" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
-                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
-                                <StackPanel>
-                                    <TextBlock Text="Idioma del Corrector Ortográfico:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBlock Text="Seleccione el idioma para la revisión de ortografía en campos de texto y comentarios." 
+                                    <TextBlock Text="Corrector Ortográfico:" Style="{StaticResource LabelStyle}"/>
+                                    <TextBlock Text="Seleccione el idioma para la revisión en tiempo real." 
                                                FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,10"/>
                                     <ComboBox ItemsSource="{Binding SpellCheckLanguages}" 
                                               SelectedValue="{Binding SpellCheckLanguage}"
                                               SelectedValuePath="Key"
                                               DisplayMemberPath="Value"
                                               Height="35" Width="200" HorizontalAlignment="Left"/>
-                                    <TextBlock Text="Nota: Requiere tener instalado el paquete de idioma correspondiente en Windows." 
+                                    <TextBlock Text="Nota: Requiere el paquete de idioma de Windows." 
                                                FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="0,8,0,0"/>
                                 </StackPanel>
                             </Border>
 
+                            <TextBlock Text="💡 Estos ajustes se aplican a toda la aplicación de forma global." 
+                                       FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="5,20,0,0"/>
                         </StackPanel>
                     </Border>
                 </ScrollViewer>
             </TabItem>
 
-
-
-            <!-- TAB CORREO -->
-            <TabItem Header="📧 Configuración de Correo">
+            <!-- TAB RUTAS: Almacenamiento -->
+            <TabItem Header="📂 Rutas">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <Border Padding="15">
+                    <Border Padding="20">
                         <StackPanel>
-                            <TextBlock Text="Configuración Global (Predeterminada)" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource AccentBrush}"/>
-                            <TextBlock Text="Estos valores se usarán si una pauta específica no tiene su propia configuración." FontSize="12" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15" Opacity="0.7"/>
-
-                            <Grid Margin="0,0,0,15">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <StackPanel Margin="0,0,10,0">
-                                    <TextBlock Text="Método General:" Style="{StaticResource LabelStyle}"/>
-                                    <ComboBox ItemsSource="{Binding EmailMethods}" 
-                                              SelectedItem="{Binding Settings.SelectedEmailMethod}"
-                                              Height="35"/>
-                                </StackPanel>
-                            </Grid>
-
-                            <TextBlock Text="Para (To) por defecto:" Style="{StaticResource LabelStyle}"/>
-                            <TextBox Text="{Binding Settings.EmailToTemplate}" Margin="0,0,0,10"/>
-
-                            <Separator Background="{DynamicResource BorderBrush}" Margin="0,15,0,20"/>
-
-                            <TextBlock Text="Configurar Envío por Pauta (Específico)" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
+                            <TextBlock Text="Ubicación de Archivos" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
                             
-                            <!-- Selector de Pauta -->
-                            <TextBlock Text="1. Seleccione la Pauta a Configurar:" Style="{StaticResource LabelStyle}"/>
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
+                                <StackPanel>
+                                    <TextBlock Text="Exportaciones Excel:" Style="{StaticResource LabelStyle}"/>
+                                    <Grid Margin="0,0,0,15">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding Settings.ExcelExportPath}" IsReadOnly="True" Height="36" VerticalContentAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="..." Command="{Binding BrowseExcelPathCommand}" 
+                                                Style="{StaticResource GhostButton}" Margin="8,0,0,0" Width="45" Height="36"/>
+                                    </Grid>
+
+                                    <TextBlock Text="Respaldos (JSON):" Style="{StaticResource LabelStyle}"/>
+                                    <Grid Margin="0,0,0,15">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding Settings.JsonBackupPath}" IsReadOnly="True" Height="36" VerticalContentAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="..." Command="{Binding BrowseJsonPathCommand}" 
+                                                Style="{StaticResource GhostButton}" Margin="8,0,0,0" Width="45" Height="36"/>
+                                    </Grid>
+
+                                    <TextBlock Text="Reportes PDF:" Style="{StaticResource LabelStyle}"/>
+                                    <Grid Margin="0,0,0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding Settings.PdfReportPath}" IsReadOnly="True" Height="36" VerticalContentAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="..." Command="{Binding BrowsePdfPathCommand}" 
+                                                Style="{StaticResource GhostButton}" Margin="8,0,0,0" Width="45" Height="36"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- TAB PAUTAS: Visualización y Estadísticas -->
+            <TabItem Header="📊 Pautas">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="Personalización de Datos" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
+                            
+                            <TextBlock Text="Seleccione una Pauta:" Style="{StaticResource LabelStyle}"/>
                             <ComboBox ItemsSource="{Binding Pautas}" 
                                       SelectedItem="{Binding SelectedPauta}"
                                       DisplayMemberPath="Name"
-                                      Margin="0,0,0,20" Height="40">
-                            </ComboBox>
+                                      Margin="0,0,0,20" Height="40" Background="{DynamicResource InputBackground}"/>
+
+                            <Separator Background="{DynamicResource BorderBrush}" Margin="0,0,0,25"/>
+
+                            <!-- Resaltado de Filas -->
+                            <TextBlock Text="Resaltado Visual de Registros" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,5"/>
+                            <TextBlock Text="Permite resaltar automáticamente las filas en la tabla principal cuando un campo específico coincide con el valor definido." 
+                                       FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15" TextWrapping="Wrap"/>
+                            
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,25">
+                                <StackPanel>
+                                    <TextBlock Text="Si el campo:" Style="{StaticResource LabelStyle}" FontSize="12"/>
+                                    <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
+                                              SelectedValue="{Binding SelectedPauta.ColoringField}"
+                                              SelectedValuePath="Label" DisplayMemberPath="Label"
+                                              Margin="0,0,0,15" Height="35"
+                                              IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Margin="0,0,15,0">
+                                            <TextBlock Text="Tiene el valor:" Style="{StaticResource LabelStyle}" FontSize="12"/>
+                                            <TextBox Text="{Binding SelectedPauta.ColoringValue}" Height="35" VerticalContentAlignment="Center"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Color:" Style="{StaticResource LabelStyle}" FontSize="12"/>
+                                            <Button Command="{Binding PickColorCommand}" Background="Transparent" Padding="0" BorderThickness="0" Height="35">
+                                                <Border Width="80" Height="32" CornerRadius="4" BorderThickness="1" BorderBrush="White">
+                                                    <Border.Background>
+                                                        <SolidColorBrush Color="{Binding SelectedPauta.ColoringColor, FallbackValue=#28a745}"/>
+                                                    </Border.Background>
+                                                </Border>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Contadores -->
+                            <TextBlock Text="Contadores y Estadísticas (KPIs)" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,5,0,5"/>
+                            <TextBlock Text="Defina hasta 3 contadores que aparecerán en la barra superior. Contarán cuántas veces aparece un valor específico en el campo seleccionado." 
+                                       FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15" TextWrapping="Wrap"/>
+                            
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="20"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <ComboBox Grid.Column="0" Grid.Row="0" ItemsSource="{Binding CurrentPautaFields}" 
+                                                  SelectedValue="{Binding SelectedPauta.CounterField1}"
+                                                  SelectedValuePath="Label" DisplayMemberPath="Label"
+                                                  Height="35" Margin="0,0,0,10" IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
+                                        <TextBox Grid.Column="2" Grid.Row="0" Text="{Binding SelectedPauta.CounterValue1}" 
+                                                 Height="35" Margin="0,0,0,10" VerticalContentAlignment="Center" Opacity="0.8"/>
+
+                                        <ComboBox Grid.Column="0" Grid.Row="1" ItemsSource="{Binding CurrentPautaFields}" 
+                                                  SelectedValue="{Binding SelectedPauta.CounterField2}"
+                                                  SelectedValuePath="Label" DisplayMemberPath="Label"
+                                                  Height="35" Margin="0,0,0,10" IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
+                                        <TextBox Grid.Column="2" Grid.Row="1" Text="{Binding SelectedPauta.CounterValue2}" 
+                                                 Height="35" Margin="0,0,0,10" VerticalContentAlignment="Center" Opacity="0.8"/>
+
+                                        <ComboBox Grid.Column="0" Grid.Row="2" ItemsSource="{Binding CurrentPautaFields}" 
+                                                  SelectedValue="{Binding SelectedPauta.CounterField3}"
+                                                  SelectedValuePath="Label" DisplayMemberPath="Label"
+                                                  Height="35" IsEnabled="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}"/>
+                                        <TextBox Grid.Column="2" Grid.Row="2" Text="{Binding SelectedPauta.CounterValue3}" 
+                                                 Height="35" VerticalContentAlignment="Center" Opacity="0.8"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- TAB CORREO -->
+            <TabItem Header="📧 Correo">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="Configuración de Envío" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
+                            
+                            <TextBlock Text="Seleccione la Pauta:" Style="{StaticResource LabelStyle}"/>
+                            <ComboBox ItemsSource="{Binding Pautas}" 
+                                      SelectedItem="{Binding SelectedPauta}"
+                                      DisplayMemberPath="Name"
+                                      Margin="0,0,0,20" Height="40"/>
 
                             <Separator Background="{DynamicResource BorderBrush}" Margin="0,0,0,20"/>
 
-                            <StackPanel>
-                                <StackPanel.Style>
-                                    <Style TargetType="StackPanel">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}" Value="True">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </StackPanel.Style>
-
-                                <TextBlock Text="{Binding SelectedPauta.Name, StringFormat='2. Configuración para: {0}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15"/>
-
-                                <TextBlock Text="Método de Envío:" Style="{StaticResource LabelStyle}"/>
-                                <ComboBox ItemsSource="{Binding EmailMethods}" 
-                                          SelectedItem="{Binding SelectedPauta.EmailMethod}"
-                                          Margin="0,0,0,15" Height="35"/>
-
-                                <!-- Detección Automática Compacta -->
-                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                            <StackPanel Visibility="{Binding SelectedPauta, Converter={StaticResource NotNullToVisibilityConverter}}">
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
                                     <StackPanel>
-                                        <Grid>
-                                            <TextBlock Text="Detección Automática de Destinatario" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                                            <CheckBox IsChecked="{Binding SelectedPauta.UseAutomatedRecipient}" Content="Activar" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                                        </Grid>
-                                        <TextBlock Text="Asocia nombres de agentes con sus correos electrónicos automáticamente." FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
-                                        
-                                        <Button Content="⚙️ CONFIGURAR DIRECTORIO Y CAMPO" 
-                                                Command="{Binding OpenEmailDirectoryCommand}"
-                                                Style="{StaticResource GhostButton}" 
-                                                Height="35"
-                                                IsEnabled="{Binding SelectedPauta.UseAutomatedRecipient}"/>
+                                        <TextBlock Text="Método:" Style="{StaticResource LabelStyle}" FontSize="12"/>
+                                        <ComboBox ItemsSource="{Binding EmailMethods}" 
+                                                  SelectedItem="{Binding SelectedPauta.EmailMethod}"
+                                                  Height="35"/>
                                     </StackPanel>
-                                </Border>
 
-                                <TextBlock Text="Para (To) [Manual o Fallback]:" Style="{StaticResource LabelStyle}"/>
-                                <TextBox Text="{Binding SelectedPauta.EmailToTemplate}" Margin="0,0,0,10"/>
+                                    <Border Grid.Column="2" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                <CheckBox IsChecked="{Binding SelectedPauta.UseAutomatedRecipient}" VerticalAlignment="Center" x:Name="AutoRecipientCheck"/>
+                                                <TextBlock Text="Detección Automática" VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                            </StackPanel>
+                                            <Button Content="⚙️ DIRECTORIO DE CORREOS" 
+                                                    Command="{Binding OpenEmailDirectoryCommand}"
+                                                    Style="{StaticResource GhostButton}" Height="35" FontSize="11"
+                                                    IsEnabled="{Binding ElementName=AutoRecipientCheck, Path=IsChecked}"/>
+                                            <TextBlock Text="Asocia nombres con correos automáticamente." 
+                                                       FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0" Opacity="0.8"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
 
-                                <TextBlock Text="Con Copia (CC):" Style="{StaticResource LabelStyle}"/>
-                                <TextBox Text="{Binding SelectedPauta.EmailCcTemplate}" Margin="0,0,0,10"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="Destinatario (To):" Style="{StaticResource LabelStyle}" FontSize="12"/>
+                                        <TextBox Text="{Binding SelectedPauta.EmailToTemplate}" Height="35" VerticalContentAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Copia (CC):" Style="{StaticResource LabelStyle}" FontSize="12"/>
+                                        <TextBox Text="{Binding SelectedPauta.EmailCcTemplate}" Height="35" VerticalContentAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
 
-                                <TextBlock Text="Asunto del Correo:" Style="{StaticResource LabelStyle}"/>
-                                <TextBox Text="{Binding SelectedPauta.EmailSubjectTemplate}" Margin="0,0,0,10"/>
+                                <TextBlock Text="Asunto:" Style="{StaticResource LabelStyle}" FontSize="12"/>
+                                <TextBox Text="{Binding SelectedPauta.EmailSubjectTemplate}" Margin="0,0,0,10" Height="35" VerticalContentAlignment="Center"/>
 
-                                <TextBlock Text="Cuerpo del Correo:" Style="{StaticResource LabelStyle}"/>
-                                <Grid Margin="0,0,0,15">
+                                <TextBlock Text="Cuerpo:" Style="{StaticResource LabelStyle}" FontSize="12"/>
+                                <Grid Margin="0,0,0,20">
                                     <TextBox x:Name="EmailBodyTextBox" 
                                              Text="{Binding SelectedPauta.EmailBodyTemplate}" 
-                                             AcceptsReturn="True" Height="200" MinHeight="100" 
+                                             AcceptsReturn="True" Height="200" MinHeight="150" 
                                              VerticalContentAlignment="Top" TextWrapping="Wrap"
                                              VerticalScrollBarVisibility="Auto"
-                                             SpellCheck.IsEnabled="{Binding Settings.SpellCheckLanguage, Converter={StaticResource NotNullToBooleanConverter}}"
-                                             Language="{Binding Settings.SpellCheckLanguage, Converter={StaticResource StringToLanguageConverter}, ConverterCulture='es-ES'}"/>
-                                    <!-- Tirador para redimensionar en la esquina inferior derecha -->
-                                    <Thumb Width="15" Height="15" HorizontalAlignment="Right" VerticalAlignment="Bottom" 
-                                           Cursor="SizeNWSE" DragDelta="EmailBody_DragDelta">
+                                             SpellCheck.IsEnabled="{Binding SpellCheckLanguage, Converter={StaticResource NotNullToBooleanConverter}}"
+                                             Language="{Binding SpellCheckLanguage, Converter={StaticResource StringToLanguageConverter}, ConverterCulture='es-ES'}"/>
+                                    <Thumb Width="15" Height="15" HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE" DragDelta="EmailBody_DragDelta">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Grid Background="Transparent">
-                                                    <Path Data="M10,0 L10,10 L0,10 Z" Fill="{DynamicResource AccentBrush}" Opacity="0.4" 
-                                                          HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,2"/>
+                                                    <Path Data="M10,0 L10,10 L0,10 Z" Fill="{DynamicResource AccentBrush}" Opacity="0.4" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
                                                 </Grid>
                                             </ControlTemplate>
                                         </Thumb.Template>
                                     </Thumb>
                                 </Grid>
 
-                                <!-- Reglas de Envío (Movidas desde ConfigWindow) -->
-                                <TextBlock Text="Reglas de Envío (Exclusión)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,10,0,10"/>
-                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
-                                    <StackPanel>
-                                        <TextBlock Text="No enviar correo si el campo..." Style="{StaticResource LabelStyle}"/>
-                                        <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
-                                                  SelectedValue="{Binding SelectedPauta.ExcludeByFieldId}"
-                                                  SelectedValuePath="Id"
-                                                  DisplayMemberPath="Label"
-                                                  Margin="0,0,0,10" Height="35"/>
-                                        
-                                        <TextBlock Text="...tiene exactamente este valor:" Style="{StaticResource LabelStyle}"/>
-                                        <TextBox Text="{Binding SelectedPauta.ExcludeByFieldValue}" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Ejemplo: Excluir si 'Calificación' tiene el valor '100%'" 
-                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic"/>
-                                    </StackPanel>
-                                </Border>
+                                <Separator Background="{DynamicResource BorderBrush}" Margin="0,5,0,20"/>
+                                
+                                <TextBlock Text="Reglas de Traducción (Reemplazo Automático)" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,5"/>
+                                <TextBlock Text="Traduzca valores internos (ej: '1' a 'Excelente') para que el correo sea legible." 
+                                           FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15"/>
 
-                                <!-- Reglas de Reemplazo -->
-                                <TextBlock Text="Reglas de Reemplazo de Valor (Traducción)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,15,0,10"/>
-                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
                                     <StackPanel>
-                                        <TextBlock Text="Si un campo tiene X valor, mostrar Y en el correo final." FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15"/>
-                                        
-                                        <!-- Botones de Acción -->
                                         <Grid Margin="0,0,0,10">
-                                            <!-- Modo Normal -->
-                                            <StackPanel Orientation="Horizontal" Visibility="{Binding IsEmailRuleMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
-                                                <Button Content="+ Nueva Regla" 
-                                                        Command="{Binding AddEmailReplacementRuleCommand}"
-                                                        Style="{StaticResource GhostButton}" Margin="0,0,10,0"/>
-                                                
-                                                <Button Content="Selección Múltiple" 
-                                                        Command="{Binding ToggleEmailRuleMultiSelectCommand}"
-                                                        Style="{StaticResource SecondaryButton}" 
-                                                        Visibility="{Binding SelectedPauta.EmailReplacementRules.Count, Converter={StaticResource DictConverter}, ConverterParameter='0:Collapsed|Default:Visible'}"/>
+                                            <!-- Barra de herramientas reglas correo -->
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Visibility="{Binding IsEmailRuleMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                <Button Content="+ Nueva Regla" Command="{Binding AddEmailReplacementRuleCommand}" Style="{StaticResource PrimaryButton}" Height="34" Padding="15,0" Margin="0,0,10,0"/>
+                                                <Button Content="Selección Múltiple" Command="{Binding ToggleEmailRuleMultiSelectCommand}" Style="{StaticResource SecondaryButton}" Height="34" Padding="15,0"
+                                                        Visibility="{Binding SelectedPauta.EmailReplacementRules.Count, Converter={StaticResource DictConverter}, ConverterParameter=0:Collapsed|Default:Visible}"/>
                                             </StackPanel>
-                                            
-                                            <!-- Modo Selección Múltiple -->
-                                            <StackPanel Orientation="Horizontal" Visibility="{Binding IsEmailRuleMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                <Button Content="Eliminar Seleccionadas" 
-                                                        Command="{Binding DeleteSelectedEmailRulesCommand}"
-                                                        Style="{StaticResource DangerButton}" Margin="0,0,10,0"/>
-                                                
-                                                <Button Content="Seleccionar Todo" 
-                                                        Command="{Binding SelectAllEmailRulesCommand}"
-                                                        Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
 
-                                                <Button Content="Cancelar" 
-                                                        Command="{Binding ToggleEmailRuleMultiSelectCommand}"
-                                                        Style="{StaticResource GhostButton}"/>
+                                            <StackPanel Orientation="Horizontal" Visibility="{Binding IsEmailRuleMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <Button Content="Eliminar Seleccionadas" Command="{Binding DeleteSelectedEmailRulesCommand}" Style="{StaticResource DangerButton}" Margin="0,0,10,0" Height="34" Padding="15,0"/>
+                                                <Button Content="Seleccionar Todo" Command="{Binding SelectAllEmailRulesCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Height="34" Padding="15,0"/>
+                                                <Button Content="Cancelar" Command="{Binding ToggleEmailRuleMultiSelectCommand}" Style="{StaticResource GhostButton}" Height="34" Padding="15,0"/>
                                             </StackPanel>
                                         </Grid>
                                         
-                                        <DataGrid ItemsSource="{Binding SelectedPauta.EmailReplacementRules}" 
-                                                  AutoGenerateColumns="False" 
-                                                  CanUserAddRows="False"
-                                                  BorderThickness="1" 
-                                                  BorderBrush="{DynamicResource BorderBrush}" 
-                                                  Background="{DynamicResource InputBackground}" 
-                                                  HeadersVisibility="Column" 
-                                                  Height="200"
-                                                  VerticalScrollBarVisibility="Auto"
-                                                  RowBackground="{DynamicResource InputBackground}" 
-                                                  AlternatingRowBackground="{DynamicResource CardBackgroundBrush}"
-                                                  GridLinesVisibility="Horizontal"
-                                                  Foreground="{DynamicResource TextBrush}">
-                                            
-                                            <DataGrid.Resources>
-                                                <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
-                                                 <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                                                     <Setter Property="BorderThickness" Value="0"/>
-                                                     <Setter Property="Padding" Value="5"/>
-                                                     <Setter Property="VerticalAlignment" Value="Center"/>
-                                                     <Setter Property="Background" Value="Transparent"/>
-                                                     <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                                                 </Style>
-                                                 <Style TargetType="DataGridCell">
-                                                     <Setter Property="BorderThickness" Value="0"/>
-                                                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                                                     <Style.Triggers>
-                                                         <Trigger Property="IsSelected" Value="True">
-                                                             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                                             <Setter Property="Foreground" Value="White"/>
-                                                         </Trigger>
-                                                     </Style.Triggers>
-                                                 </Style>
-                                            </DataGrid.Resources>
-
+                                        <DataGrid ItemsSource="{Binding SelectedPauta.EmailReplacementRules}" AutoGenerateColumns="False" CanUserAddRows="False" Height="220" Background="Transparent"
+                                                  BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" RowHeight="42">
                                             <DataGrid.Columns>
-                                                <!-- Selección (Solo visible en modo multiselect usando Proxy) -->
-                                                <DataGridTemplateColumn Width="40" Visibility="{Binding Data.IsEmailRuleMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <!-- Checkbox Estilo App -->
+                                                <DataGridTemplateColumn Width="45" Visibility="{Binding Data.IsEmailRuleMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
@@ -437,24 +348,18 @@
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
 
-                                                <!-- Campo Origen (Botón clickable) -->
-                                                <DataGridTemplateColumn Header="Campos Origen" Width="1.5*">
+                                                <!-- Campos Afectados -->
+                                                <DataGridTemplateColumn Header="Campos Afectados" Width="1.5*">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <Button Command="{Binding Data.EditEmailRuleFieldsCommand, Source={StaticResource Proxy}}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Style="{StaticResource GhostButton}"
-                                                                    HorizontalContentAlignment="Stretch"
-                                                                    VerticalContentAlignment="Center"
-                                                                    Padding="8,4" Margin="2"
-                                                                    ToolTip="Click para editar campos afectados">
-                                                                 <Grid>
+                                                                    CommandParameter="{Binding}" Style="{StaticResource GhostButton}" HorizontalContentAlignment="Stretch" Padding="8,4" Margin="2">
+                                                                <Grid>
                                                                     <Grid.ColumnDefinitions>
                                                                         <ColumnDefinition Width="*"/>
                                                                         <ColumnDefinition Width="Auto"/>
                                                                     </Grid.ColumnDefinitions>
-                                                                    <TextBlock TextTrimming="CharacterEllipsis" VerticalAlignment="Center" 
-                                                                               Foreground="{DynamicResource TextBrush}">
+                                                                    <TextBlock TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}">
                                                                         <TextBlock.Text>
                                                                             <MultiBinding Converter="{StaticResource FieldIdsToNamesConverter}">
                                                                                 <Binding Path="TargetFieldIds" />
@@ -470,134 +375,125 @@
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
 
-                                                <!-- Valor Original -->
-                                                <DataGridTextColumn Header="Si Valor es..." Binding="{Binding TargetValue, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
-
-                                                <!-- Flecha -->
-                                                <DataGridTemplateColumn Width="30">
+                                                <DataGridTemplateColumn Header="Si el valor es..." Width="*">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
-                                                            <TextBlock Text="➡" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
+                                                            <TextBox Text="{Binding TargetValue, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" BorderThickness="0" Padding="8,4" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
 
-                                                <!-- Reemplazo -->
-                                                <DataGridTextColumn Header="Mostrar Texto..." Binding="{Binding ReplacementValue, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
-                                                
+                                                <DataGridTemplateColumn Header="Reemplazar por..." Width="*">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBox Text="{Binding ReplacementValue, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" BorderThickness="0" Padding="8,4" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <DataGridTemplateColumn Width="50" Visibility="{Binding Data.IsEmailRuleMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="🗑️" Command="{Binding Data.RemoveEmailReplacementRuleCommand, Source={StaticResource Proxy}}" 
+                                                                    CommandParameter="{Binding}" Style="{StaticResource DangerButton}" Padding="0" Width="30" Height="30" VerticalAlignment="Center"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
                                             </DataGrid.Columns>
                                         </DataGrid>
-
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Background="{DynamicResource CardBackgroundBrush}" Padding="10" CornerRadius="4" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                    <StackPanel>
-                                        <TextBlock Text="💡 Tip sobre Placeholders:" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Puedes usar [Nombre del Campo] para insertar datos del registro automáticamente." 
-                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap"/>
-                                        <TextBlock Text="Ejemplo: [Nombre del Agente], [Ticket], [Calificación]" 
-                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,3,0,0"/>
+                                        <TextBlock Text="* Pulse 'Editar...' para seleccionar a qué campos se aplica cada regla." 
+                                                   FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" FontStyle="Italic"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
-
-                            <TextBlock Text="No hay pautas disponibles para configurar." 
-                                       Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,20,0,0">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedPauta, Converter={StaticResource NotNullToBool}}" Value="False">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
                         </StackPanel>
                     </Border>
                 </ScrollViewer>
             </TabItem>
+
             <!-- TAB PLANTILLAS -->
             <TabItem Header="📑 Plantillas">
-                <Border Padding="20">
-                    <StackPanel>
-                        <TextBlock Text="Gestión de Plantillas" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource AccentBrush}"/>
-                        <TextBlock Text="Configura textos reutilizables para facilitar el llenado de comentarios y reportes." Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,25" TextWrapping="Wrap"/>
-
-                        <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="25" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <Border Padding="30">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="500">
+                        <TextBlock Text="Gestión de Fragmentos de Texto" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                        <TextBlock Text="Configure textos rápidos para rellenar comentarios con un solo clic." 
+                                   Foreground="{DynamicResource SecondaryTextBrush}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,30"/>
+                        
+                        <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="15" Padding="30" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="Acceso al Gestor de Plantillas" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"/>
-                                <TextBlock Text="Haz clic en el botón de abajo para abrir la ventana donde podrás agregar, editar e importar tus plantillas de texto." 
-                                           FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,20" TextWrapping="Wrap"/>
-
-                                <Button Content="📂 ABRIR GESTIÓN DE PLANTILLAS" 
+                                <Button Content="📂 ABRIR GESTOR DE PLANTILLAS" 
                                         Command="{Binding OpenTemplateManagementCommand}"
                                         Style="{StaticResource PrimaryButton}" 
-                                        Height="50" FontSize="14" FontWeight="Bold"/>
+                                        Height="60" FontSize="15" FontWeight="Bold"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                 </Border>
             </TabItem>
 
-
             <!-- TAB ADMIN -->
-            <TabItem Header="🔐 Opción Administrativa">
-                <Border Padding="20">
-                    <StackPanel>
-                        <TextBlock Text="Opciones Administrativas" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}"/>
-                        <TextBlock Text="Estas opciones requieren autorización de administrador para ser modificadas." Foreground="{DynamicResource TextBrush}" Margin="0,0,0,20" TextWrapping="Wrap" Opacity="0.8"/>
+            <TabItem Header="🔐 Admin">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,50">
+                        <StackPanel MaxWidth="500" Width="500">
+                            <TextBlock Text="Acceso Administrativo" FontSize="22" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Estas opciones permiten modificar el comportamiento interno del sistema. Por favor, proceda con precaución." 
+                                       Foreground="{DynamicResource SecondaryTextBrush}" TextAlignment="Center" Margin="0,0,0,30" TextWrapping="Wrap"/>
 
-                        <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="30" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                            <Grid>
-                                <!-- Vista Bloqueada -->
-                                <StackPanel Visibility="{Binding IsAdminSettingsUnlocked, Converter={StaticResource BoolToVisCustom}, ConverterParameter=Inverse}">
-                                    <Viewbox Height="40" Margin="0,0,0,20">
-                                        <TextBlock Text="AUTORIZACIÓN REQUERIDA" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                    </Viewbox>
-                                    
-                                    <TextBlock Text="Ingrese la clave maestra de administrador:" FontSize="13" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15" HorizontalAlignment="Center"/>
-                                    
-                                    <PasswordBox x:Name="AdminPassBox" Height="45" Width="300" 
-                                                 Style="{StaticResource {x:Type PasswordBox}}"
-                                                 Background="{DynamicResource InputBackground}" 
-                                                 Foreground="{DynamicResource TextBrush}" 
-                                                 Padding="15,0" VerticalContentAlignment="Center"
-                                                 FontSize="16" HorizontalAlignment="Center"/>
-                                    
-                                    <Button Content="VERIFICAR ACCESO" Command="{Binding UnlockAdminSettingsCommand}" 
-                                            Style="{StaticResource PrimaryButton}" Height="50" Width="220" Margin="0,30,0,0"
-                                            FontWeight="Bold" HorizontalAlignment="Center"/>
-                                </StackPanel>
+                            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="15" Padding="40" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="15" ShadowDepth="2" Opacity="0.2" Color="Black"/>
+                                </Border.Effect>
+                                <Grid>
+                                    <!-- Vista Bloqueada: Login Admin -->
+                                    <StackPanel Visibility="{Binding IsAdminSettingsUnlocked, Converter={StaticResource BoolToVisCustom}, ConverterParameter=Inverse}" HorizontalAlignment="Center">
+                                        <Path Data="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,5A3,3 0 0,1 15,8V10H17V17H7V10H9V8A3,3 0 0,1 12,5M12,7A1,1 0 0,0 11,8V10H13V8A1,1 0 0,0 12,7Z" 
+                                              Fill="{DynamicResource AccentBrush}" Width="50" Height="50" Stretch="Uniform" Margin="0,0,0,25" Opacity="0.9"/>
+                                        
+                                        <TextBlock Text="SISTEMA RESTRINGIDO" FontWeight="ExtraBold" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,10" FontSize="14"/>
+                                        <TextBlock Text="Ingrese la clave maestra para continuar" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,25" FontSize="11" HorizontalAlignment="Center"/>
+                                        
+                                        <PasswordBox x:Name="AdminPassBox" Height="45" Width="300" 
+                                                     Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                                     Padding="15,0" VerticalContentAlignment="Center" HorizontalAlignment="Center"/>
+                                        
+                                        <Button Content="DESBLOQUEAR AJUSTES" Command="{Binding UnlockAdminSettingsCommand}" 
+                                                Style="{StaticResource PrimaryButton}" Height="50" Width="240" Margin="0,25,0,0" FontWeight="Bold"/>
+                                    </StackPanel>
 
-                                <!-- Vista Desbloqueada -->
-                                <StackPanel Visibility="{Binding IsAdminSettingsUnlocked, Converter={StaticResource BoolToVisCustom}}">
-                                    <Border Background="{DynamicResource SuccessBrush}" CornerRadius="8" Padding="15" Margin="0,0,0,25">
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <TextBlock Text="✓" Foreground="White" FontWeight="Bold" Margin="0,0,10,0" FontSize="18"/>
-                                            <TextBlock Text="Acceso Administrativo Concedido" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Border>
-                                    
-                                    <TextBlock Text="Configuración de Tiempo Interno" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,15"/>
-                                    
-                                    <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="8" Padding="15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,15">
-                                        <StackPanel>
-                                            <CheckBox IsChecked="{Binding EnableInternalTimer}" 
-                                                      Content="Activar contador de tiempo de auditoría (Silencioso)" 
-                                                      FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"/>
-                                            
-                                            <TextBlock Text="Al activar esta opción, el sistema registrará los minutos transcurridos entre cada ticket guardado. Este dato se incluirá automáticamente como la primera columna en las exportaciones a Excel." 
-                                                       FontSize="12" Foreground="{DynamicResource TextBrush}" Opacity="0.7" TextWrapping="Wrap"/>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </StackPanel>
-                </Border>
+                                    <!-- Vista Desbloqueada: Ajustes Admin -->
+                                    <StackPanel Visibility="{Binding IsAdminSettingsUnlocked, Converter={StaticResource BoolToVisCustom}}">
+                                        <Border Background="{DynamicResource SuccessBrush}" CornerRadius="10" Padding="15" Margin="0,0,0,30" Opacity="0.9">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <TextBlock Text="✓" Foreground="White" FontWeight="Bold" Margin="0,0,10,0" FontSize="18"/>
+                                                <TextBlock Text="Acceso de Administrador Activo" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                        
+                                        <TextBlock Text="Gestión de Tiempos" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
+                                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
+                                        
+                                        <Grid Margin="0,0,0,15">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox IsChecked="{Binding EnableInternalTimer}" Style="{StaticResource {x:Type CheckBox}}" VerticalAlignment="Top" Margin="0,3,15,0"/>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="Habilitar Contador de Auditoría Silencioso" FontWeight="SemiBold" FontSize="13"/>
+                                                <TextBlock Text="Cuando esta opción está activa, el sistema registrará automáticamente los minutos transcurridos entre cada registro guardado en la base de datos de auditoría." 
+                                                           FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,5,0,0" LineHeight="16"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        
+                                        <TextBlock Text="* Estos datos se guardarán junto con cada registro para fines de análisis de productividad." 
+                                                   FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="0,15,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
 
