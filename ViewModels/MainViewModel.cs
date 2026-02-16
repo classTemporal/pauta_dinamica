@@ -88,7 +88,7 @@ namespace PautaDinamicaApp.ViewModels
             ToggleMultiSelectCommand = new RelayCommand(_ => ToggleMultiSelect());
             SelectAllCommand = new RelayCommand(_ => ExecuteSelectAll());
             DeleteSelectedCommand = new RelayCommand(_ => DeleteSelectedRecords());
-            ExportSelectedCommand = new RelayCommand(_ => ExportRecordsToExcel(Records.Where(r => r.IsSelected).ToList(), "Export_Parcial_Auditoria"));
+            ExportSelectedCommand = new RelayCommand(_ => ExportRecordsToExcel(Records.Where(r => r.IsSelected).ToList()));
             ImportFromExcelCommand = new RelayCommand(_ => ImportRecordsFromExcel());
             GeneratePdfCommand = new RelayCommand(p => GeneratePdfForRecord(p as AuditEntry));
             GenerateSelectedPdfCommand = new RelayCommand(_ => GeneratePdfForSelected());
@@ -344,6 +344,34 @@ namespace PautaDinamicaApp.ViewModels
             var data = (recordsToExport ?? Records).ToList();
             if (!data.Any()) return false;
 
+            List<ExportColumnConfig>? allConfig = null;
+            string selectedPresetName = "";
+            if (CurrentPauta != null)
+            {
+                if (CurrentPauta.ExportPresets != null && CurrentPauta.ExportPresets.Count > 1 && !silent)
+                {
+                    var dialog = new ExportPresetSelectionWindow(CurrentPauta.ExportPresets);
+                    dialog.Owner = System.Windows.Application.Current.MainWindow;
+                    if (dialog.ShowDialog() == true)
+                    {
+                        allConfig = dialog.SelectedPreset?.Columns;
+                        selectedPresetName = dialog.SelectedPreset?.Name ?? "";
+                    }
+                    else
+                    {
+                        return false; // Usuario canceló la selección
+                    }
+                }
+                else
+                {
+                    // Usar el único preset disponible, o caer en el config legacy si no hay presets
+                    var preset = CurrentPauta.ExportPresets?.FirstOrDefault();
+                    allConfig = preset?.Columns ?? CurrentPauta.ExportConfig;
+                    selectedPresetName = preset?.Name ?? "";
+                }
+            }
+
+            // --- CONSTRUIR NOMBRE DE ARCHIVO ---
             string filePath;
             if (silent)
             {
@@ -358,8 +386,16 @@ namespace PautaDinamicaApp.ViewModels
                 if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
 
                 string pautaName = CurrentPauta?.Name ?? "Auditoria";
-                string safePautaName = string.Join("_", pautaName.Split(Path.GetInvalidFileNameChars()));
-                string fileName = (customTitle ?? $"{safePautaName}_{DateTime.Now:yyyyMMdd_HHmm}") + ".xlsx";
+                string safePautaName = string.Join("_", pautaName.Split(Path.GetInvalidFileNameChars())).Trim().Replace(" ", "_");
+
+                string? baseName = customTitle;
+                if (string.IsNullOrEmpty(baseName))
+                {
+                    baseName = (recordsToExport != null ? "Parcial_" : "") + safePautaName;
+                }
+
+                string presetPart = !string.IsNullOrEmpty(selectedPresetName) ? $"_{selectedPresetName}" : "";
+                string fileName = $"{baseName}{presetPart}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
                 filePath = Path.Combine(exportDir, fileName);
             }
 
@@ -370,56 +406,24 @@ namespace PautaDinamicaApp.ViewModels
                     var worksheet = workbook.Worksheets.Add("Auditoría");
 
                     // --- DEFINIR COLUMNAS A EXPORTAR ---
-                    // Usar configuración de exportación si existe, de lo contrario usar campos actuales en orden
                     var columnsToExport = new List<(string FieldId, string Header, FieldType Type, FieldDefinition? Def)>();
-
-                    var settings = _storageService.LoadSettings();
-
-                    List<ExportColumnConfig>? allConfig = null;
-
-                    if (CurrentPauta != null)
-                    {
-                        if (CurrentPauta.ExportPresets != null && CurrentPauta.ExportPresets.Count > 1 && !silent)
-                        {
-                            var dialog = new ExportPresetSelectionWindow(CurrentPauta.ExportPresets);
-                            dialog.Owner = System.Windows.Application.Current.MainWindow;
-                            if (dialog.ShowDialog() == true)
-                            {
-                                allConfig = dialog.SelectedPreset?.Columns;
-                            }
-                            else
-                            {
-                                return false; // Usuario canceló la selección
-                            }
-                        }
-                        else
-                        {
-                            // Usar el único preset disponible, o caer en el config legacy si no hay presets
-                            allConfig = CurrentPauta.ExportPresets?.FirstOrDefault()?.Columns ?? CurrentPauta.ExportConfig;
-                        }
-                    }
+                    var globalSettings = _storageService.LoadSettings();
 
                     if (allConfig == null) allConfig = new System.Collections.Generic.List<ExportColumnConfig>();
                     var exportConfig = allConfig.Where(c => c.IsExportEnabled).OrderBy(c => c.Order).ToList();
 
                     if (exportConfig != null && exportConfig.Any())
                     {
-                        // 1. Duración: Solo si está activada GLOBALMENTE. 
-                        // Se agrega SIEMPRE al principio si está habilitada, ignorando config de pauta.
-                        if (settings.EnableInternalTimer)
+                        if (globalSettings.EnableInternalTimer)
                         {
                             columnsToExport.Add(("System_Duration", "Duración (min)", FieldType.Numeric, null));
                         }
 
                         foreach (var config in exportConfig)
                         {
-                            // 2. Eliminar Fecha de evaluación (System_Timestamp)
                             if (config.FieldId == "System_Timestamp") continue;
-
-                            // 3. Omitir System_Duration si ya está en la config (ya la agregamos arriba fija)
                             if (config.FieldId == "System_Duration") continue;
 
-                            // 4. Campos dinámicos
                             var field = CurrentFields.FirstOrDefault(f => f.Id == config.FieldId);
                             if (field != null)
                             {
@@ -430,8 +434,7 @@ namespace PautaDinamicaApp.ViewModels
                     }
                     else
                     {
-                        // Fallback: Si no hay configuración manual, exportamos Duración (si aplica) y Campos Dinámicos
-                        if (settings.EnableInternalTimer)
+                        if (globalSettings.EnableInternalTimer)
                         {
                             columnsToExport.Add(("System_Duration", "Duración (min)", FieldType.Numeric, null));
                         }
@@ -1001,9 +1004,11 @@ namespace PautaDinamicaApp.ViewModels
                                     if (triggerSource.Type == FieldType.Boolean)
                                     {
                                         if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
+                                        else if (triggerVal.Equals("True", StringComparison.OrdinalIgnoreCase)) triggerVal = "1";
+                                        else if (triggerVal.Equals("False", StringComparison.OrdinalIgnoreCase)) triggerVal = "0";
                                     }
 
-                                    if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
+                                    if (EvaluateRule(triggerVal, "=", def.ZeroTriggerValue))
                                     {
                                         triggered = true;
                                         break;
@@ -1108,9 +1113,11 @@ namespace PautaDinamicaApp.ViewModels
                                     if (triggerSource.Type == FieldType.Boolean)
                                     {
                                         if (triggerSource.Value is bool b) triggerVal = b ? "1" : "0";
+                                        else if (triggerVal.Equals("True", StringComparison.OrdinalIgnoreCase)) triggerVal = "1";
+                                        else if (triggerVal.Equals("False", StringComparison.OrdinalIgnoreCase)) triggerVal = "0";
                                     }
 
-                                    if (string.Equals(triggerVal, def.ZeroTriggerValue, StringComparison.OrdinalIgnoreCase))
+                                    if (EvaluateRule(triggerVal, "=", def.ZeroTriggerValue))
                                     {
                                         triggered = true;
                                         break;
@@ -1181,10 +1188,29 @@ namespace PautaDinamicaApp.ViewModels
             string s = sourceVal.Replace("%", "").Trim();
             string r = ruleVal.Replace("%", "").Trim();
 
-            if (op == "=") return string.Equals(s, r, StringComparison.OrdinalIgnoreCase);
+            // 1. Comparación Directa (Ignorando mayúsculas/minúsculas)
+            if (string.Equals(s, r, StringComparison.OrdinalIgnoreCase)) return true;
 
-            if (double.TryParse(s, out double sNum) && double.TryParse(r, out double rNum))
+            // 2. Normalización Booleana (Mapear equivalencias comunes)
+            if (op == "=")
             {
+                string sLower = s.ToLower();
+                string rLower = r.ToLower();
+
+                bool? sBool = sLower == "1" || sLower == "true" || sLower == "si" || sLower == "sí" ? true :
+                             (sLower == "0" || sLower == "false" || sLower == "no" ? false : (bool?)null);
+
+                bool? rBool = rLower == "1" || rLower == "true" || rLower == "si" || rLower == "sí" ? true :
+                             (rLower == "0" || rLower == "false" || rLower == "no" ? false : (bool?)null);
+
+                if (sBool.HasValue && rBool.HasValue) return sBool == rBool;
+            }
+
+            // 3. Comparación Numérica (Robusta con decimales y separadores)
+            if (double.TryParse(s.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double sNum) &&
+                double.TryParse(r.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double rNum))
+            {
+                if (op == "=") return Math.Abs(sNum - rNum) < 0.0001;
                 switch (op)
                 {
                     case ">": return sNum > rNum;
@@ -1193,6 +1219,7 @@ namespace PautaDinamicaApp.ViewModels
                     case "<=": return sNum <= rNum;
                 }
             }
+
             return false;
         }
 
