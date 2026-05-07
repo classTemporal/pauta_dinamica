@@ -273,6 +273,61 @@
                                     </Border>
                                 </Grid>
 
+                                <!-- Advertencias Dinámicas de Envío -->
+                                <StackPanel Margin="0,0,0,20">
+                                    <!-- Advertencia MAILTO -->
+                                    <Border Background="#20FFC107" BorderBrush="#FFC107" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedPauta.EmailMethod}" Value="{x:Static models:EmailMethod.Mailto}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="⚠️" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12">
+                                                <Run FontWeight="Bold" Foreground="#FFC107">Nota sobre MAILTO:</Run>
+                                                <LineBreak/>
+                                                <Run Foreground="{DynamicResource TextBrush}">El método MAILTO tiene un límite de caracteres impuesto por Windows. Si el cuerpo del correo es muy largo, es posible que la ventana de correo no se abra o falte información. Para correos extensos, se recomienda usar el método Outlook.</Run>
+                                            </TextBlock>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Advertencia OUTLOOK -->
+                                    <Border Background="#200078D4" BorderBrush="#0078D4" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedPauta.EmailMethod}" Value="{x:Static models:EmailMethod.Outlook}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="ℹ️" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12">
+                                                <Run FontWeight="Bold" Foreground="#0078D4">Requisito de Outlook:</Run>
+                                                <LineBreak/>
+                                                <Run Foreground="{DynamicResource TextBrush}">Este método requiere que la aplicación de escritorio de Microsoft Outlook esté instalada y configurada con una cuenta activa en este equipo.</Run>
+                                            </TextBlock>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
