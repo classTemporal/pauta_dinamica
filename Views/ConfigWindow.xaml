@@ -254,52 +254,97 @@
                 </StackPanel>
 
                 <!-- Pauta List -->
-                <ListBox ItemsSource="{Binding Pautas}" SelectedItem="{Binding EditingPauta}" 
+                <ListBox x:Name="PautaList" ItemsSource="{Binding Pautas}" 
                          Background="Transparent" BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         Margin="0,10,0,0">
+                         Margin="0,10,0,0"
+                         AllowDrop="True"
+                         PreviewMouseLeftButtonDown="PautaList_PreviewMouseLeftButtonDown"
+                         PreviewMouseLeftButtonUp="PautaList_PreviewMouseLeftButtonUp"
+                         MouseMove="PautaList_MouseMove"
+                         Drop="PautaList_Drop">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
+                            <EventSetter Event="DragEnter" Handler="PautaItem_DragEnter"/>
+                            <EventSetter Event="DragLeave" Handler="PautaItem_DragLeave"/>
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="Border" Background="{DynamicResource BackgroundBrush}" CornerRadius="10" Margin="0,0,0,12" Padding="15" BorderThickness="1.2" BorderBrush="Transparent">
+                                        <Border x:Name="Border" Background="{DynamicResource BackgroundBrush}" CornerRadius="10" Margin="0,0,0,12" Padding="12" BorderThickness="1.2" BorderBrush="Transparent"
+                                                Cursor="Hand">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
 
-                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" Margin="0,0,12,0" VerticalAlignment="Center"
+                                                <CheckBox Grid.Column="0" Grid.RowSpan="2" IsChecked="{Binding IsSelected}" Margin="0,0,12,0" VerticalAlignment="Center"
                                                           Visibility="{Binding DataContext.IsPautaMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                                 
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
-                                                             Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}" FontWeight="Bold" FontSize="15"/>
-                                                     <TextBlock Text="{Binding CreatedAt, StringFormat='{}Creado: {0:dd/MM/yyyy}'}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="2,4,0,0" Opacity="0.7"/>
-                                                </StackPanel>
+                                                    <!-- Row 1: Name -->
+                                                    <Grid Margin="0,0,0,2">
+                                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextBrush}" FontWeight="Bold" FontSize="15"
+                                                                   Visibility="{Binding IsRenaming, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBox x:Name="RenameTextBox" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
+                                                                 Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}" 
+                                                                 FontWeight="Bold" FontSize="15" BorderThickness="1" BorderBrush="{DynamicResource AccentBrush}"
+                                                                 Visibility="{Binding IsRenaming, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                 KeyDown="PautaNameTextBox_KeyDown" LostFocus="PautaNameTextBox_LostFocus"
+                                                                 IsVisibleChanged="RenameTextBox_IsVisibleChanged"
+                                                                 Padding="2"/>
+                                                    </Grid>
 
-                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
-                                                             Visibility="{Binding DataContext.IsPautaMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
-                                                     <Button Content="📑" 
-                                                             Command="{Binding DataContext.DuplicatePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
-                                                             CommandParameter="{Binding}" 
-                                                             Style="{StaticResource GhostButton}" Padding="5" Width="32" Height="32" FontSize="12" Margin="0,0,8,0"
-                                                             ToolTip="Duplicar Pauta"/>
-                                                     <Button Content="🗑️" 
-                                                             Command="{Binding DataContext.DeletePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
-                                                             CommandParameter="{Binding}" 
-                                                             Style="{StaticResource DangerButton}" Padding="5" Width="32" Height="32" FontSize="12"
-                                                             ToolTip="Eliminar permanentemente"/>
-                                                 </StackPanel>
+                                                    <!-- Row 2: Date -->
+                                                     <TextBlock Text="{Binding CreatedAt, StringFormat='{}Creado: {0:dd/MM/yyyy}'}" 
+                                                                Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Opacity="0.7"
+                                                                TextTrimming="CharacterEllipsis" Margin="0,0,0,8"/>
+                                                     
+                                                    <!-- Row 3: Actions -->
+                                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                                                 Visibility="{Binding DataContext.IsPautaMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                         <Button Content="✏️" 
+                                                                 Command="{Binding DataContext.RenamePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                                                 CommandParameter="{Binding}" 
+                                                                 Style="{StaticResource GhostButton}" Padding="4" Width="28" Height="28" FontSize="11" Margin="0,0,6,0"
+                                                                 ToolTip="Editar Nombre"/>
+                                                         <Button Content="📑" 
+                                                                 Command="{Binding DataContext.DuplicatePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                                                 CommandParameter="{Binding}" 
+                                                                 Style="{StaticResource GhostButton}" Padding="4" Width="28" Height="28" FontSize="11" Margin="0,0,6,0"
+                                                                 ToolTip="Duplicar Pauta"/>
+                                                         <Button Content="🗑️" 
+                                                                 Command="{Binding DataContext.DeletePautaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                                                 CommandParameter="{Binding}" 
+                                                                 Style="{StaticResource DangerButton}" Padding="4" Width="28" Height="28" FontSize="11"
+                                                                 ToolTip="Eliminar permanentemente"/>
+                                                     </StackPanel>
+                                                </StackPanel>
                                             </Grid>
                                         </Border>
                                         <ControlTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsDragging}" Value="True">
+                                                <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
+                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsDropTarget}" Value="True">
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
+                                            </DataTrigger>
                                             <Trigger Property="IsSelected" Value="True">
                                                 <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                                 <Setter TargetName="Border" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
                                             </Trigger>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                            </DataTrigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                             </Trigger>

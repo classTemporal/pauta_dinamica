@@ -91,6 +91,7 @@ namespace PautaDinamicaApp.ViewModels
             ExportAllDatabaseCommand = new RelayCommand(_ => ExportAllDatabase());
             ImportAllDatabaseCommand = new RelayCommand(_ => ImportAllDatabase());
             DuplicatePautaCommand = new RelayCommand(p => DuplicatePauta(p as PautaSchema));
+            RenamePautaCommand = new RelayCommand(p => RenamePauta(p as PautaSchema));
 
             AddPresetCommand = new RelayCommand(_ => AddPreset());
             RemovePresetCommand = new RelayCommand(p => RemovePreset(p as ExportPreset));
@@ -131,6 +132,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ExportAllDatabaseCommand { get; }
         public ICommand ImportAllDatabaseCommand { get; }
         public ICommand DuplicatePautaCommand { get; }
+        public ICommand RenamePautaCommand { get; }
         public bool WasDatabaseModified { get; private set; } = false;
 
         public ObservableCollection<PautaSchema> Pautas
@@ -196,6 +198,11 @@ namespace PautaDinamicaApp.ViewModels
                     foreach (var p in Pautas) p.IsSelected = false;
                 }
             }
+        }
+
+        public void MarkDatabaseModified()
+        {
+            WasDatabaseModified = true;
         }
 
         public ObservableCollection<FieldDefinition> Fields
@@ -940,6 +947,24 @@ namespace PautaDinamicaApp.ViewModels
             var newPauta = new PautaSchema { Name = "Nueva Pauta " + (Pautas.Count + 1) };
             Pautas.Add(newPauta);
             EditingPauta = newPauta;
+        }
+
+        private void RenamePauta(PautaSchema? pauta)
+        {
+            if (pauta == null) return;
+
+            if (pauta.IsRenaming)
+            {
+                // Finalizar renombrado
+                pauta.IsRenaming = false;
+                WasDatabaseModified = true;
+            }
+            else
+            {
+                // Cancelar renombramientos activos en otras pautas
+                foreach (var p in Pautas) p.IsRenaming = false;
+                pauta.IsRenaming = true;
+            }
         }
 
         private void DuplicatePauta(PautaSchema? source)

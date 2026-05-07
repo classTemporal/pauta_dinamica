@@ -10,6 +10,7 @@ namespace PautaDinamicaApp.Models
         private string _name = "Nueva Pauta";
         private DateTime _createdAt = DateTime.Now;
         private bool _isSelected;
+        private bool _isRenaming;
 
         public string Id
         {
@@ -37,6 +38,20 @@ namespace PautaDinamicaApp.Models
         }
 
         [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsRenaming
+        {
+            get => _isRenaming;
+            set => SetProperty(ref _isRenaming, value);
+        }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsDragging
+        {
+            get => _isDragging;
+            set => SetProperty(ref _isDragging, value);
+        }
+
+        [System.Text.Json.Serialization.JsonIgnore]
         public bool IsValid => true;
 
         // --- Configuración de Correo por Pauta ---
@@ -46,6 +61,15 @@ namespace PautaDinamicaApp.Models
         private string _emailSubjectTemplate = "";
         private string _emailBodyTemplate = "";
         private bool _useAutomatedRecipient = false;
+        private bool _isDragging;
+        private bool _isDropTarget;
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsDropTarget
+        {
+            get => _isDropTarget;
+            set => SetProperty(ref _isDropTarget, value);
+        }
 
         // --- Lógica de Exclusión ---
         private string _excludeByFieldId = ""; // ID del campo a evaluar

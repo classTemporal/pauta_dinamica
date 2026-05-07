@@ -15,12 +15,23 @@ using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using System.Linq;
+using System.Runtime.InteropServices;
+
 
 namespace PautaDinamicaApp
 {
     public partial class ConfigWindow : Window
     {
         private System.Windows.Point _startPoint;
+        private ListBoxItem? _draggedItem;
+        private bool _isDraggingNow;
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetCursorPos(out POINT lpPoint);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT { public int X; public int Y; }
 
         public ConfigWindow(string activePautaId = "")
         {
@@ -195,6 +206,222 @@ namespace PautaDinamicaApp
             T? parent = parentObject as T;
             if (parent != null) return parent;
             return FindVisualParent<T>(parentObject);
+        }
+
+        // --- Drag & Drop para Pautas ---
+
+        private void PautaList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _startPoint = e.GetPosition(null);
+            _draggedItem = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+            _isDraggingNow = false;
+        }
+
+        private void PautaList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            // Solo seleccionamos si NO hubo arrastre y no fue clic en botón/checkbox
+            if (!_isDraggingNow && _draggedItem != null && this.DataContext is ViewModels.EditorViewModel vm)
+            {
+                var pauta = _draggedItem.DataContext as PautaSchema;
+                if (pauta != null)
+                {
+                    vm.EditingPauta = pauta;
+                    PautaList.SelectedItem = pauta; // Sincronizar visualmente si es necesario
+                }
+            }
+            _draggedItem = null;
+        }
+
+        private void PautaList_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed && _draggedItem != null)
+            {
+                System.Windows.Point mousePos = e.GetPosition(null);
+                Vector diff = _startPoint - mousePos;
+
+                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    _isDraggingNow = true;
+                    var pauta = _draggedItem.DataContext as PautaSchema;
+
+                    if (pauta != null && !pauta.IsRenaming)
+                    {
+                        DataObject dragData = new DataObject("PautaSchema", pauta);
+                        pauta.IsDragging = true;
+
+                        // Crear un visual para el arrastre
+                        var dragWindow = CreateDragVisual(_draggedItem);
+                        dragWindow.Show();
+
+                        // Suscribirse al evento para actualizar la posición
+                        System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) =>
+                        {
+                            UpdateDragVisualPosition(dragWindow);
+                        };
+
+                        _draggedItem.GiveFeedback += feedbackHandler;
+                        
+                        try {
+                            DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move);
+                        }
+                        finally {
+                            _draggedItem.GiveFeedback -= feedbackHandler;
+                            pauta.IsDragging = false;
+                            dragWindow.Close();
+                            _isDraggingNow = false;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void PautaList_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("PautaSchema"))
+            {
+                PautaSchema? droppedPauta = e.Data.GetData("PautaSchema") as PautaSchema;
+                DependencyObject? originalSource = e.OriginalSource as DependencyObject;
+                ListBoxItem? item = originalSource != null ? FindVisualParent<ListBoxItem>(originalSource) : null;
+
+                if (droppedPauta != null && this.DataContext is ViewModels.EditorViewModel vm)
+                {
+                    int oldIndex = vm.Pautas.IndexOf(droppedPauta);
+                    int newIndex = -1;
+
+                    if (item != null)
+                    {
+                        newIndex = vm.Pautas.IndexOf((PautaSchema)item.DataContext);
+                    }
+                    else
+                    {
+                        newIndex = vm.Pautas.Count - 1;
+                    }
+
+                    if (newIndex != -1 && oldIndex != newIndex)
+                    {
+                        vm.Pautas.Move(oldIndex, newIndex);
+                        vm.MarkDatabaseModified();
+                    }
+
+                    // Limpiar estados de drop target
+                    foreach (var p in vm.Pautas) p.IsDropTarget = false;
+                }
+            }
+        }
+
+        private void PautaItem_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("PautaSchema") && sender is ListBoxItem item && item.DataContext is PautaSchema pauta)
+            {
+                pauta.IsDropTarget = true;
+            }
+        }
+
+        private void PautaItem_DragLeave(object sender, DragEventArgs e)
+        {
+            if (sender is ListBoxItem item && item.DataContext is PautaSchema pauta)
+            {
+                pauta.IsDropTarget = false;
+            }
+        }
+
+        // --- Edición de Nombre de Pauta ---
+
+        private void PautaNameTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                FinalizeRename(sender);
+            }
+            else if (e.Key == Key.Escape)
+            {
+                CancelRename(sender);
+            }
+        }
+
+        private void PautaNameTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            FinalizeRename(sender);
+        }
+
+        private void FinalizeRename(object sender)
+        {
+            if (sender is System.Windows.Controls.TextBox tb && tb.DataContext is PautaSchema pauta)
+            {
+                pauta.IsRenaming = false;
+                if (this.DataContext is ViewModels.EditorViewModel vm)
+                {
+                    vm.MarkDatabaseModified();
+                }
+            }
+        }
+
+        private void CancelRename(object sender)
+        {
+            if (sender is System.Windows.Controls.TextBox tb && tb.DataContext is PautaSchema pauta)
+            {
+                pauta.IsRenaming = false;
+            }
+        }
+
+        private void RenameTextBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.TextBox tb && (bool)e.NewValue)
+            {
+                tb.Focus();
+                tb.SelectAll();
+            }
+        }
+
+        // --- Ayudantes Visuales para Arrastre ---
+
+        private Window CreateDragVisual(FrameworkElement source)
+        {
+            var visual = new Border
+            {
+                Background = this.TryFindResource("CardBackgroundBrush") as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.White,
+                BorderBrush = this.TryFindResource("AccentBrush") as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Blue,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(10),
+                Opacity = 0.7,
+                Child = new TextBlock
+                {
+                    Text = (source.DataContext as PautaSchema)?.Name ?? "Arrastrando...",
+                    FontWeight = FontWeights.Bold,
+                    Foreground = this.TryFindResource("TextBrush") as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Black
+                }
+            };
+
+            var window = new Window
+            {
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = System.Windows.Media.Brushes.Transparent,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                Topmost = true,
+                ShowInTaskbar = false,
+                IsHitTestVisible = false,
+                Content = visual
+            };
+
+            UpdateDragVisualPosition(window);
+            return window;
+        }
+
+        private void UpdateDragVisualPosition(Window window)
+        {
+            if (GetCursorPos(out POINT lpPoint))
+            {
+                window.Left = lpPoint.X + 15;
+                window.Top = lpPoint.Y + 15;
+            }
+        }
+
+        private System.Windows.Point GetMousePosition()
+        {
+            return PointToScreen(Mouse.GetPosition(this));
         }
 
         private void ClearPdfField1_Click(object sender, RoutedEventArgs e)
