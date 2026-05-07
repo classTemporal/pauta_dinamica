@@ -149,13 +149,16 @@ namespace PautaDinamicaApp.Services
                 {
                     var rawVal = record.Values.TryGetValue(item.FieldId, out var val) ? val : null;
 
+                    // Prioridad absoluta al tipo de la definición
+                    FieldType actualType = fieldMeta.TryGetValue(item.FieldId, out var def) ? def.Type : FieldType.Text;
+                    string formattedValue = FormatValue(rawVal, actualType);
+
                     string? customText = null;
                     string? customColor = null;
 
                     if (replacementRules != null)
                     {
-                        string valStr = rawVal?.ToString() ?? "";
-                        var rule = replacementRules.FirstOrDefault(r => r.TargetFieldIds.Contains(item.FieldId) && string.Equals(r.TargetValue, valStr, StringComparison.OrdinalIgnoreCase));
+                        var rule = replacementRules.FirstOrDefault(r => r.TargetFieldIds.Contains(item.FieldId) && string.Equals(r.TargetValue, formattedValue, StringComparison.OrdinalIgnoreCase));
 
                         if (rule != null)
                         {
@@ -164,17 +167,7 @@ namespace PautaDinamicaApp.Services
                         }
                     }
 
-                    string value;
-                    if (customText != null)
-                    {
-                        value = customText;
-                    }
-                    else
-                    {
-                        // Prioridad absoluta al tipo de la definición
-                        FieldType actualType = fieldMeta.TryGetValue(item.FieldId, out var def) ? def.Type : FieldType.Text;
-                        value = FormatValue(rawVal, actualType);
-                    }
+                    string value = customText ?? formattedValue;
 
                     table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(5).Background(Colors.Grey.Lighten4).Text(item.CustomHeader).SemiBold();
 

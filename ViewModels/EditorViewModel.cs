@@ -307,19 +307,23 @@ namespace PautaDinamicaApp.ViewModels
             {
                 string currentFieldsJson = JsonSerializer.Serialize(Fields);
                 if (_initialFieldsJson != currentFieldsJson) return true;
+
+                if (SelectedExportPreset != null)
+                {
+                    SelectedExportPreset.Columns = ExportColumns.OrderBy(c => c.Order).ToList();
+                }
+                EditingPauta.ExportPresets = ExportPresets.ToList();
+                EditingPauta.PdfConfig = PdfColumns.OrderBy(c => c.Order).ToList();
             }
 
             var savedPautas = _storageService.LoadPautas();
             if (savedPautas.Count != Pautas.Count) return true;
             if (_pautasToDelete.Any()) return true;
 
-            for (int i = 0; i < Pautas.Count; i++)
-            {
-                if (Pautas[i].Id != savedPautas[i].Id || Pautas[i].Name != savedPautas[i].Name)
-                    return true;
-            }
-
-            return false;
+            var currentJson = JsonSerializer.Serialize(Pautas);
+            var savedJson = JsonSerializer.Serialize(savedPautas);
+            
+            return currentJson != savedJson;
         }
 
         private void LoadPautaList()
