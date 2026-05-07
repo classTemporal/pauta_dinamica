@@ -1399,9 +1399,10 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (MessageBox.Show("¿Eliminar TODOS los registros de esta pauta?", "Confirmar Eliminación Total", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
+                bool wasEditing = SelectedRecord != null;
                 Records.Clear();
                 if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
-                CreateNewRecord();
+                if (wasEditing) CreateNewRecord();
             }
         }
 
@@ -1554,9 +1555,10 @@ namespace PautaDinamicaApp.ViewModels
             if (!selected.Any()) return;
             if (MessageBox.Show($"¿Eliminar {selected.Count}?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
+                bool wasEditingDeleted = SelectedRecord != null && selected.Contains(SelectedRecord);
                 foreach (var rec in selected) Records.Remove(rec);
                 if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
-                CreateNewRecord();
+                if (wasEditingDeleted) CreateNewRecord();
             }
         }
 
