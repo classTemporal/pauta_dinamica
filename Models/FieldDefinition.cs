@@ -153,6 +153,12 @@ namespace PautaDinamicaApp.Models
             }
         }
 
+        public FieldDefinition Clone()
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(this);
+            return System.Text.Json.JsonSerializer.Deserialize<FieldDefinition>(json)!;
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         protected virtual void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

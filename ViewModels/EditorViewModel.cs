@@ -33,6 +33,8 @@ namespace PautaDinamicaApp.ViewModels
         private bool _isPautaMultiSelectMode;
         private bool _isMultiSelectMode;
         private readonly List<PautaSchema> _pautasToDelete = new();
+        private readonly Dictionary<string, List<FieldDefinition>> _unsavedConfigs = new();
+        private readonly Dictionary<string, List<AuditEntry>> _unsavedRecords = new();
         private int _selectedTabIndex;
 
         public int SelectedTabIndex
@@ -129,6 +131,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ExportAllDatabaseCommand { get; }
         public ICommand ImportAllDatabaseCommand { get; }
         public ICommand DuplicatePautaCommand { get; }
+        public bool WasDatabaseModified { get; private set; } = false;
 
         public ObservableCollection<PautaSchema> Pautas
         {
@@ -146,7 +149,16 @@ namespace PautaDinamicaApp.ViewModels
                 // 1. Antes de cambiar la pauta, cargamos sus campos de forma "silenciosa" (sin notificar a la UI todavía)
                 if (value != null)
                 {
-                    var config = _storageService.LoadConfiguration(value.Id).OrderBy(f => f.Order).ToList();
+                    List<FieldDefinition> config;
+                    if (_unsavedConfigs.ContainsKey(value.Id))
+                    {
+                        config = _unsavedConfigs[value.Id];
+                    }
+                    else
+                    {
+                        config = _storageService.LoadConfiguration(value.Id).OrderBy(f => f.Order).ToList();
+                    }
+                    
                     foreach (var f in config) f.EnsureDefaultOptions();
 
                     // Actualizar el campo privado directamente
@@ -830,12 +842,26 @@ namespace PautaDinamicaApp.ViewModels
                                 ep.PdfFileNameFieldId2 = m.PdfFileNameFieldId2;
                                 ep.ExportConfig = m.ExportConfig ?? new List<ExportColumnConfig>();
                                 ep.PdfConfig = m.PdfConfig ?? new List<ExportColumnConfig>();
+                                ep.ExportPresets = m.ExportPresets ?? new List<ExportPreset>();
+                                ep.CounterField1 = m.CounterField1;
+                                ep.CounterValue1 = m.CounterValue1;
+                                ep.CounterField2 = m.CounterField2;
+                                ep.CounterValue2 = m.CounterValue2;
+                                ep.CounterField3 = m.CounterField3;
+                                ep.CounterValue3 = m.CounterValue3;
+                                ep.ColoringField = m.ColoringField;
+                                ep.ColoringValue = m.ColoringValue;
+                                ep.ColoringColor = m.ColoringColor;
+                                ep.EmailReplacementRules = m.EmailReplacementRules ?? new System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule>();
+                                ep.PdfReplacementRules = m.PdfReplacementRules ?? new System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule>();
 
-                                // 3. Refresh UI de columnas
                                 LoadExportColumns();
                                 LoadPdfColumns();
 
-                                MessageBox.Show("Configuración importada con éxito.");
+                                // Guardar en caché de memoria para que persista al cambiar de pauta dentro de la sesión
+                                _unsavedConfigs[ep.Id] = Fields.ToList();
+
+                                MessageBox.Show("Configuración importada con éxito en memoria. Recuerde Guardar para confirmar los cambios.");
                             }
                         }
                         else
@@ -967,20 +993,68 @@ namespace PautaDinamicaApp.ViewModels
                     OriginalLabel = c.OriginalLabel,
                     Type = c.Type,
                     IsVisible = c.IsVisible
-                }).ToList() ?? new List<ExportColumnConfig>()
+                }).ToList() ?? new List<ExportColumnConfig>(),
+
+                ExportPresets = source.ExportPresets?.Select(p => new ExportPreset
+                {
+                    Name = p.Name,
+                    Columns = p.Columns?.Select(c => new ExportColumnConfig
+                    {
+                        FieldId = c.FieldId,
+                        CustomHeader = c.CustomHeader,
+                        IsExportEnabled = c.IsExportEnabled,
+                        Order = c.Order,
+                        OriginalLabel = c.OriginalLabel,
+                        Type = c.Type,
+                        IsVisible = c.IsVisible
+                    }).ToList() ?? new List<ExportColumnConfig>()
+                }).ToList() ?? new List<ExportPreset>(),
+
+                CounterField1 = source.CounterField1,
+                CounterValue1 = source.CounterValue1,
+                CounterField2 = source.CounterField2,
+                CounterValue2 = source.CounterValue2,
+                CounterField3 = source.CounterField3,
+                CounterValue3 = source.CounterValue3,
+
+                ColoringField = source.ColoringField,
+                ColoringValue = source.ColoringValue,
+                ColoringColor = source.ColoringColor,
+
+                EmailReplacementRules = new System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule>(
+                    source.EmailReplacementRules?.Select(r => new EmailReplacementRule
+                    {
+                        TargetValue = r.TargetValue,
+                        ReplacementValue = r.ReplacementValue,
+                        TargetFieldIds = new System.Collections.ObjectModel.ObservableCollection<string>(r.TargetFieldIds ?? new System.Collections.ObjectModel.ObservableCollection<string>())
+                    }) ?? Array.Empty<EmailReplacementRule>()
+                ),
+
+                PdfReplacementRules = new System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule>(
+                    source.PdfReplacementRules?.Select(r => new PdfReplacementRule
+                    {
+                        TargetValue = r.TargetValue,
+                        ReplacementValue = r.ReplacementValue,
+                        TextColor = r.TextColor,
+                        TargetFieldIds = new System.Collections.ObjectModel.ObservableCollection<string>(r.TargetFieldIds ?? new System.Collections.ObjectModel.ObservableCollection<string>())
+                    }) ?? Array.Empty<PdfReplacementRule>()
+                )
             };
 
             // Copiar la configuración de campos (estructura JSON)
-            var sourceFields = _storageService.LoadConfiguration(source.Id);
-            // IMPORTANTE: Los campos dentro de la configuración deben tener los mismos IDs para que el ExportConfig/PdfConfig funcionen
-            _storageService.SaveConfiguration(newPauta.Id, sourceFields);
+            // Revisar si la fuente ya está en memoria (modificada) o si se carga del disco
+            var sourceFields = _unsavedConfigs.ContainsKey(source.Id)
+                ? _unsavedConfigs[source.Id].Select(f => f.Clone()).ToList()
+                : _storageService.LoadConfiguration(source.Id).Select(f => f.Clone()).ToList();
 
-            // Agregar al índice
+            _unsavedConfigs[newPauta.Id] = sourceFields;
+
+            // Agregar al índice en memoria (NO GUARDAR EN DISCO TODAVÍA)
             Pautas.Add(newPauta);
-            _storageService.SavePautas(Pautas.ToList());
+            WasDatabaseModified = true;
 
             EditingPauta = newPauta;
-            MessageBox.Show($"Pauta '{source.Name}' duplicada con éxito como '{newPauta.Name}'");
+            MessageBox.Show($"Pauta '{source.Name}' duplicada con éxito en memoria. Recuerde Guardar para confirmar los cambios.");
         }
 
         private void DeletePauta(PautaSchema? p)
@@ -1051,16 +1125,54 @@ namespace PautaDinamicaApp.ViewModels
                     var configs = JsonSerializer.Deserialize<Dictionary<string, List<FieldDefinition>>>(doc.RootElement.GetProperty("Configs").GetRawText());
                     if (pautas != null && configs != null)
                     {
-                        foreach (var p in _storageService.LoadPautas()) _storageService.DeletePautaFiles(p.Id);
-                        _storageService.SavePautas(pautas);
-                        foreach (var kvp in configs) _storageService.SaveConfiguration(kvp.Key, kvp.Value);
+                        // RESPALDO OBLIGATORIO PREVIO A LA ELIMINACIÓN
+                        try
+                        {
+                            var settings = _storageService.LoadSettings();
+                            string backupDir = settings.JsonBackupPath;
+                            if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
+                            string backupFile = Path.Combine(backupDir, $"System_Backup_Auto_Antes_De_Importar_{DateTime.Now:yyyyMMdd_HHmmss}.json");
+
+                            var currentData = new
+                            {
+                                Pautas = _storageService.LoadPautas(),
+                                Configs = _storageService.LoadPautas().ToDictionary(p => p.Id, p => _storageService.LoadConfiguration(p.Id)),
+                                Records = _storageService.LoadPautas().ToDictionary(p => p.Id, p => _storageService.LoadRecords(p.Id))
+                            };
+
+                            File.WriteAllText(backupFile, JsonSerializer.Serialize(currentData, new JsonSerializerOptions { WriteIndented = true }));
+                            MessageBox.Show($"Se ha creado un respaldo automático de seguridad del sistema actual en:\n{backupFile}", "Respaldo Automático", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (MessageBox.Show($"Ocurrió un error al intentar crear el respaldo de seguridad automático:\n{ex.Message}\n\n¿Desea proceder de todas formas bajo su propio riesgo?", "Fallo de Respaldo", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                            {
+                                return; // Abortar si falló el respaldo y el usuario no quiere continuar
+                            }
+                        }
+
+                        // CARGAR TODO EN MEMORIA (NO EN DISCO)
+                        _unsavedConfigs.Clear();
+                        foreach (var kvp in configs) _unsavedConfigs[kvp.Key] = kvp.Value;
+
+                        _unsavedRecords.Clear();
                         if (doc.RootElement.TryGetProperty("Records", out var recsProp))
                         {
                             var records = JsonSerializer.Deserialize<Dictionary<string, List<AuditEntry>>>(recsProp.GetRawText());
-                            if (records != null) foreach (var kvp in records) _storageService.SaveRecords(kvp.Key, kvp.Value);
+                            if (records != null)
+                            {
+                                foreach (var kvp in records) _unsavedRecords[kvp.Key] = kvp.Value;
+                            }
                         }
-                        LoadPautaList();
-                        MessageBox.Show("Base de datos restaurada.");
+
+                        // Actualizar lista de pautas en la UI
+                        Pautas = new ObservableCollection<PautaSchema>(pautas);
+                        EditingPauta = Pautas.FirstOrDefault();
+
+                        WasDatabaseModified = true;
+                        ShouldClearRecords = true; 
+                        
+                        MessageBox.Show("Base de datos cargada en memoria. Revise los cambios y haga clic en 'Guardar' para aplicarlos permanentemente o en 'Cancelar' para descartarlos.");
                     }
                 }
                 catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
@@ -1210,9 +1322,23 @@ namespace PautaDinamicaApp.ViewModels
             }
             _pautasToDelete.Clear();
 
+            // 4. Guardar configuraciones y registros pendientes en memoria
+            foreach (var kvp in _unsavedConfigs)
+            {
+                _storageService.SaveConfiguration(kvp.Key, kvp.Value);
+            }
+            _unsavedConfigs.Clear();
+
+            foreach (var kvp in _unsavedRecords)
+            {
+                _storageService.SaveRecords(kvp.Key, kvp.Value);
+            }
+            _unsavedRecords.Clear();
+
             // 5. Guardar índice
             _storageService.SavePautas(Pautas.ToList());
             IsSaveSuccessful = true;
+            WasDatabaseModified = true;
             MessageBox.Show("Cambios guardados con éxito.");
         }
 

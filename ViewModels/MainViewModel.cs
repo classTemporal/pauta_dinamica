@@ -1238,16 +1238,20 @@ namespace PautaDinamicaApp.ViewModels
             var win = new ConfigWindow(CurrentPauta.Id);
             win.Owner = System.Windows.Application.Current.MainWindow;
 
-            if (win.ShowDialog() == true)
+            var editorVm = win.DataContext as EditorViewModel;
+            bool? result = win.ShowDialog();
+
+            if (result == true || (editorVm != null && editorVm.WasDatabaseModified))
             {
                 LoadPautas(); // Recargar lista por si se agregaron/eliminaron pautas
-                if (win.DataContext is EditorViewModel editorVm && editorVm.ShouldClearRecords)
+                
+                if (editorVm != null && editorVm.ShouldClearRecords)
                 {
                     // Los respaldos ya se hicieron dentro del ConfigWindow.
                     // Aquí solo limpiamos y refrescamos la vista actual del MainViewModel.
                     Records.Clear();
                     RefreshFields();
-                    MessageBox.Show("La vista se ha refrescado debido a cambios estructurales.");
+                    MessageBox.Show("La vista se ha refrescado debido a cambios estructurales o restauración de base de datos.");
                 }
                 else
                 {
@@ -1420,7 +1424,7 @@ namespace PautaDinamicaApp.ViewModels
             else GenerateBatchPdfs(selected);
         }
 
-        private void SendEmails(AuditEntry? singleEntry = null)
+        private async void SendEmails(AuditEntry? singleEntry = null)
         {
             if (CurrentPauta == null)
             {
@@ -1490,6 +1494,12 @@ namespace PautaDinamicaApp.ViewModels
                     // El EmailService ahora maneja la herencia internamente
                     _emailService.SendEmail(globalSettings, CurrentPauta, entry, fieldDefinitions, pdfPath);
                     count++;
+
+                    // Añadir un pequeño retraso para evitar que Windows ignore las peticiones (especialmente con Mailto)
+                    if (toProcess.Count > 1)
+                    {
+                        await System.Threading.Tasks.Task.Delay(800);
+                    }
                 }
                 catch (Exception ex)
                 {
