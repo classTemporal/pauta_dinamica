@@ -8,6 +8,14 @@ namespace PautaDinamicaApp.Models
         Outlook
     }
 
+    public enum DashboardLayout
+    {
+        Left,
+        Right,
+        Top,
+        Bottom
+    }
+
     public class AppSettings
     {
         public string ExcelExportPath { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -22,6 +30,11 @@ namespace PautaDinamicaApp.Models
 
         // Spellcheck Settings
         public string SpellCheckLanguage { get; set; } = "es-ES"; // Default to Spanish
+
+        // UI Persistence
+        public double DashboardFormWidth { get; set; } = 400;
+        public double DashboardFormHeight { get; set; } = 300;
+        public bool IsFiltersPanelExpanded { get; set; } = true;
+        public DashboardLayout DashboardLayout { get; set; } = DashboardLayout.Left;
     }
 }
-

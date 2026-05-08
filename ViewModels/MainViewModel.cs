@@ -29,6 +29,7 @@ namespace PautaDinamicaApp.ViewModels
         private readonly StorageService _storageService;
         private readonly PdfService _pdfService;
         private readonly EmailService _emailService;
+
         private ObservableCollection<DynamicFieldVM> _currentFields = new();
         private ICollectionView? _groupedFields;
         private ObservableCollection<AuditEntry> _records = new();
@@ -37,6 +38,9 @@ namespace PautaDinamicaApp.ViewModels
         private PautaSchema? _currentPauta;
         private AppSettings _settings = new();
 
+        private ICollectionView _recordsView;
+        public ICollectionView RecordsView => _recordsView;
+
         public AppSettings Settings
         {
             get => _settings;
@@ -44,8 +48,6 @@ namespace PautaDinamicaApp.ViewModels
         }
 
         public ICommand OpenSettingsCommand { get; }
-
-        // Comandos existentes
         public ICommand SaveRecordCommand { get; }
         public ICommand ClearFormCommand { get; }
         public ICommand SelectRecordCommand { get; }
@@ -67,9 +69,171 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand LogoutCommand { get; }
         public ICommand CancelEditCommand { get; }
         public ICommand ToggleThemeCommand { get; }
-        public UserModel? CurrentUser => SessionService.CurrentUser;
+        public ICommand ClearFiltersCommand { get; }
+        public ICommand OpenAttachmentsFolderCommand { get; }
 
+        public UserModel? CurrentUser => SessionService.CurrentUser;
         private DateTime _currentAuditStartTime = DateTime.Now;
+
+        private DateTime? _filterStartDate;
+        public DateTime? FilterStartDate
+        {
+            get => _filterStartDate;
+            set { if (SetProperty(ref _filterStartDate, value)) _recordsView.Refresh(); }
+        }
+
+        private DateTime? _filterEndDate;
+        public DateTime? FilterEndDate
+        {
+            get => _filterEndDate;
+            set { if (SetProperty(ref _filterEndDate, value)) _recordsView.Refresh(); }
+        }
+
+        private string _searchText = string.Empty;
+        public string SearchText
+        {
+            get => _searchText;
+            set { if (SetProperty(ref _searchText, value)) _recordsView.Refresh(); }
+        }
+
+        private string _searchFieldId = "ALL";
+        public string SearchFieldId
+        {
+            get => _searchFieldId;
+            set 
+            { 
+                string val = value ?? "ALL";
+                if (SetProperty(ref _searchFieldId, val)) 
+                {
+                    OnPropertyChanged(nameof(SelectedSearchFieldType));
+                    OnPropertyChanged(nameof(IsDateFilterVisible));
+                    OnPropertyChanged(nameof(IsTimeFilterVisible));
+                    _recordsView.Refresh(); 
+                }
+            }
+        }
+
+        public FieldType? SelectedSearchFieldType
+        {
+            get
+            {
+                if (SearchFieldId == "ALL") return null;
+                if (SearchFieldId == "SYSTEM_TIMESTAMP") return FieldType.Date;
+                var field = CurrentFields.FirstOrDefault(f => f.Id == SearchFieldId);
+                return field?.Type;
+            }
+        }
+
+        public bool IsDateFilterVisible => SelectedSearchFieldType == FieldType.Date || SearchFieldId == "SYSTEM_TIMESTAMP";
+        public bool IsTimeFilterVisible => SelectedSearchFieldType == FieldType.Time;
+
+        private string _sortFieldId = "SYSTEM_TIMESTAMP";
+        public string SortFieldId
+        {
+            get => _sortFieldId;
+            set { if (SetProperty(ref _sortFieldId, value ?? "SYSTEM_TIMESTAMP")) ApplySorting(); }
+        }
+
+        private string _sortDirection = "Descendente";
+        public string SortDirection
+        {
+            get => _sortDirection;
+            set { if (SetProperty(ref _sortDirection, value)) ApplySorting(); }
+        }
+
+        public List<string> SortDirectionOptions => new List<string> { "Ascendente", "Descendente" };
+
+        private bool _isSortAscending = false;
+        public bool IsSortAscending
+        {
+            get => SortDirection == "Ascendente";
+            set => SortDirection = value ? "Ascendente" : "Descendente";
+        }
+
+        public double DashboardFormWidth
+        {
+            get => _settings.DashboardFormWidth > 0 ? _settings.DashboardFormWidth : 400;
+            set
+            {
+                if (_settings.DashboardFormWidth != value)
+                {
+                    _settings.DashboardFormWidth = value;
+                    _storageService.SaveSettings(_settings);
+                    OnPropertyChanged(nameof(DashboardFormWidth));
+                }
+            }
+        }
+
+        public double DashboardFormHeight
+        {
+            get => _settings.DashboardFormHeight > 0 ? _settings.DashboardFormHeight : 300;
+            set
+            {
+                if (_settings.DashboardFormHeight != value)
+                {
+                    _settings.DashboardFormHeight = value;
+                    _storageService.SaveSettings(_settings);
+                    OnPropertyChanged(nameof(DashboardFormHeight));
+                }
+            }
+        }
+
+        public bool IsFiltersPanelExpanded
+        {
+            get => _settings.IsFiltersPanelExpanded;
+            set
+            {
+                if (_settings.IsFiltersPanelExpanded != value)
+                {
+                    _settings.IsFiltersPanelExpanded = value;
+                    _storageService.SaveSettings(_settings);
+                    OnPropertyChanged(nameof(IsFiltersPanelExpanded));
+                }
+            }
+        }
+
+        public DashboardLayout DashboardLayout
+        {
+            get => _settings.DashboardLayout;
+            set
+            {
+                if (_settings.DashboardLayout != value)
+                {
+                    _settings.DashboardLayout = value;
+                    _storageService.SaveSettings(_settings);
+                    OnPropertyChanged(nameof(DashboardLayout));
+                    OnPropertyChanged(nameof(DashboardLayoutString));
+                }
+            }
+        }
+
+        public string DashboardLayoutString
+        {
+            get => DashboardLayout switch
+            {
+                DashboardLayout.Left => "Izquierda",
+                DashboardLayout.Right => "Derecha",
+                DashboardLayout.Top => "Arriba",
+                DashboardLayout.Bottom => "Abajo",
+                _ => "Izquierda"
+            };
+            set
+            {
+                DashboardLayout = value switch
+                {
+                    "Izquierda" => DashboardLayout.Left,
+                    "Derecha" => DashboardLayout.Right,
+                    "Arriba" => DashboardLayout.Top,
+                    "Abajo" => DashboardLayout.Bottom,
+                    _ => DashboardLayout.Left
+                };
+            }
+        }
+
+        public List<string> DashboardLayoutOptions => new List<string> { "Izquierda", "Derecha", "Arriba", "Abajo" };
+
+        public ICommand ToggleFiltersCommand { get; }
+        public ICommand ChangeLayoutCommand { get; }
 
         public MainViewModel()
         {
@@ -80,6 +244,9 @@ namespace PautaDinamicaApp.ViewModels
             // Aplicar tema guardado del usuario al iniciar
             _settings = _storageService.LoadSettings();
             new ThemeService().SetTheme(_settings.Theme);
+
+            _recordsView = CollectionViewSource.GetDefaultView(_records);
+            _recordsView.Filter = FilterRecords;
 
             LoadPautas();
             LoadData();
@@ -109,9 +276,271 @@ namespace PautaDinamicaApp.ViewModels
             CancelEditCommand = new RelayCommand(_ => CreateNewRecord());
             ToggleThemeCommand = new RelayCommand(_ => ToggleTheme());
             OpenAttachmentsFolderCommand = new RelayCommand(_ => OpenAttachmentsFolder());
+            ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
+            ToggleFiltersCommand = new RelayCommand(_ => IsFiltersPanelExpanded = !IsFiltersPanelExpanded);
+            ChangeLayoutCommand = new RelayCommand(_ => RotateLayout());
+            
+            // Comandos para Pick Date/Time (mismo comportamiento que en Config)
+            PickDateFromCommand = new RelayCommand(p => PickDate(true));
+            PickDateToCommand = new RelayCommand(p => PickDate(false));
+            PickTimeFromCommand = new RelayCommand(p => PickTime(true));
+            PickTimeToCommand = new RelayCommand(p => PickTime(false));
+
+            this.FieldsRefreshed += UpdateFilterOptions;
         }
 
-        public ICommand OpenAttachmentsFolderCommand { get; }
+        private void RotateLayout()
+        {
+            DashboardLayout = DashboardLayout switch
+            {
+                DashboardLayout.Left => DashboardLayout.Top,
+                DashboardLayout.Top => DashboardLayout.Right,
+                DashboardLayout.Right => DashboardLayout.Bottom,
+                DashboardLayout.Bottom => DashboardLayout.Left,
+                _ => DashboardLayout.Left
+            };
+        }
+
+        public ICommand PickDateFromCommand { get; }
+        public ICommand PickDateToCommand { get; }
+        public ICommand PickTimeFromCommand { get; }
+        public ICommand PickTimeToCommand { get; }
+
+        private void PickDate(bool isFrom)
+        {
+            var win = new DateSelectorWindow(isFrom ? FilterStartDate?.ToString("dd/MM/yyyy") : FilterEndDate?.ToString("dd/MM/yyyy"));
+            win.Owner = System.Windows.Application.Current.MainWindow;
+            if (win.ShowDialog() == true)
+            {
+                if (win.SelectedValue == "TODAY")
+                {
+                    if (isFrom) FilterStartDate = DateTime.Today;
+                    else FilterEndDate = DateTime.Today.AddHours(23).AddMinutes(59);
+                }
+                else if (DateTime.TryParse(win.SelectedValue, out DateTime date))
+                {
+                    if (isFrom) FilterStartDate = date;
+                    else FilterEndDate = date.AddHours(23).AddMinutes(59);
+                }
+                else
+                {
+                    if (isFrom) FilterStartDate = null;
+                    else FilterEndDate = null;
+                }
+            }
+        }
+
+        private void PickTime(bool isFrom)
+        {
+            var win = new TimeSelectorWindow(isFrom ? (FilterStartDate?.ToString("HH:mm") ?? "00:00") : (FilterEndDate?.ToString("HH:mm") ?? "23:59"));
+            win.Owner = System.Windows.Application.Current.MainWindow;
+            if (win.ShowDialog() == true)
+            {
+                if (win.SelectedValue == "NOW")
+                {
+                    if (isFrom) FilterStartDate = DateTime.Today.Add(DateTime.Now.TimeOfDay);
+                    else FilterEndDate = DateTime.Today.Add(DateTime.Now.TimeOfDay);
+                }
+                else if (DateTime.TryParse(win.SelectedValue, out DateTime time))
+                {
+                    // Usar hoy como fecha base para el filtro de tiempo
+                    DateTime baseDate = DateTime.Today;
+                    if (isFrom) FilterStartDate = baseDate.Add(time.TimeOfDay);
+                    else FilterEndDate = baseDate.Add(time.TimeOfDay);
+                }
+                else
+                {
+                    if (isFrom) FilterStartDate = null;
+                    else FilterEndDate = null;
+                }
+            }
+        }
+
+        private void UpdateFilterOptions()
+        {
+            OnPropertyChanged(nameof(FilterFieldOptions));
+            OnPropertyChanged(nameof(SortFieldOptions));
+            
+            // Reset to default if current selection is not valid anymore
+            if (!FilterFieldOptions.Any(o => o.Id == SearchFieldId)) SearchFieldId = "ALL";
+            if (!SortFieldOptions.Any(o => o.Id == SortFieldId)) SortFieldId = "SYSTEM_TIMESTAMP";
+        }
+
+        public class FieldOption
+        {
+            public string Id { get; set; } = "";
+            public string Name { get; set; } = "";
+        }
+
+        public List<FieldOption> FilterFieldOptions
+        {
+            get
+            {
+                var options = new List<FieldOption> { new FieldOption { Id = "ALL", Name = "Todos los campos" } };
+                options.AddRange(CurrentFields.Where(f => f.Type != FieldType.Separator)
+                                             .Select(f => new FieldOption { Id = f.Id, Name = f.Label }));
+                return options;
+            }
+        }
+
+        public List<FieldOption> SortFieldOptions
+        {
+            get
+            {
+                var options = new List<FieldOption> { new FieldOption { Id = "SYSTEM_TIMESTAMP", Name = "Fecha de Creación" } };
+                options.AddRange(CurrentFields.Where(f => f.Type != FieldType.Separator)
+                                             .Select(f => new FieldOption { Id = f.Id, Name = f.Label }));
+                return options;
+            }
+        }
+
+        private void ClearFilters()
+        {
+            FilterStartDate = null;
+            FilterEndDate = null;
+            SearchText = string.Empty;
+            SearchFieldId = "ALL";
+        }
+
+        private bool FilterRecords(object obj)
+        {
+            if (obj is not AuditEntry entry) return false;
+
+            // Filtro por Búsqueda (en todos o campo específico)
+            string search = SearchText?.ToLower() ?? "";
+            
+            if (SearchFieldId == "ALL")
+            {
+                // En modo global, el rango de fechas afecta al Timestamp
+                if (FilterStartDate.HasValue && entry.Timestamp < FilterStartDate.Value) return false;
+                if (FilterEndDate.HasValue && entry.Timestamp > FilterEndDate.Value) return false;
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    bool found = entry.Timestamp.ToString().ToLower().Contains(search);
+                    if (!found)
+                    {
+                        foreach (var val in entry.Values.Values)
+                        {
+                            if (val?.ToString()?.ToLower().Contains(search) == true)
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!found) return false;
+                }
+            }
+            else
+            {
+                // Buscar solo en el campo seleccionado
+                if (!string.IsNullOrEmpty(SearchFieldId) && entry.Values.TryGetValue(SearchFieldId, out var val))
+                {
+                    string strVal = val?.ToString() ?? "";
+                    
+                    if (IsDateFilterVisible || IsTimeFilterVisible)
+                    {
+                        if (DateTime.TryParse(strVal, out DateTime fieldDt))
+                        {
+                            if (IsTimeFilterVisible)
+                            {
+                                // Solo comparar horas
+                                TimeSpan t = fieldDt.TimeOfDay;
+                                if (FilterStartDate.HasValue && t < FilterStartDate.Value.TimeOfDay) return false;
+                                if (FilterEndDate.HasValue && t > FilterEndDate.Value.TimeOfDay) return false;
+                            }
+                            else
+                            {
+                                if (FilterStartDate.HasValue && fieldDt.Date < FilterStartDate.Value.Date) return false;
+                                if (FilterEndDate.HasValue && fieldDt.Date > FilterEndDate.Value.Date) return false;
+                            }
+                        }
+                    }
+                    
+                    if (!string.IsNullOrWhiteSpace(search) && !strVal.ToLower().Contains(search)) return false;
+                }
+                else if (SearchFieldId == "SYSTEM_TIMESTAMP")
+                {
+                    if (FilterStartDate.HasValue && entry.Timestamp < FilterStartDate.Value) return false;
+                    if (FilterEndDate.HasValue && entry.Timestamp > FilterEndDate.Value) return false;
+                    
+                    if (!string.IsNullOrWhiteSpace(search) && !entry.Timestamp.ToString().ToLower().Contains(search)) return false;
+                }
+                else
+                {
+                    // Si el campo no existe en el registro y no es global, ocultar (a menos que no haya filtros)
+                    if (!string.IsNullOrWhiteSpace(search) || FilterStartDate.HasValue || FilterEndDate.HasValue) return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ApplySorting()
+        {
+            var view = _recordsView as ListCollectionView;
+            if (view == null) return;
+
+            view.CustomSort = new AuditEntryComparer(SortFieldId, IsSortAscending);
+        }
+
+        public class AuditEntryComparer : System.Collections.IComparer
+        {
+            private readonly string _fieldId;
+            private readonly bool _ascending;
+
+            public AuditEntryComparer(string fieldId, bool ascending)
+            {
+                _fieldId = fieldId;
+                _ascending = ascending;
+            }
+
+            public int Compare(object? x, object? y)
+            {
+                if (x is not AuditEntry a || y is not AuditEntry b) return 0;
+
+                int result = 0;
+                if (_fieldId == "SYSTEM_TIMESTAMP")
+                {
+                    result = DateTime.Compare(a.Timestamp, b.Timestamp);
+                }
+                else
+                {
+                    string valA = !string.IsNullOrEmpty(_fieldId) && a.Values.ContainsKey(_fieldId) ? a.Values[_fieldId]?.ToString() ?? "" : "";
+                    string valB = !string.IsNullOrEmpty(_fieldId) && b.Values.ContainsKey(_fieldId) ? b.Values[_fieldId]?.ToString() ?? "" : "";
+
+                    // Intentar comparación numérica si ambos son números o porcentajes
+                    if (IsNumericOrPercentage(valA) && IsNumericOrPercentage(valB))
+                    {
+                        double d1 = ParsePercentage(valA);
+                        double d2 = ParsePercentage(valB);
+                        result = d1.CompareTo(d2);
+                    }
+                    else
+                    {
+                        result = string.Compare(valA, valB, StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+
+                return _ascending ? result : -result;
+            }
+
+            private bool IsNumericOrPercentage(string val)
+            {
+                if (string.IsNullOrWhiteSpace(val)) return false;
+                string clean = val.Replace("%", "").Trim();
+                return double.TryParse(clean, out _);
+            }
+
+            private double ParsePercentage(string val)
+            {
+                if (string.IsNullOrWhiteSpace(val)) return 0;
+                string clean = val.Replace("%", "").Trim();
+                if (double.TryParse(clean, out double d)) return d;
+                return 0;
+            }
+        }
 
         private void ToggleTheme()
         {
@@ -580,7 +1009,7 @@ namespace PautaDinamicaApp.ViewModels
                                         }
                                         else
                                         {
-                                            cell.Value = string.Join(", ", paths.Select(Path.GetFileName));
+                                            cell.Value = string.Join(", ", paths);
                                         }
                                     }
                                     else cell.Value = "";
@@ -929,7 +1358,16 @@ namespace PautaDinamicaApp.ViewModels
         public ObservableCollection<AuditEntry> Records
         {
             get => _records;
-            set => SetProperty(ref _records, value);
+            set 
+            { 
+                if (SetProperty(ref _records, value))
+                {
+                    _recordsView = CollectionViewSource.GetDefaultView(_records);
+                    _recordsView.Filter = FilterRecords;
+                    ApplySorting();
+                    OnPropertyChanged(nameof(RecordsView));
+                }
+            }
         }
 
         public AuditEntry? SelectedRecord
@@ -978,12 +1416,16 @@ namespace PautaDinamicaApp.ViewModels
             if (CurrentPauta == null) return;
             RefreshFields();
             var savedRecords = _storageService.LoadRecords(CurrentPauta.Id);
+            
+            // Reutilizar la colección si es posible o disparar el setter
             Records = new ObservableCollection<AuditEntry>(savedRecords);
+            
             Records.CollectionChanged += (s, e) => UpdateAuditStats();
             UpdateAuditStats();
 
             ApplyRowColoring();
             ValidateAllRecordAttachments();
+            ApplySorting(); // Asegurar que el orden se aplique al cargar
             FieldsRefreshed?.Invoke();
             CreateNewRecord();
         }

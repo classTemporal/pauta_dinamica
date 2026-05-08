@@ -15,6 +15,19 @@
 
     <Window.Resources>
         <ResourceDictionary>
+            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <conv:GridLengthConverter x:Key="GridLengthConverter"/>
+            <conv:StringSwitchConverter x:Key="StringSwitchConverter"/>
+
+            <Style x:Key="FilterButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+                <Setter Property="Height" Value="28"/>
+                <Setter Property="Padding" Value="8,0"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource InputBorder}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            </Style>
+
             <views:FieldTemplateSelector x:Key="FieldTemplateSelector"
                 TextTemplate="{StaticResource TextTemplate}"
                 NumericTemplate="{StaticResource NumericTemplate}"
@@ -99,11 +112,18 @@
                 
                 <!-- Right: Utility Actions -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,15,0" VerticalAlignment="Center">
+                        <TextBlock Text="🔄 POSICIÓN DE REGISTRO:" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="9" FontWeight="Bold" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <ComboBox ItemsSource="{Binding DashboardLayoutOptions}" 
+                                  SelectedItem="{Binding DashboardLayoutString}"
+                                  Width="100" Height="32" VerticalContentAlignment="Center"/>
+                    </StackPanel>
+
                     <!-- Theme Toggle -->
                     <Button Command="{Binding ToggleThemeCommand}" 
-                            Style="{StaticResource GhostButton}" Width="40" Height="32" Padding="0" Margin="0,0,10,0" ToolTip="Cambiar Tema">
+                            Style="{StaticResource GhostButton}" Width="40" Height="32" Padding="0" Margin="0,0,15,0" ToolTip="Cambiar Tema">
                         <Path Data="{DynamicResource ThemeToggleIcon}" 
-                              Fill="{DynamicResource AccentBrush}" Width="16" Height="16" Stretch="Uniform"/>
+                               Fill="{DynamicResource AccentBrush}" Width="16" Height="16" Stretch="Uniform"/>
                     </Button>
 
                     <Button Content="⚙️ CONFIG. GENERAL" Command="{Binding OpenSettingsCommand}" 
@@ -115,13 +135,130 @@
         </Border>
 
         <Grid Grid.Row="1" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition x:Name="Row0">
+                    <RowDefinition.Style>
+                        <Style TargetType="RowDefinition">
+                            <Setter Property="Height" Value="*"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
+                                    <Setter Property="Height" Value="{Binding DashboardFormHeight, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </RowDefinition.Style>
+                </RowDefinition>
+                <RowDefinition x:Name="RowSplit" Height="Auto"/>
+                <RowDefinition x:Name="Row2">
+                    <RowDefinition.Style>
+                        <Style TargetType="RowDefinition">
+                            <Setter Property="Height" Value="*"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DashboardLayout}" Value="Top">
+                                    <Setter Property="Height" Value="{Binding DashboardFormHeight, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </RowDefinition.Style>
+                </RowDefinition>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="1.2*"/>
+                <ColumnDefinition x:Name="Col0">
+                    <ColumnDefinition.Style>
+                        <Style TargetType="ColumnDefinition">
+                            <Setter Property="Width" Value="*"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DashboardLayout}" Value="Right">
+                                    <Setter Property="Width" Value="{Binding DashboardFormWidth, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ColumnDefinition.Style>
+                </ColumnDefinition>
+                <ColumnDefinition x:Name="ColSplit" Width="Auto"/>
+                <ColumnDefinition x:Name="Col2">
+                    <ColumnDefinition.Style>
+                        <Style TargetType="ColumnDefinition">
+                            <Setter Property="Width" Value="*"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DashboardLayout}" Value="Left">
+                                    <Setter Property="Width" Value="{Binding DashboardFormWidth, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ColumnDefinition.Style>
+                </ColumnDefinition>
             </Grid.ColumnDefinitions>
 
-            <!-- Left: Dynamic Form with grouping -->
-            <DockPanel Grid.Column="0" Margin="0,0,10,0">
+            <!-- Vertical GridSplitter (For Left/Right) -->
+            <GridSplitter Grid.Column="1" Grid.Row="0" Grid.RowSpan="3" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" 
+                          Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0">
+                <GridSplitter.Style>
+                    <Style TargetType="GridSplitter">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Left">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Right">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </GridSplitter.Style>
+            </GridSplitter>
+
+            <!-- Horizontal GridSplitter (For Top/Bottom) -->
+            <GridSplitter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Height="4" HorizontalAlignment="Stretch" VerticalAlignment="Center" 
+                          Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1">
+                <GridSplitter.Style>
+                    <Style TargetType="GridSplitter">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Top">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </GridSplitter.Style>
+            </GridSplitter>
+
+            <!-- Dynamic Form (General) -->
+            <DockPanel Margin="0">
+                <DockPanel.Style>
+                    <Style TargetType="DockPanel">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Left">
+                                <Setter Property="Grid.Column" Value="2"/>
+                                <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.RowSpan" Value="3"/>
+                                <Setter Property="Margin" Value="10,0,0,0"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Right">
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.RowSpan" Value="3"/>
+                                <Setter Property="Margin" Value="0,0,10,0"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Top">
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.Row" Value="2"/>
+                                <Setter Property="Grid.ColumnSpan" Value="3"/>
+                                <Setter Property="Margin" Value="0,10,0,0"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.ColumnSpan" Value="3"/>
+                                <Setter Property="Margin" Value="0,0,0,10"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DockPanel.Style>
+
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,15,0,0">
                     <Button Command="{Binding SaveRecordCommand}" 
                             Height="40" Padding="20,0" Margin="0,0,10,0">
@@ -182,12 +319,144 @@
             </DockPanel>
 
             <!-- Right: Records Grid -->
-            <Border Grid.Column="1" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Left">
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.RowSpan" Value="3"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Right">
+                                <Setter Property="Grid.Column" Value="2"/>
+                                <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.RowSpan" Value="3"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Top">
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.ColumnSpan" Value="3"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.Row" Value="2"/>
+                                <Setter Property="Grid.ColumnSpan" Value="3"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
                 <DockPanel>
-                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,15" Orientation="Horizontal">
-                        <TextBlock Text="Registros de Auditorías" Foreground="{DynamicResource TextBrush}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,15,5"/>
-                        <TextBlock Text="{Binding AuditStatsText}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,5"/>
-                    </WrapPanel>
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <WrapPanel Grid.Column="0" Orientation="Horizontal">
+                            <TextBlock Text="Registros de Auditorías" Foreground="{DynamicResource TextBrush}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,15,5"/>
+                            <TextBlock Text="{Binding AuditStatsText}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                        </WrapPanel>
+
+                        <Button Grid.Column="1" Command="{Binding ToggleFiltersCommand}" 
+                                Style="{StaticResource GhostButton}" Padding="10,0" Height="28" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🔍" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding IsFiltersPanelExpanded, ConverterParameter='Ocultar Filtros|Mostrar Filtros', Converter={StaticResource StringSwitchConverter}}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Filter and Sort Bar -->
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundBrush}" 
+                            CornerRadius="8" Padding="12,8" Margin="0,0,0,15"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Visibility="{Binding IsFiltersPanelExpanded, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <WrapPanel Grid.Column="0" Orientation="Horizontal">
+                                <!-- Search -->
+                                <StackPanel Margin="0,0,10,5">
+                                    <TextBlock Text="BUSCAR EN" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4"/>
+                                    <ComboBox ItemsSource="{Binding FilterFieldOptions}" 
+                                              SelectedValue="{Binding SearchFieldId}"
+                                              SelectedValuePath="Id"
+                                              DisplayMemberPath="Name"
+                                              Width="130" Height="28"/>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,15,5" VerticalAlignment="Bottom">
+                                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Width="150" Height="28" 
+                                             VerticalContentAlignment="Center" Padding="5,0"/>
+                                </StackPanel>
+
+                                <!-- Date Range Filter -->
+                                <StackPanel Margin="0,0,15,5" Visibility="{Binding IsDateFilterVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock Text="RANGO DE FECHAS" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Command="{Binding PickDateFromCommand}" Style="{StaticResource FilterButtonStyle}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="📅" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding FilterStartDate, StringFormat='dd/MM/yyyy', TargetNullValue='Desde'}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <TextBlock Text="-" VerticalAlignment="Center" Margin="5,0"/>
+                                        <Button Command="{Binding PickDateToCommand}" Style="{StaticResource FilterButtonStyle}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="📅" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding FilterEndDate, StringFormat='dd/MM/yyyy', TargetNullValue='Hasta'}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Time Range Filter -->
+                                <StackPanel Margin="0,0,15,5" Visibility="{Binding IsTimeFilterVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock Text="RANGO DE HORAS" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Command="{Binding PickTimeFromCommand}" Style="{StaticResource FilterButtonStyle}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="🕒" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding FilterStartDate, StringFormat='HH:mm', TargetNullValue='Desde'}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <TextBlock Text="-" VerticalAlignment="Center" Margin="5,0"/>
+                                        <Button Command="{Binding PickTimeToCommand}" Style="{StaticResource FilterButtonStyle}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="🕒" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding FilterEndDate, StringFormat='HH:mm', TargetNullValue='Hasta'}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Sorting -->
+                                <StackPanel Margin="0,0,10,5">
+                                    <TextBlock Text="ORDENAR POR" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4"/>
+                                    <ComboBox ItemsSource="{Binding SortFieldOptions}" 
+                                              SelectedValue="{Binding SortFieldId}"
+                                              SelectedValuePath="Id"
+                                              DisplayMemberPath="Name"
+                                              Width="140" Height="28"/>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,15,5">
+                                    <TextBlock Text="ORDEN" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4"/>
+                                    <ComboBox ItemsSource="{Binding SortDirectionOptions}"
+                                              SelectedValue="{Binding SortDirection}"
+                                              Width="110" Height="28"/>
+                                </StackPanel>
+                            </WrapPanel>
+
+                            <Button Grid.Column="1" Command="{Binding ClearFiltersCommand}" 
+                                    Content="🧹 Limpiar Filtros" Style="{StaticResource GhostButton}" 
+                                    Height="28" VerticalAlignment="Bottom" Margin="0,0,0,5" Padding="10,0"/>
+                        </Grid>
+                    </Border>
                     
                     <StackPanel DockPanel.Dock="Bottom" Margin="0,15,0,0">
                         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right"
@@ -212,7 +481,7 @@
                         </Border>
                     </StackPanel>
                     
-                    <DataGrid x:Name="RecordsGrid" ItemsSource="{Binding Records}" 
+                    <DataGrid x:Name="RecordsGrid" ItemsSource="{Binding RecordsView}" 
                                AutoGenerateColumns="False"
                                IsReadOnly="True"
                                Background="Transparent"

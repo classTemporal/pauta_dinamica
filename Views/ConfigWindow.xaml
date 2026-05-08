@@ -293,6 +293,7 @@
 
                 <!-- Pauta List -->
                 <ListBox x:Name="PautaList" ItemsSource="{Binding Pautas}" 
+                         SelectedItem="{Binding EditingPauta}"
                          Background="Transparent" BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          Margin="0,10,0,0"
@@ -589,6 +590,7 @@
                                                              <DataTrigger Binding="{Binding Type}" Value="Separator"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
                                                              <DataTrigger Binding="{Binding Type}" Value="Calculation"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
                                                              <DataTrigger Binding="{Binding Type}" Value="Average"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                             <DataTrigger Binding="{Binding Type}" Value="FileAttachment"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
                                                          </Style.Triggers>
                                                      </Style>
                                                  </TextBlock.Style>
@@ -605,6 +607,7 @@
                                                              <DataTrigger Binding="{Binding Type}" Value="Separator"><Setter Property="ContentTemplate" Value="{StaticResource EmptyDefaultValueTemplate}"/></DataTrigger>
                                                              <DataTrigger Binding="{Binding Type}" Value="Calculation"><Setter Property="ContentTemplate" Value="{StaticResource EmptyDefaultValueTemplate}"/></DataTrigger>
                                                              <DataTrigger Binding="{Binding Type}" Value="Average"><Setter Property="ContentTemplate" Value="{StaticResource EmptyDefaultValueTemplate}"/></DataTrigger>
+                                                             <DataTrigger Binding="{Binding Type}" Value="FileAttachment"><Setter Property="ContentTemplate" Value="{StaticResource EmptyDefaultValueTemplate}"/></DataTrigger>
                                                          </Style.Triggers>
                                                      </Style>
                                                  </ContentControl.Style>

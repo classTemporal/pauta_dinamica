@@ -38,6 +38,7 @@ namespace PautaDinamicaApp
             InitializeComponent();
             var vm = new ViewModels.EditorViewModel(activePautaId);
             this.DataContext = vm;
+            this.Loaded += ConfigWindow_Loaded;
 
             // Auto-scroll logic when items move
             vm.Fields.CollectionChanged += (s, e) =>
@@ -55,6 +56,14 @@ namespace PautaDinamicaApp
                 if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Move)
                     ScrollFirstSelected(PdfGrid);
             };
+        }
+
+        private void ConfigWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (PautaList.SelectedItem != null)
+            {
+                PautaList.ScrollIntoView(PautaList.SelectedItem);
+            }
         }
 
         private void ScrollFirstSelected(DataGrid grid)
