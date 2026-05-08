@@ -190,6 +190,12 @@ namespace PautaDinamicaApp.ViewModels
         private string _zeroTriggerValue = string.Empty;
         private bool _showDecimals;
         private CalculationRounding _rounding;
+        private bool _allowMultipleAttachments;
+        private bool _attachToEmail;
+        private int _maxLength;
+        private bool _allowAnyFile;
+        private string? _pautaId;
+        private ObservableCollection<ExtensionItem> _availableExtensions = new();
         private ObservableCollection<SelectableFieldVM> _triggerFieldChoices = new();
 
         public FieldDefinition OriginalField { get; }
@@ -198,15 +204,21 @@ namespace PautaDinamicaApp.ViewModels
         public ObservableCollection<AutoSelectRuleVM> AutoSelectRules { get; } = new();
         public List<string> Operators { get; } = new() { "=", ">", "<", ">=", "<=" };
 
-        public OptionsEditorViewModel(FieldDefinition field, List<FieldDefinition> allFields)
+        public OptionsEditorViewModel(FieldDefinition field, List<FieldDefinition> allFields, string? pautaId = null)
         {
             OriginalField = field;
+            _pautaId = pautaId;
             _useCustomWeights = field.UseCustomWeights;
             _timeFormat = field.TimeFormat;
             _maxLength = field.MaxLength;
             WarnOnDuplicate = field.WarnOnDuplicate;
             ShowDecimals = field.ShowDecimals;
             Rounding = field.Rounding;
+            AllowMultipleAttachments = field.AllowMultipleAttachments;
+            AttachToEmail = field.AttachToEmail;
+            AllowAnyFile = field.AllowAnyFile;
+
+            InitializeExtensions(field.AllowedExtensions);
 
             // Initialize AutoSelectRules from field
             if (field.AutoSelectRules != null)
@@ -337,6 +349,20 @@ namespace PautaDinamicaApp.ViewModels
 
             MoveUpCommand = new RelayCommand(p => MoveUp(p as SelectableOptionVM));
             MoveDownCommand = new RelayCommand(p => MoveDown(p as SelectableOptionVM));
+
+            OpenFolderCommand = new RelayCommand(_ =>
+            {
+                if (string.IsNullOrEmpty(_pautaId)) return;
+                string path = _storageService.GetPautaAttachmentsDir(_pautaId);
+                if (System.IO.Directory.Exists(path))
+                {
+                    System.Diagnostics.Process.Start("explorer.exe", path);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show("La carpeta de archivos aún no ha sido creada o no contiene archivos.", "Información");
+                }
+            });
         }
 
         private bool needsInitialRedistribution(FieldDefinition f)
@@ -462,7 +488,6 @@ namespace PautaDinamicaApp.ViewModels
         }
 
         public string TimeFormat { get => _timeFormat; set => SetProperty(ref _timeFormat, value); }
-        private int _maxLength;
         public int MaxLength { get => _maxLength; set => SetProperty(ref _maxLength, value); }
 
         private bool _warnOnDuplicate;
@@ -498,6 +523,42 @@ namespace PautaDinamicaApp.ViewModels
             set => SetProperty(ref _rounding, value);
         }
 
+
+
+        public bool AllowMultipleAttachments
+        {
+            get => _allowMultipleAttachments;
+            set => SetProperty(ref _allowMultipleAttachments, value);
+        }
+
+        public bool AttachToEmail
+        {
+            get => _attachToEmail;
+            set => SetProperty(ref _attachToEmail, value);
+        }
+
+        public bool AllowAnyFile
+        {
+            get => _allowAnyFile;
+            set 
+            { 
+                if (SetProperty(ref _allowAnyFile, value) && value)
+                {
+                    // If allowing any, deselect all specific ones
+                    foreach (var ext in AvailableExtensions) ext.IsSelected = false;
+                }
+            }
+        }
+
+        public ObservableCollection<ExtensionItem> AvailableExtensions
+        {
+            get => _availableExtensions;
+            set => SetProperty(ref _availableExtensions, value);
+        }
+
+        public List<string> ResultAllowedExtensions => 
+            AvailableExtensions.Where(e => e.IsSelected).Select(e => e.Extension).ToList();
+
         public Array AvailableRoundingModes => Enum.GetValues(typeof(CalculationRounding));
 
         public int SelectedTriggerCount => TriggerFieldChoices.Count(t => t.IsSelected);
@@ -525,6 +586,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand RemoveAutoSelectRuleCommand { get; }
         public ICommand MoveUpCommand { get; }
         public ICommand MoveDownCommand { get; }
+        public ICommand OpenFolderCommand { get; }
 
         public List<AutoSelectRule> ResultAutoSelectRules => AutoSelectRules.Select(r => new AutoSelectRule
         {
@@ -706,6 +768,53 @@ namespace PautaDinamicaApp.ViewModels
                     Options.Move(idx, idx + 1);
                 }
             }
+        }
+
+        private void InitializeExtensions(List<string> selected)
+        {
+            var categories = new Dictionary<string, string[]>
+            {
+                { "Imágenes", new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp" } },
+                { "Documentos", new[] { ".pdf", ".docx", ".xlsx", ".pptx", ".txt", ".csv" } },
+                { "Audio", new[] { ".mp3", ".wav", ".m4a", ".flac", ".ogg" } },
+                { "Video", new[] { ".mp4", ".avi", ".mov", ".mkv", ".wmv" } },
+                { "Otros", new[] { ".zip", ".rar", ".7z" } }
+            };
+
+            foreach (var cat in categories)
+            {
+                foreach (var ext in cat.Value)
+                {
+                    var item = new ExtensionItem 
+                    { 
+                        Extension = ext, 
+                        Category = cat.Key,
+                        IsSelected = selected?.Contains(ext) == true
+                    };
+
+                    item.PropertyChanged += (s, e) => {
+                        if (e.PropertyName == nameof(ExtensionItem.IsSelected) && item.IsSelected)
+                        {
+                            // Si se selecciona uno específico, desactivar "Cualquier archivo"
+                            AllowAnyFile = false;
+                        }
+                    };
+
+                    AvailableExtensions.Add(item);
+                }
+            }
+        }
+    }
+
+    public class ExtensionItem : ViewModelBase
+    {
+        private bool _isSelected;
+        public string Extension { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public bool IsSelected 
+        { 
+            get => _isSelected; 
+            set => SetProperty(ref _isSelected, value); 
         }
     }
 }

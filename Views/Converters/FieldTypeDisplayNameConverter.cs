@@ -23,6 +23,7 @@ namespace PautaDinamicaApp.Views.Converters
                     FieldType.Average => "Promedio",
                     FieldType.TextArea => "Texto largo",
                     FieldType.Separator => "--- SECCIÓN ---",
+                    FieldType.FileAttachment => "Archivo Adjunto",
                     _ => type.ToString()
                 };
             }
@@ -45,6 +46,7 @@ namespace PautaDinamicaApp.Views.Converters
                     "Promedio" => FieldType.Average,
                     "Texto largo" => FieldType.TextArea,
                     "--- SECCIÓN ---" => FieldType.Separator,
+                    "Archivo Adjunto" => FieldType.FileAttachment,
                     _ => Enum.TryParse(typeof(FieldType), str, out var result) ? result : FieldType.Text
                 };
             }

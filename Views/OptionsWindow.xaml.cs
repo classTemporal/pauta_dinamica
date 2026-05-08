@@ -14,5 +14,6 @@ namespace PautaDinamicaApp.Views
             this.DialogResult = true;
             this.Close();
         }
+
     }
 }

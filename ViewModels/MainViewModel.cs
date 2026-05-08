@@ -108,7 +108,10 @@ namespace PautaDinamicaApp.ViewModels
             LogoutCommand = new RelayCommand(_ => Logout());
             CancelEditCommand = new RelayCommand(_ => CreateNewRecord());
             ToggleThemeCommand = new RelayCommand(_ => ToggleTheme());
+            OpenAttachmentsFolderCommand = new RelayCommand(_ => OpenAttachmentsFolder());
         }
+
+        public ICommand OpenAttachmentsFolderCommand { get; }
 
         private void ToggleTheme()
         {
@@ -130,6 +133,20 @@ namespace PautaDinamicaApp.ViewModels
             catch { /* Ignorar error al guardar default */ }
 
             new ThemeService().SetTheme(newTheme);
+        }
+
+        private void OpenAttachmentsFolder()
+        {
+            if (CurrentPauta == null) return;
+            string path = _storageService.GetPautaAttachmentsDir(CurrentPauta.Id);
+            if (Directory.Exists(path))
+            {
+                System.Diagnostics.Process.Start("explorer.exe", path);
+            }
+            else
+            {
+                MessageBox.Show("Aún no hay archivos adjuntos para esta pauta.");
+            }
         }
 
 
@@ -550,6 +567,24 @@ namespace PautaDinamicaApp.ViewModels
                                     }
                                     else cell.Value = strVal;
                                 }
+                                else if (type == FieldType.FileAttachment)
+                                {
+                                    var paths = strVal.Split('|').Where(p => !string.IsNullOrEmpty(p)).ToList();
+                                    if (paths.Any())
+                                    {
+                                        var missing = paths.Where(p => !File.Exists(p)).ToList();
+                                        if (missing.Any())
+                                        {
+                                            cell.Value = "Archivo adjunto perdido";
+                                            cell.Style.Font.FontColor = XLColor.Red;
+                                        }
+                                        else
+                                        {
+                                            cell.Value = string.Join(", ", paths.Select(Path.GetFileName));
+                                        }
+                                    }
+                                    else cell.Value = "";
+                                }
                                 else
                                 {
                                     cell.Value = strVal;
@@ -948,8 +983,39 @@ namespace PautaDinamicaApp.ViewModels
             UpdateAuditStats();
 
             ApplyRowColoring();
+            ValidateAllRecordAttachments();
             FieldsRefreshed?.Invoke();
             CreateNewRecord();
+        }
+
+        private void ValidateAllRecordAttachments()
+        {
+            if (CurrentPauta == null || Records == null) return;
+            var config = _storageService.LoadConfiguration(CurrentPauta.Id);
+            var attachmentFields = config.Where(f => f.Type == FieldType.FileAttachment).ToList();
+
+            foreach (var record in Records)
+            {
+                bool missing = false;
+                foreach (var field in attachmentFields)
+                {
+                    if (record.Values.TryGetValue(field.Id, out var val) && val != null)
+                    {
+                        string strVal = val.ToString() ?? "";
+                        var paths = strVal.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var path in paths)
+                        {
+                            if (!File.Exists(path))
+                            {
+                                missing = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (missing) break;
+                }
+                record.HasMissingAttachments = missing;
+            }
         }
 
         public void RefreshFields()
@@ -1370,6 +1436,7 @@ namespace PautaDinamicaApp.ViewModels
             entry.NotifyUpdate();
             if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
             ApplyRowColoring();
+            ValidateAllRecordAttachments();
 
             // Reiniciar todo para la siguiente auditoría (limpia campos y resetea el temporizador)
             CreateNewRecord();

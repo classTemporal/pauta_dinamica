@@ -25,7 +25,8 @@
                 SeparatorTemplate="{StaticResource SeparatorTemplate}"
                 CalculationTemplate="{StaticResource CalculationTemplate}"
                 AverageTemplate="{StaticResource AverageTemplate}"
-                TextAreaTemplate="{StaticResource TextAreaTemplate}"/>
+                TextAreaTemplate="{StaticResource TextAreaTemplate}"
+                FileAttachmentTemplate="{StaticResource FileAttachmentTemplate}"/>
 
 
             <!-- Group Style -->
@@ -142,7 +143,7 @@
                             Style="{StaticResource DangerButton}"
                             Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     <Button Command="{Binding SendEmailsCommand}" 
-                            Content="📧 Enviar todos los correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}"/>
+                            Content="📧 Enviar todos los correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
                 </StackPanel>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -280,6 +281,11 @@
                                     <!-- Custom Row Color Trigger -->
                                     <DataTrigger Binding="{Binding RowColor, Converter={StaticResource NotNullToBooleanConverter}}" Value="True">
                                         <Setter Property="Background" Value="{Binding RowColor, Converter={StaticResource StringToBrushConverter}}"/>
+                                    </DataTrigger>
+                                    <!-- Missing Attachments Trigger -->
+                                    <DataTrigger Binding="{Binding HasMissingAttachments}" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource ErrorBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                     <!-- Hover effect to maintain readability -->
                                     <Trigger Property="IsMouseOver" Value="True">

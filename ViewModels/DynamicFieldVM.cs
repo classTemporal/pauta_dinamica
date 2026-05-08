@@ -5,6 +5,7 @@ using PautaDinamicaApp.Services;
 using System.Windows.Input;
 using System.Linq;
 using System.Windows;
+using System.IO;
 
 namespace PautaDinamicaApp.ViewModels
 {
@@ -23,11 +24,95 @@ namespace PautaDinamicaApp.ViewModels
             PickTimeCommand = new RelayCommand(_ => PickTime());
             PickDateCommand = new RelayCommand(_ => PickDate());
             OpenTemplatesCommand = new RelayCommand(_ => OpenTemplatePicker());
+            AttachFileCommand = new RelayCommand(_ => AttachFile());
+            RemoveFileCommand = new RelayCommand(p => RemoveFile(p as string));
         }
 
         public ICommand PickTimeCommand { get; }
         public ICommand PickDateCommand { get; }
         public ICommand OpenTemplatesCommand { get; }
+        public ICommand AttachFileCommand { get; }
+        public ICommand RemoveFileCommand { get; }
+
+        private void AttachFile()
+        {
+            if (Type != FieldType.FileAttachment) return;
+
+            var currentPaths = GetPathsList();
+            if (!Definition.AllowMultipleAttachments && currentPaths.Count > 0)
+            {
+                System.Windows.MessageBox.Show("Solo se permite un archivo adjunto en este campo.", "Límite Alcanzado");
+                return;
+            }
+
+            var dialog = new Microsoft.Win32.OpenFileDialog();
+            if (Definition.AllowedExtensions != null && Definition.AllowedExtensions.Any())
+            {
+                string filter = "Archivos Permitidos|" + string.Join(";", Definition.AllowedExtensions.Select(e => "*" + e));
+                dialog.Filter = filter + "|Todos los archivos|*.*";
+            }
+            else
+            {
+                dialog.Filter = "Todos los archivos|*.*";
+            }
+            dialog.Multiselect = Definition.AllowMultipleAttachments;
+
+            if (dialog.ShowDialog() == true)
+            {
+                var storage = new StorageService();
+                // Generate a temporary RecordId if we are creating a new one
+                // In a real app, we'd probably manage this better via the MainViewModel
+                // For now, let's use "draft" or similar if we don't have a record context yet
+                string recordId = "temp_" + Guid.NewGuid().ToString().Substring(0, 8);
+                
+                // Try to find the actual RecordId from the active record being edited
+                var mainVm = System.Windows.Application.Current.MainWindow.DataContext as MainViewModel;
+                if (mainVm?.SelectedRecord != null) recordId = mainVm.SelectedRecord.RecordId;
+
+                string pautaId = mainVm?.CurrentPauta?.Id ?? "unknown";
+
+                foreach (string file in dialog.FileNames)
+                {
+                    string localPath = storage.CopyAttachment(pautaId, recordId, Definition.Id, file);
+                    if (!string.IsNullOrEmpty(localPath))
+                    {
+                        currentPaths.Add(localPath);
+                    }
+                }
+
+                Value = string.Join("|", currentPaths);
+            }
+        }
+
+        private void RemoveFile(string? path)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            var paths = GetPathsList();
+            if (paths.Remove(path))
+            {
+                Value = string.Join("|", paths);
+                
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error al eliminar archivo: {ex.Message}");
+                }
+            }
+        }
+
+
+
+        public List<string> GetPathsList()
+        {
+            string val = Value?.ToString() ?? "";
+            return val.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+        }
 
         private void PickTime()
         {
@@ -144,10 +229,13 @@ namespace PautaDinamicaApp.ViewModels
                 if (SetProperty(ref _value, value))
                 {
                     OnPropertyChanged(nameof(CurrentLength));
+                    OnPropertyChanged(nameof(Paths));
                     Validate();
                 }
             }
         }
+
+        public List<string> Paths => GetPathsList();
 
         public string? ValidationError
         {
@@ -231,6 +319,19 @@ namespace PautaDinamicaApp.ViewModels
                         {
                             IsValid = false;
                             ValidationError = $"Formato inválido ({format}).";
+                            return false;
+                        }
+                    }
+                }
+                else if (Type == FieldType.FileAttachment)
+                {
+                    var paths = GetPathsList();
+                    foreach (var path in paths)
+                    {
+                        if (!File.Exists(path))
+                        {
+                            IsValid = false;
+                            ValidationError = "Se perdió el archivo adjunto.";
                             return false;
                         }
                     }

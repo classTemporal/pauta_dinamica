@@ -213,5 +213,77 @@ namespace PautaDinamicaApp.Services
             }
             catch { }
         }
+
+        // --- ATTACHMENT MANAGEMENT ---
+        public string GetAttachmentsBaseDir()
+        {
+            string dir = Path.Combine(_basePath, "attachments");
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            return dir;
+        }
+
+        public string GetPautaAttachmentsDir(string pautaId)
+        {
+            string dir = Path.Combine(GetAttachmentsBaseDir(), pautaId);
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            return dir;
+        }
+
+        public string CopyAttachment(string pautaId, string recordId, string fieldId, string sourcePath)
+        {
+            if (!File.Exists(sourcePath)) return "";
+            
+            string destDir = Path.Combine(GetPautaAttachmentsDir(pautaId), recordId, fieldId);
+            if (!Directory.Exists(destDir)) Directory.CreateDirectory(destDir);
+            
+            string fileName = Path.GetFileName(sourcePath);
+            string destPath = Path.Combine(destDir, fileName);
+            
+            // To avoid name collisions, append timestamp if file already exists in this field folder
+            if (File.Exists(destPath))
+            {
+                string nameOnly = Path.GetFileNameWithoutExtension(fileName);
+                string ext = Path.GetExtension(fileName);
+                destPath = Path.Combine(destDir, $"{nameOnly}_{DateTime.Now:yyyyMMddHHmmss}{ext}");
+            }
+            
+            File.Copy(sourcePath, destPath, true);
+            return destPath;
+        }
+
+        public bool ValidateAttachment(string localPath)
+        {
+            return !string.IsNullOrEmpty(localPath) && File.Exists(localPath);
+        }
+
+        public void DeleteAttachment(string localPath)
+        {
+            try
+            {
+                if (File.Exists(localPath)) File.Delete(localPath);
+            }
+            catch { }
+        }
+
+        public void CleanOrphanAttachments(string pautaId, List<AuditEntry> activeRecords)
+        {
+            // Logic to delete folders for records that no longer exist
+            try
+            {
+                string pautaDir = GetPautaAttachmentsDir(pautaId);
+                var recordDirs = Directory.GetDirectories(pautaDir);
+                var activeIds = activeRecords.Select(r => r.RecordId).ToHashSet();
+
+                foreach (var dir in recordDirs)
+                {
+                    string dirName = Path.GetFileName(dir);
+                    if (!activeIds.Contains(dirName))
+                    {
+                        Directory.Delete(dir, true);
+                    }
+                }
+            }
+            catch { }
+        }
     }
 }

@@ -67,48 +67,54 @@ namespace PautaDinamicaApp.Services
             string to = "";
             bool directoryFound = false;
 
-            Console.WriteLine($"DEBUG: --- START SEND EMAIL (Pauta: {pauta.Name}) ---");
-            Console.WriteLine($"DEBUG: UseAutomatedRecipient prop: {pauta.UseAutomatedRecipient}");
-
-            // 1. PRIORIDAD 1: DIRECTORIO (Solo si está ACTIVO en la pauta)
             if (pauta.UseAutomatedRecipient && !string.IsNullOrWhiteSpace(pauta.EmailNameFieldId))
             {
                 if (entry.Values.TryGetValue(pauta.EmailNameFieldId, out var nameVal) && nameVal != null)
                 {
                     string nameText = nameVal.ToString()?.Trim() ?? "";
-                    Console.WriteLine($"DEBUG: Directory search for name: '{nameText}'");
                     var contact = pauta.RecipientContacts?.FirstOrDefault(c => string.Equals(c.Name?.Trim(), nameText, StringComparison.OrdinalIgnoreCase));
                     if (contact != null && !string.IsNullOrWhiteSpace(contact.Email))
                     {
                         to = contact.Email;
                         directoryFound = true;
-                        Console.WriteLine($"DEBUG: Found match in Directory: {to}");
                     }
-                    else { Console.WriteLine($"DEBUG: No match found in Directory for '{nameText}'"); }
                 }
-                else { Console.WriteLine($"DEBUG: Source field {pauta.EmailNameFieldId} not found in record."); }
             }
 
-            // 2. PRIORIDAD 2: CAMPO MANUAL DE LA PAUTA
             if (!directoryFound)
             {
                 to = ProcessTemplate(pauta.EmailToTemplate, entry, fields, pauta.EmailReplacementRules);
-                Console.WriteLine($"DEBUG: Using Pauta Manual template: {to}");
             }
 
-            // Procesar el resto de campos (CC, Asunto, Cuerpo)
             string cc = ProcessTemplate(pauta.EmailCcTemplate, entry, fields, pauta.EmailReplacementRules);
             string subject = ProcessTemplate(pauta.EmailSubjectTemplate, entry, fields, pauta.EmailReplacementRules);
             string body = ProcessTemplate(pauta.EmailBodyTemplate, entry, fields, pauta.EmailReplacementRules);
 
-            EmailMethod method = pauta.EmailMethod;
+            // Collect all attachments
+            var attachments = new List<string>();
+            if (!string.IsNullOrEmpty(pdfPath) && File.Exists(pdfPath)) attachments.Add(pdfPath);
 
-            Console.WriteLine($"DEBUG: Final 'To': '{to}'");
-            Console.WriteLine($"DEBUG: Final Method: {method}");
+            if (fields != null)
+            {
+                foreach (var f in fields.Where(f => f.Type == FieldType.FileAttachment && f.AttachToEmail))
+                {
+                    if (entry.Values.TryGetValue(f.Id, out var val) && val != null)
+                    {
+                        string strVal = val.ToString() ?? "";
+                        var paths = strVal.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var path in paths)
+                        {
+                            if (File.Exists(path)) attachments.Add(path);
+                        }
+                    }
+                }
+            }
+
+            EmailMethod method = pauta.EmailMethod;
 
             if (method == EmailMethod.Outlook)
             {
-                SendViaOutlook(to, cc, subject, body, pdfPath);
+                SendViaOutlook(to, cc, subject, body, attachments);
             }
             else
             {
@@ -135,11 +141,10 @@ namespace PautaDinamicaApp.Services
             }
         }
 
-        private void SendViaOutlook(string to, string cc, string subject, string body, string? attachmentPath)
+        private void SendViaOutlook(string to, string cc, string subject, string body, List<string> attachmentPaths)
         {
             try
             {
-                // Uso de COM dinámico para evitar dependencia estricta de versión de Interop
                 Type? outlookType = Type.GetTypeFromProgID("Outlook.Application");
                 if (outlookType == null)
                 {
@@ -154,12 +159,18 @@ namespace PautaDinamicaApp.Services
                 mailItem.Subject = subject;
                 mailItem.Body = body;
 
-                if (!string.IsNullOrEmpty(attachmentPath) && System.IO.File.Exists(attachmentPath))
+                if (attachmentPaths != null)
                 {
-                    mailItem.Attachments.Add(attachmentPath);
+                    foreach (var path in attachmentPaths)
+                    {
+                        if (System.IO.File.Exists(path))
+                        {
+                            mailItem.Attachments.Add(path);
+                        }
+                    }
                 }
 
-                mailItem.Display(); // Mostramos el correo para que el usuario sea quien de click en Enviar
+                mailItem.Display();
             }
             catch (Exception ex)
             {

@@ -712,10 +712,10 @@ namespace PautaDinamicaApp.ViewModels
         private void ConfigureOptions(FieldDefinition? field)
         {
             if (field == null) return;
-            var configurableTypes = new[] { FieldType.Dropdown, FieldType.Boolean, FieldType.Calculation, FieldType.Average, FieldType.Time, FieldType.Text, FieldType.TextArea, FieldType.Numeric };
+            var configurableTypes = new[] { FieldType.Dropdown, FieldType.Boolean, FieldType.Calculation, FieldType.Average, FieldType.Time, FieldType.Text, FieldType.TextArea, FieldType.Numeric, FieldType.FileAttachment };
             if (!configurableTypes.Contains(field.Type)) return;
 
-            var vm = new OptionsEditorViewModel(field, Fields.ToList());
+            var vm = new OptionsEditorViewModel(field, Fields.ToList(), EditingPauta?.Id);
             var win = new OptionsWindow { DataContext = vm };
             win.Owner = System.Windows.Application.Current.MainWindow;
             if (win.ShowDialog() == true)
@@ -724,6 +724,10 @@ namespace PautaDinamicaApp.ViewModels
                 field.MaxLength = vm.ResultMaxLength;
                 field.WarnOnDuplicate = vm.WarnOnDuplicate;
                 field.TimeFormat = vm.TimeFormat;
+                field.AllowedExtensions = vm.ResultAllowedExtensions;
+                field.AllowMultipleAttachments = vm.AllowMultipleAttachments;
+                field.AttachToEmail = vm.AttachToEmail;
+                field.AllowAnyFile = vm.AllowAnyFile;
                 if (field.Type == FieldType.Dropdown)
                 {
                     field.Options = vm.ResultOptions;

@@ -17,7 +17,8 @@ namespace PautaDinamicaApp.Models
         Separator,
         Calculation,
         Average,
-        TextArea
+        TextArea,
+        FileAttachment
     }
 
     public enum CalculationRounding
@@ -71,6 +72,8 @@ namespace PautaDinamicaApp.Models
         private bool _showDecimals = true;
         private CalculationRounding _rounding = CalculationRounding.None;
         private List<AutoSelectRule> _autoSelectRules = new();
+        private List<string> _allowedExtensions = new();
+        private bool _allowMultipleAttachments = false;
 
         public string Id { get => _id; set { _id = value; OnPropertyChanged(); } }
         public string Label { get => _label; set { _label = value; OnPropertyChanged(); } }
@@ -100,6 +103,11 @@ namespace PautaDinamicaApp.Models
                 case FieldType.Numeric: MaxLength = 15; break;
                 case FieldType.Date: MaxLength = 10; break;
                 case FieldType.Time: MaxLength = 10; break;
+                case FieldType.FileAttachment:
+                    MaxLength = 4000;
+                    if (AllowedExtensions == null || AllowedExtensions.Count == 0)
+                        AllowedExtensions = new List<string> { ".pdf", ".jpg", ".png", ".docx", ".xlsx", ".mp3", ".wav", ".m4a" };
+                    break;
             }
         }
         public bool IsRequired { get => _isRequired; set { _isRequired = value; OnPropertyChanged(); } }
@@ -115,6 +123,13 @@ namespace PautaDinamicaApp.Models
         public CalculationRounding Rounding { get => _rounding; set { _rounding = value; OnPropertyChanged(); } }
         private int _maxLength = 255;
         public int MaxLength { get => _maxLength; set { _maxLength = value; OnPropertyChanged(); } }
+
+        public List<string> AllowedExtensions { get => _allowedExtensions; set { _allowedExtensions = value ?? new(); OnPropertyChanged(); } }
+        private bool _allowAnyFile = true;
+        private bool _attachToEmail = true;
+        public bool AllowAnyFile { get => _allowAnyFile; set { _allowAnyFile = value; OnPropertyChanged(); } }
+        public bool AttachToEmail { get => _attachToEmail; set { _attachToEmail = value; OnPropertyChanged(); } }
+        public bool AllowMultipleAttachments { get => _allowMultipleAttachments; set { _allowMultipleAttachments = value; OnPropertyChanged(); } }
 
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsValid => true; // Dummy property to satisfy global styles in ConfigWindow
@@ -169,7 +184,7 @@ namespace PautaDinamicaApp.Models
                 Options = new List<string> { "Cumple", "No Cumple", "N/A" };
 
             // Migración para campos antiguos sin MaxLength (o puestos a 0 por error)
-            if (MaxLength <= 0)
+            if (MaxLength <= 0 || (Type == FieldType.FileAttachment && MaxLength < 4000))
             {
                 ApplyTypeDefaults();
             }

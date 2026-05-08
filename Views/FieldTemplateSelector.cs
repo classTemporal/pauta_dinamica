@@ -17,6 +17,7 @@ namespace PautaDinamicaApp.Views
         public DataTemplate? CalculationTemplate { get; set; }
         public DataTemplate? AverageTemplate { get; set; }
         public DataTemplate? TextAreaTemplate { get; set; }
+        public DataTemplate? FileAttachmentTemplate { get; set; }
 
         public override DataTemplate? SelectTemplate(object item, DependencyObject container)
         {
@@ -34,6 +35,7 @@ namespace PautaDinamicaApp.Views
                     FieldType.Calculation => CalculationTemplate,
                     FieldType.Average => AverageTemplate,
                     FieldType.TextArea => TextAreaTemplate,
+                    FieldType.FileAttachment => FileAttachmentTemplate,
                     _ => TextTemplate
                 };
             }

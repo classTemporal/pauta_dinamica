@@ -11,6 +11,7 @@
     <conv:FlexibleBooleanConverter x:Key="FlexibleBooleanConverter"/>
     <conv:StringToBrushConverter x:Key="StringToBrushConverter"/>
     <conv:StringToLanguageConverter x:Key="StringToLanguageConverter"/>
+    <conv:FileNameConverter x:Key="FileNameConverter"/>
 
 
     <!-- Design Tokens / Brushes -->

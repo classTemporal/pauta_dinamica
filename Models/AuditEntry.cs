@@ -43,6 +43,21 @@ namespace PautaDinamicaApp.Models
         private string? _rowColor;
 
         [System.Text.Json.Serialization.JsonIgnore]
+        public bool HasMissingAttachments
+        {
+            get => _hasMissingAttachments;
+            set
+            {
+                if (_hasMissingAttachments != value)
+                {
+                    _hasMissingAttachments = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        private bool _hasMissingAttachments;
+
+        [System.Text.Json.Serialization.JsonIgnore]
         public bool IsValid => true;
 
         public event PropertyChangedEventHandler? PropertyChanged;
