@@ -15,6 +15,9 @@ namespace PautaDinamicaApp.Models
 
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsValid => true;
+        
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string Type { get; } = "";
 
         private bool _isSelected;
         [System.Text.Json.Serialization.JsonIgnore]

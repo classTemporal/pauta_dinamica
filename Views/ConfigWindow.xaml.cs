@@ -86,6 +86,8 @@ namespace PautaDinamicaApp
             foreach (var item in items)
             {
                 if (item is FieldDefinition f && f.IsSelected) { firstSelected = item; break; }
+                if (item is ExportColumnConfig ec && ec.IsSelected) { firstSelected = item; break; }
+                if (item is PdfReplacementRule pr && pr.IsSelected) { firstSelected = item; break; }
             }
 
             if (firstSelected != null)
