@@ -603,7 +603,7 @@ namespace PautaDinamicaApp.ViewModels
             var content = new StringBuilder();
             content.AppendLine("# 📘 Documentación del Sistema");
             content.AppendLine("");
-            content.AppendLine("**Versión:** 1.2.0");
+            content.AppendLine("**Versión:** 2.1.0");
             content.AppendLine("**Creador:** Angel Gustavo Pacheco Manzanero");
             content.AppendLine("");
             content.AppendLine("### 🚀 Resumen del Sistema");
