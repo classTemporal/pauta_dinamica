@@ -76,6 +76,24 @@ namespace PautaDinamicaApp
             }
         }
 
+        private void ScrollFirstSelected(System.Windows.Controls.ListBox grid)
+        {
+            if (grid == null) return;
+            var items = grid.ItemsSource as System.Collections.IEnumerable;
+            if (items == null) return;
+
+            object? firstSelected = null;
+            foreach (var item in items)
+            {
+                if (item is FieldDefinition f && f.IsSelected) { firstSelected = item; break; }
+            }
+
+            if (firstSelected != null)
+            {
+                grid.ScrollIntoView(firstSelected);
+            }
+        }
+
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
             if (this.DataContext is ViewModels.EditorViewModel vm)
@@ -153,15 +171,15 @@ namespace PautaDinamicaApp
                 if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
                     Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
                 {
-                    DataGrid dataGrid = (DataGrid)sender;
+                    System.Windows.Controls.ListBox listBox = (System.Windows.Controls.ListBox)sender;
                     DependencyObject? originalSource = e.OriginalSource as DependencyObject;
-                    DataGridRow? row = originalSource != null ? FindVisualParent<DataGridRow>(originalSource) : null;
+                    ListBoxItem? item = FindVisualParent<ListBoxItem>(originalSource);
 
-                    if (row != null)
+                    if (item != null)
                     {
-                        FieldDefinition field = (FieldDefinition)row.Item;
+                        FieldDefinition field = (FieldDefinition)item.DataContext;
                         DataObject dragData = new DataObject("FieldDefinition", field);
-                        DragDrop.DoDragDrop(row, dragData, DragDropEffects.Move);
+                        DragDrop.DoDragDrop(item, dragData, DragDropEffects.Move);
                     }
                 }
             }
@@ -172,18 +190,18 @@ namespace PautaDinamicaApp
             if (e.Data.GetDataPresent("FieldDefinition"))
             {
                 FieldDefinition? droppedField = e.Data.GetData("FieldDefinition") as FieldDefinition;
-                DataGrid dataGrid = (DataGrid)sender;
+                System.Windows.Controls.ListBox listBox = (System.Windows.Controls.ListBox)sender;
                 DependencyObject? originalSource = e.OriginalSource as DependencyObject;
-                DataGridRow? row = originalSource != null ? FindVisualParent<DataGridRow>(originalSource) : null;
+                ListBoxItem? item = FindVisualParent<ListBoxItem>(originalSource);
 
-                if (droppedField != null && dataGrid.DataContext is ViewModels.EditorViewModel vm)
+                if (droppedField != null && listBox.DataContext is ViewModels.EditorViewModel vm)
                 {
                     int oldIndex = vm.Fields.IndexOf(droppedField);
                     int newIndex = -1;
 
-                    if (row != null)
+                    if (item != null && item.DataContext is FieldDefinition targetField)
                     {
-                        newIndex = vm.Fields.IndexOf((FieldDefinition)row.Item);
+                        newIndex = vm.Fields.IndexOf(targetField);
                     }
                     else
                     {
@@ -199,8 +217,9 @@ namespace PautaDinamicaApp
             }
         }
 
-        private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
         {
+            if (child == null) return null;
             DependencyObject? parentObject = VisualTreeHelper.GetParent(child);
             if (parentObject == null) return null;
             T? parent = parentObject as T;
