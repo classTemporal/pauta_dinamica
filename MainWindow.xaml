@@ -638,7 +638,7 @@
                         </StackPanel>
                     </Button>
                     <Separator Width="1" Height="15" Margin="10,0" Background="{DynamicResource BorderBrush}"/>
-                    <TextBlock Text="v1.2.0" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="v2.1.0" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
                 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">

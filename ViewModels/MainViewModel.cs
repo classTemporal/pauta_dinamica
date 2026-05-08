@@ -143,7 +143,6 @@ namespace PautaDinamicaApp.ViewModels
 
         public List<string> SortDirectionOptions => new List<string> { "Ascendente", "Descendente" };
 
-        private bool _isSortAscending = false;
         public bool IsSortAscending
         {
             get => SortDirection == "Ascendente";
@@ -308,7 +307,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void PickDate(bool isFrom)
         {
-            var win = new DateSelectorWindow(isFrom ? FilterStartDate?.ToString("dd/MM/yyyy") : FilterEndDate?.ToString("dd/MM/yyyy"));
+            var win = new DateSelectorWindow((isFrom ? FilterStartDate?.ToString("dd/MM/yyyy") : FilterEndDate?.ToString("dd/MM/yyyy")) ?? "");
             win.Owner = System.Windows.Application.Current.MainWindow;
             if (win.ShowDialog() == true)
             {
