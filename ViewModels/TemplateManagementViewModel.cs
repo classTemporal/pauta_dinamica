@@ -28,6 +28,11 @@ namespace PautaDinamicaApp.ViewModels
         {
             Model = model;
         }
+
+        public void NotifyContentChanged()
+        {
+            OnPropertyChanged(nameof(Content));
+        }
     }
 
     public class TemplateManagementViewModel : ViewModelBase
@@ -36,10 +41,26 @@ namespace PautaDinamicaApp.ViewModels
         private ObservableCollection<TemplateItemVM> _templates = new();
         private string _newTemplateContent = string.Empty;
         private bool _isMultiSelectMode;
+        private TemplateItemVM? _editingTemplate;
+        private bool _isEditing;
 
         public ObservableCollection<TemplateItemVM> Templates { get => _templates; set => SetProperty(ref _templates, value); }
         public string NewTemplateContent { get => _newTemplateContent; set => SetProperty(ref _newTemplateContent, value); }
         public bool IsMultiSelectMode { get => _isMultiSelectMode; set => SetProperty(ref _isMultiSelectMode, value); }
+        
+        public bool IsEditing 
+        { 
+            get => _isEditing; 
+            set 
+            { 
+                if (SetProperty(ref _isEditing, value))
+                {
+                    OnPropertyChanged(nameof(AddButtonText));
+                }
+            } 
+        }
+
+        public string AddButtonText => IsEditing ? "💾 ACTUALIZAR" : "➕ AGREGAR";
 
         public ICommand AddTemplateCommand { get; }
         public ICommand DeleteTemplateCommand { get; }
@@ -48,6 +69,10 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ExportExcelCommand { get; }
         public ICommand ImportExcelCommand { get; }
         public ICommand SelectAllCommand { get; }
+        public ICommand MoveUpCommand { get; }
+        public ICommand MoveDownCommand { get; }
+        public ICommand StartEditCommand { get; }
+        public ICommand CancelEditCommand { get; }
         public ICommand SaveChangesCommand { get; }
         public ICommand ApplyChangesCommand { get; }
         public ICommand CancelCommand { get; }
@@ -66,9 +91,45 @@ namespace PautaDinamicaApp.ViewModels
             ExportExcelCommand = new RelayCommand(_ => ExportToExcel());
             ImportExcelCommand = new RelayCommand(_ => ImportFromExcel());
             SelectAllCommand = new RelayCommand(_ => SelectAll());
+            MoveUpCommand = new RelayCommand(p => MoveUp(p as TemplateItemVM));
+            MoveDownCommand = new RelayCommand(p => MoveDown(p as TemplateItemVM));
+            StartEditCommand = new RelayCommand(p => StartEdit(p as TemplateItemVM));
+            CancelEditCommand = new RelayCommand(_ => CancelEdit());
             SaveChangesCommand = new RelayCommand(_ => SaveAndClose());
             ApplyChangesCommand = new RelayCommand(_ => { SaveTemplates(); System.Windows.MessageBox.Show("Plantillas aplicadas correctamente.", "Éxito"); });
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
+        }
+
+        private void MoveUp(TemplateItemVM? item)
+        {
+            var selected = Templates.Where(t => t.IsSelected).ToList();
+            if (!selected.Any()) { if (item != null) selected.Add(item); else return; }
+
+            var orderedSelected = selected.OrderBy(t => Templates.IndexOf(t)).ToList();
+            foreach (var t in orderedSelected)
+            {
+                int idx = Templates.IndexOf(t);
+                if (idx > 0 && !Templates[idx - 1].IsSelected)
+                {
+                    Templates.Move(idx, idx - 1);
+                }
+            }
+        }
+
+        private void MoveDown(TemplateItemVM? item)
+        {
+            var selected = Templates.Where(t => t.IsSelected).ToList();
+            if (!selected.Any()) { if (item != null) selected.Add(item); else return; }
+
+            var orderedSelected = selected.OrderByDescending(t => Templates.IndexOf(t)).ToList();
+            foreach (var t in orderedSelected)
+            {
+                int idx = Templates.IndexOf(t);
+                if (idx < Templates.Count - 1 && !Templates[idx + 1].IsSelected)
+                {
+                    Templates.Move(idx, idx + 1);
+                }
+            }
         }
 
         private void SaveAndClose()
@@ -91,9 +152,33 @@ namespace PautaDinamicaApp.ViewModels
 
         private void AddTemplate()
         {
-            var newModel = new MessageTemplate { Content = NewTemplateContent.Trim() };
-            Templates.Add(new TemplateItemVM(newModel));
+            if (IsEditing && _editingTemplate != null)
+            {
+                _editingTemplate.Model.Content = NewTemplateContent.Trim();
+                _editingTemplate.NotifyContentChanged();
+                CancelEdit();
+            }
+            else
+            {
+                var newModel = new MessageTemplate { Content = NewTemplateContent.Trim() };
+                Templates.Add(new TemplateItemVM(newModel));
+                NewTemplateContent = string.Empty;
+            }
+        }
+
+        private void StartEdit(TemplateItemVM? template)
+        {
+            if (template == null) return;
+            _editingTemplate = template;
+            NewTemplateContent = template.Model.Content;
+            IsEditing = true;
+        }
+
+        private void CancelEdit()
+        {
+            _editingTemplate = null;
             NewTemplateContent = string.Empty;
+            IsEditing = false;
         }
 
         private void DeleteTemplate(TemplateItemVM? template)
@@ -102,6 +187,7 @@ namespace PautaDinamicaApp.ViewModels
             {
                 if (System.Windows.MessageBox.Show("¿Eliminar esta plantilla?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
+                    if (_editingTemplate == template) CancelEdit();
                     Templates.Remove(template);
                 }
             }

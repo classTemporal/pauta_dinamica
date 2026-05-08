@@ -71,11 +71,6 @@ namespace PautaDinamicaApp.ViewModels
         {
             var storage = new StorageService();
             var templates = storage.LoadTemplates();
-            if (!templates.Any())
-            {
-                System.Windows.MessageBox.Show("No hay plantillas disponibles. Puedes agregarlas en Configuración General > Plantillas.", "Gestor de Plantillas", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
 
             var win = new PautaDinamicaApp.Views.TemplatePickerWindow(templates);
             win.Owner = System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);

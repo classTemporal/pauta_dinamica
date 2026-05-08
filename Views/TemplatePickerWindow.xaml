@@ -1,32 +1,102 @@
 <Window x:Class="PautaDinamicaApp.Views.TemplatePickerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Seleccionar Plantilla" Height="450" Width="500"
+        Title="Seleccionar Plantilla" Height="550" Width="550"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
     
+    <Window.Resources>
+        <Style x:Key="MoveButtonStyle" TargetType="Button" BasedOn="{StaticResource GhostButton}">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="MultiSelectToggleStyle" TargetType="CheckBox">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="border" Background="Transparent" CornerRadius="6" Padding="12,6" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" SnapsToDevicePixels="True" Height="32">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock x:Name="icon" Text="▢" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" FontWeight="Bold" FontSize="14"/>
+                                <ContentPresenter VerticalAlignment="Center" TextElement.Foreground="{DynamicResource TextBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="icon" Property="Text" Value="✅"/>
+                                <Setter TargetName="icon" Property="Foreground" Value="White"/>
+                                <Setter Property="TextElement.Foreground" Value="White" TargetName="border"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BorderBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Margin="0,0,0,15">
-            <TextBlock Text="Insertar Plantilla" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-            <TextBlock Text="Selecciona el texto que deseas agregar al campo actual." FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
-        </StackPanel>
+        <Grid Grid.Row="0" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Insertar Plantilla" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                <TextBlock Text="Selecciona el texto que deseas agregar." FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
+            </StackPanel>
+            <CheckBox Grid.Column="1" Content="Selección Múltiple" IsChecked="{Binding IsMultiSelectMode}" Style="{StaticResource MultiSelectToggleStyle}"/>
+        </Grid>
 
-        <ListBox x:Name="TemplatesList" Grid.Row="1" ItemsSource="{Binding}" 
-                 Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <!-- MultiSelect Bar -->
+        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="12,6" Margin="0,0,0,15"
+                BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.2"
+                Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="▲" Click="MoveUp_Click" Style="{StaticResource SuccessButton}" Margin="0,0,6,0" Width="34" Height="30" ToolTip="Mover seleccionados arriba" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/>
+                    <Button Content="▼" Click="MoveDown_Click" Style="{StaticResource SuccessButton}" Margin="0,0,12,0" Width="34" Height="30" ToolTip="Mover seleccionados abajo" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Content="Seleccionar Todo" Click="SelectAll_Click" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Height="30" Padding="12,0" FontSize="11"/>
+                    <Button Content="🗑️" Click="DeleteSelected_Click" Style="{StaticResource DangerButton}" Height="30" Width="34" Padding="0" FontSize="11" ToolTip="Eliminar seleccionados"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ListBox x:Name="TemplatesList" Grid.Row="2" 
+                  Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Padding" Value="0"/>
                     <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListBoxItem">
-                                <Border x:Name="Bd" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Background="{TemplateBinding Background}" Padding="15">
+                                <Border x:Name="Bd" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Background="{TemplateBinding Background}" Padding="12">
                                     <ContentPresenter />
                                 </Border>
                                 <ControlTemplate.Triggers>
@@ -45,18 +115,60 @@
             </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Content}" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" MaxHeight="80" TextTrimming="CharacterEllipsis" FontSize="13"/>
+                    <Grid MinHeight="40">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                  Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        
+                        <TextBlock Grid.Column="1" Text="{Binding Content}" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" MaxHeight="60" TextTrimming="CharacterEllipsis" FontSize="13" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,5,0"
+                                    Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                            <Button Content="▲" Click="MoveUp_Click" Style="{StaticResource MoveButtonStyle}" Margin="0,0,6,0"/>
+                            <Button Content="▼" Click="MoveDown_Click" Style="{StaticResource MoveButtonStyle}"/>
+                        </StackPanel>
+                    </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <Grid Grid.Row="2" Margin="0,20,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <Button Content="CANCELAR" Click="Cancel_Click" Style="{StaticResource GhostButton}" Width="120" Height="40" HorizontalAlignment="Left"/>
-            <Button Grid.Column="1" Content="INSERTAR TEXTO" Click="Select_Click" Style="{StaticResource SuccessButton}" Width="200" Height="40" IsDefault="True"/>
-        </Grid>
+        <StackPanel Grid.Row="3" Margin="0,15,0,0">
+            <!-- Add Template Section -->
+            <Grid x:Name="AddTemplateGrid" Visibility="Collapsed" Margin="0,0,0,15">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Nueva Plantilla:" FontSize="12" FontWeight="Bold" Margin="0,0,0,5"/>
+                <TextBox x:Name="NewTemplateTextBox" Grid.Row="1" Height="80" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,0,10"
+                         Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                         Padding="5"/>
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="CANCELAR" Click="CancelAdd_Click" Style="{StaticResource GhostButton}" Height="32" Width="100" FontSize="11" Margin="0,0,8,0"/>
+                    <Button Content="GUARDAR" Click="SaveNewTemplate_Click" Style="{StaticResource SuccessButton}" Height="32" Width="100" FontSize="11"/>
+                </StackPanel>
+            </Grid>
+
+            <StackPanel x:Name="ShowAddPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
+                <Button x:Name="ShowAddButton" Content="+ AGREGAR NUEVA PLANTILLA" Click="ShowAdd_Click" Style="{StaticResource GhostButton}" Margin="0,0,8,0"/>
+                <Button Content="⚙️" Click="OpenConfig_Click" Style="{StaticResource GhostButton}" Width="34" Height="34" Padding="0" ToolTip="Configuración General de Plantillas"/>
+            </StackPanel>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button Content="CERRAR" Click="Cancel_Click" Style="{StaticResource GhostButton}" Width="120" Height="40" HorizontalAlignment="Left"/>
+                <Button Grid.Column="1" Content="INSERTAR TEXTO" Click="Select_Click" Style="{StaticResource SuccessButton}" Width="200" Height="40" IsDefault="True"/>
+            </Grid>
+        </StackPanel>
     </Grid>
 </Window>

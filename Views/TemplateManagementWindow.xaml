@@ -4,10 +4,29 @@
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
         Title="Gestión de Plantillas" Height="650" Width="800"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
-    
-    <Window.Resources>
+        <Window.Resources>
         <conv:BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
+        
+        <Style x:Key="MoveButtonStyle" TargetType="Button" BasedOn="{StaticResource GhostButton}">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="DangerMoveButtonStyle" TargetType="Button" BasedOn="{StaticResource MoveButtonStyle}">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#15FF0000"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -24,8 +43,8 @@
             <TextBlock Text="Agrega textos predefinidos para insertar rápidamente en campos cortos o largos." FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"/>
         </StackPanel>
 
-        <!-- Agregar Nueva Plantilla -->
-        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" Padding="15" CornerRadius="8" Margin="0,0,0,15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+        <!-- Agregar / Editar Plantilla -->
+        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" Padding="18,12" CornerRadius="12" Margin="0,0,0,20" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -36,21 +55,31 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
-                <TextBlock Grid.Row="0" Text="Nueva Plantilla (Contenido):" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="{Binding AddButtonText}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" FontSize="13"/>
+                    <TextBlock Text=" (Escribe el contenido abajo)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" VerticalAlignment="Bottom" Margin="5,0,0,1"/>
+                </StackPanel>
                 
                 <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding NewTemplateContent, UpdateSourceTrigger=PropertyChanged}" 
-                         Foreground="{DynamicResource TextBrush}" Background="{DynamicResource InputBackground}"
-                         AcceptsReturn="True" Height="100" VerticalScrollBarVisibility="Auto" 
-                         TextWrapping="Wrap" Margin="0,0,15,0" Padding="10"/>
+                          Foreground="{DynamicResource TextBrush}" Background="{DynamicResource InputBackground}"
+                          AcceptsReturn="True" Height="80" VerticalScrollBarVisibility="Auto" 
+                          TextWrapping="Wrap" Margin="0,0,15,0" Padding="12,8"
+                          VerticalContentAlignment="Top"
+                          BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1.2"/>
                 
-                <Button Grid.Row="1" Grid.Column="1" Content="➕ AGREGAR" Command="{Binding AddTemplateCommand}" 
-                        Style="{StaticResource SuccessButton}" Width="120" Height="100" VerticalAlignment="Bottom"/>
+                <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Stretch">
+                    <Button Content="{Binding AddButtonText}" Command="{Binding AddTemplateCommand}" 
+                            Style="{StaticResource SuccessButton}" Width="140" Height="45" Margin="0,0,0,8"/>
+                    <Button Content="✖️ CANCELAR" Command="{Binding CancelEditCommand}" 
+                            Style="{StaticResource GhostButton}" Width="140" Height="27" FontSize="11"
+                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
             </Grid>
         </Border>
 
         <!-- Lista de Plantillas -->
         <DockPanel Grid.Row="2">
-            <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" Padding="10" CornerRadius="8,8,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" Padding="10" CornerRadius="10,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
                 <Grid>
                     <!-- Vista Normal -->
                     <StackPanel Orientation="Horizontal" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
@@ -64,13 +93,16 @@
 
                     <!-- Vista Selección Múltiple -->
                     <StackPanel Orientation="Horizontal" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVis}}">
+                        <Button Content="▲" Command="{Binding MoveUpCommand}" Style="{StaticResource SuccessButton}" Margin="0,0,6,0" Width="36" Height="34" ToolTip="Mover arriba" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/>
+                        <Button Content="▼" Command="{Binding MoveDownCommand}" Style="{StaticResource SuccessButton}" Margin="0,0,15,0" Width="36" Height="34" ToolTip="Mover abajo" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/>
+                        
                         <Button Content="✔️ Seleccionar Todo" Command="{Binding SelectAllCommand}" 
                                 Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
                         <Button Content="📤 Exportar Seleccionados" Command="{Binding ExportExcelCommand}" 
                                 Style="{StaticResource SecondaryButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
                         <Button Content="🗑️ Eliminar Seleccionados" Command="{Binding DeleteSelectedCommand}" 
                                 Style="{StaticResource DangerButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
-                        <Button Content="❌ Salir Selección" Command="{Binding ToggleMultiSelectCommand}" 
+                        <Button Content="❌ Salir" Command="{Binding ToggleMultiSelectCommand}" 
                                 Style="{StaticResource GhostButton}" Padding="15,5" Height="34"/>
                     </StackPanel>
                 </Grid>
@@ -78,14 +110,14 @@
 
             <DataGrid ItemsSource="{Binding Templates}" AutoGenerateColumns="False" CanUserAddRows="False"
                       Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1"
-                      GridLinesVisibility="Horizontal">
+                      GridLinesVisibility="Horizontal" IsReadOnly="True">
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="MinHeight" Value="50"/>
+                        <Setter Property="MinHeight" Value="65"/>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
@@ -109,18 +141,30 @@
                     <DataGridTemplateColumn Header="Contenido de la Plantilla" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBox Text="{Binding Model.Content, UpdateSourceTrigger=PropertyChanged}" 
-                                         AcceptsReturn="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" Padding="10" 
-                                         Foreground="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Foreground}"/>
+                                <TextBlock Text="{Binding Model.Content}" 
+                                           TextWrapping="Wrap" Padding="12" Margin="2"
+                                           VerticalAlignment="Center"
+                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Foreground}"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Width="50" Visibility="{Binding Data.IsMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                    <!-- Acciones Individuales (Solo en modo normal) -->
+                    <DataGridTemplateColumn Width="180" Visibility="{Binding Data.IsMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Content="🗑️" Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                        CommandParameter="{Binding}" Foreground="{DynamicResource DangerBrush}" Background="Transparent" BorderThickness="0" FontSize="18" Padding="10"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,2">
+                                    <Button Content="▲" Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                            CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                    <Button Content="▼" Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                            CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                    
+                                    <Button Content="✏️" Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                            CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Width="32" Height="32" Padding="0" Margin="0,0,6,0" ToolTip="Editar contenido" VerticalAlignment="Center"/>
+                                    
+                                    <Button Content="🗑️" Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                            CommandParameter="{Binding}" Style="{StaticResource DangerMoveButtonStyle}" ToolTip="Eliminar plantilla" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
