@@ -14,6 +14,7 @@
             <Setter Property="Margin" Value="2"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Padding" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
@@ -108,68 +109,80 @@
                 </Grid>
             </Border>
 
-            <DataGrid ItemsSource="{Binding Templates}" AutoGenerateColumns="False" CanUserAddRows="False"
-                      Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1"
-                      GridLinesVisibility="Horizontal" IsReadOnly="True">
-                <DataGrid.RowStyle>
-                    <Style TargetType="DataGridRow">
-                        <Setter Property="Background" Value="Transparent"/>
+            <ListBox x:Name="TemplatesList" ItemsSource="{Binding Templates}" 
+                     Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}"
+                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1"
+                     HorizontalContentAlignment="Stretch" Padding="10"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     AllowDrop="True"
+                     PreviewMouseLeftButtonDown="TemplatesList_PreviewMouseLeftButtonDown"
+                     PreviewMouseLeftButtonUp="TemplatesList_PreviewMouseLeftButtonUp"
+                     MouseMove="TemplatesList_MouseMove"
+                     Drop="TemplatesList_Drop">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="MinHeight" Value="65"/>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                <Setter Property="Foreground" Value="White"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
-                            </Trigger>
-                        </Style.Triggers>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Margin" Value="0,0,0,8"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                     <Border x:Name="Bd" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{TemplateBinding Background}" Padding="12" CornerRadius="8">
+                                         <ContentPresenter />
+                                     </Border>
+                                     <ControlTemplate.Triggers>
+                                         <Trigger Property="IsMouseOver" Value="True">
+                                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+                                         </Trigger>
+                                         <Trigger Property="IsSelected" Value="True">
+                                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                             <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
+                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                         </Trigger>
+                                     </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                     </Style>
-                </DataGrid.RowStyle>
-                <DataGrid.Columns>
-                    <DataGridTemplateColumn Width="45" Visibility="{Binding Data.IsMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BoolToVis}}">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid MinHeight="50">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                    <DataGridTemplateColumn Header="Contenido de la Plantilla" Width="*">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Model.Content}" 
-                                           TextWrapping="Wrap" Padding="12" Margin="2"
-                                           VerticalAlignment="Center"
-                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Foreground}"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
+                            <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                      Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVis}}"
+                                      VerticalAlignment="Center" Margin="5,0,15,0"/>
 
-                    <!-- Acciones Individuales (Solo en modo normal) -->
-                    <DataGridTemplateColumn Width="180" Visibility="{Binding Data.IsMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,2">
-                                    <Button Content="▲" Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
-                                            CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                    <Button Content="▼" Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
-                                            CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                    
-                                    <Button Content="✏️" Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
-                                            CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Width="32" Height="32" Padding="0" Margin="0,0,6,0" ToolTip="Editar contenido" VerticalAlignment="Center"/>
-                                    
-                                    <Button Content="🗑️" Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
-                                            CommandParameter="{Binding}" Style="{StaticResource DangerMoveButtonStyle}" ToolTip="Eliminar plantilla" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
+                            <TextBlock Grid.Column="1" Text="{Binding Model.Content}" 
+                                       TextWrapping="Wrap" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       FontSize="13" Padding="5"/>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,5,0"
+                                        Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                <Button Content="▲" Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                        CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Margin="0,0,4,0"/>
+                                <Button Content="▼" Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                        CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Margin="0,0,12,0"/>
+                                
+                                <Button Content="✏️" Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                        CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Width="32" Height="32" Margin="0,0,6,0" ToolTip="Editar contenido"/>
+                                
+                                <Button Content="🗑️" Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                        CommandParameter="{Binding}" Style="{StaticResource DangerMoveButtonStyle}" ToolTip="Eliminar plantilla"/>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </DockPanel>
 
         <!-- Pie -->

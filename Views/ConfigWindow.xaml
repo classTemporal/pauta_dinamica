@@ -142,17 +142,25 @@
 
             <DataTemplate x:Key="TimeDefaultValueTemplate">
                  <Button Command="{Binding DataContext.PickTimeCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
-                         Style="{StaticResource SecondaryButton}" Padding="8,4" HorizontalContentAlignment="Left"
-                         Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource InputBorder}" Foreground="{DynamicResource TextBrush}" BorderThickness="1">
-                      <TextBlock Text="{Binding DefaultValue, FallbackValue='(Seleccionar Hora)'}"/>
+                         Style="{StaticResource SecondaryButton}" Padding="6,2" HorizontalContentAlignment="Left"
+                         Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource InputBorder}" Foreground="{DynamicResource TextBrush}" BorderThickness="1"
+                         Width="120" Height="28" HorizontalAlignment="Left">
+                      <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="🕒" Margin="0,0,6,0" VerticalAlignment="Center" FontSize="12" Opacity="0.8"/>
+                          <TextBlock Text="{Binding DefaultValue, FallbackValue='(Hora)'}" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                      </StackPanel>
                  </Button>
             </DataTemplate>
 
             <DataTemplate x:Key="DateDefaultValueTemplate">
                  <Button Command="{Binding DataContext.PickDateCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
-                         Style="{StaticResource SecondaryButton}" Padding="8,4" HorizontalContentAlignment="Left"
-                         Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource InputBorder}" Foreground="{DynamicResource TextBrush}" BorderThickness="1">
-                      <TextBlock Text="{Binding DefaultValue, FallbackValue='(Seleccionar Fecha)'}"/>
+                         Style="{StaticResource SecondaryButton}" Padding="6,2" HorizontalContentAlignment="Left"
+                         Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource InputBorder}" Foreground="{DynamicResource TextBrush}" BorderThickness="1"
+                         Width="120" Height="28" HorizontalAlignment="Left">
+                      <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="📅" Margin="0,0,6,0" VerticalAlignment="Center" FontSize="12" Opacity="0.8"/>
+                          <TextBlock Text="{Binding DefaultValue, FallbackValue='(Fecha)'}" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                      </StackPanel>
                  </Button>
             </DataTemplate>
 
@@ -456,6 +464,7 @@
                                  ItemContainerStyle="{StaticResource CardListBoxItemStyle}"
                                  ScrollViewer.CanContentScroll="False"
                                  PreviewMouseLeftButtonDown="EditorGrid_PreviewMouseLeftButtonDown"
+                                 PreviewMouseLeftButtonUp="EditorGrid_PreviewMouseLeftButtonUp"
                                  MouseMove="EditorGrid_MouseMove"
                                  Drop="EditorGrid_Drop">
                              <ListBox.ItemTemplate>
@@ -755,7 +764,12 @@
                                  Background="Transparent" BorderThickness="0"
                                  ItemContainerStyle="{StaticResource CardListBoxItemStyle}"
                                  HorizontalContentAlignment="Stretch"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 AllowDrop="True"
+                                 PreviewMouseLeftButtonDown="ExportGrid_PreviewMouseLeftButtonDown"
+                                 PreviewMouseLeftButtonUp="ExportGrid_PreviewMouseLeftButtonUp"
+                                 MouseMove="ExportGrid_MouseMove"
+                                 Drop="ExportGrid_Drop">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>
@@ -966,7 +980,12 @@
                                  Background="Transparent" BorderThickness="0"
                                  ItemContainerStyle="{StaticResource CardListBoxItemStyle}"
                                  HorizontalContentAlignment="Stretch"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 AllowDrop="True"
+                                 PreviewMouseLeftButtonDown="PdfGrid_PreviewMouseLeftButtonDown"
+                                 PreviewMouseLeftButtonUp="PdfGrid_PreviewMouseLeftButtonUp"
+                                 MouseMove="PdfGrid_MouseMove"
+                                 Drop="PdfGrid_Drop">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>
@@ -1137,11 +1156,16 @@
                         </Grid>
                         
                         <Border Grid.Row="1" Background="{DynamicResource BackgroundBrush}" CornerRadius="8" Padding="15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                            <ListBox ItemsSource="{Binding EditingPauta.PdfReplacementRules}"
+                            <ListBox x:Name="PdfRulesList" ItemsSource="{Binding EditingPauta.PdfReplacementRules}"
                                      Background="Transparent" BorderThickness="0"
                                      ItemContainerStyle="{StaticResource CardListBoxItemStyle}"
                                      HorizontalContentAlignment="Stretch"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     AllowDrop="True"
+                                     PreviewMouseLeftButtonDown="PdfRulesList_PreviewMouseLeftButtonDown"
+                                     PreviewMouseLeftButtonUp="PdfRulesList_PreviewMouseLeftButtonUp"
+                                     MouseMove="PdfRulesList_MouseMove"
+                                     Drop="PdfRulesList_Drop">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Grid>

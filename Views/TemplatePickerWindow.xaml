@@ -87,7 +87,12 @@
 
         <ListBox x:Name="TemplatesList" Grid.Row="2" 
                   Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  AllowDrop="True"
+                  PreviewMouseLeftButtonDown="TemplatesList_PreviewMouseLeftButtonDown"
+                  PreviewMouseLeftButtonUp="TemplatesList_PreviewMouseLeftButtonUp"
+                  MouseMove="TemplatesList_MouseMove"
+                  Drop="TemplatesList_Drop">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Padding" Value="0"/>
@@ -96,16 +101,16 @@
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListBoxItem">
-                                <Border x:Name="Bd" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Background="{TemplateBinding Background}" Padding="12">
+                                <Border x:Name="Bd" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{TemplateBinding Background}" Padding="12" CornerRadius="8" Margin="10,0,10,8">
                                     <ContentPresenter />
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BorderBrush}"/>
+                                        <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                     </Trigger>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SuccessBrush}"/>
-                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>

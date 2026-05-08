@@ -112,12 +112,41 @@
                                 </Grid>
                             </StackPanel>
                             <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                <ListBox ItemsSource="{Binding Options}" 
+                                <ListBox x:Name="OptionsList" ItemsSource="{Binding Options}" 
                                      Background="Transparent" BorderThickness="0"
                                      HorizontalContentAlignment="Stretch"
-                                     ItemContainerStyle="{StaticResource ModernListBoxItemStyle}"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     MaxHeight="350">
+                                     MaxHeight="350"
+                                     AllowDrop="True"
+                                     PreviewMouseLeftButtonDown="OptionsList_PreviewMouseLeftButtonDown"
+                                     PreviewMouseLeftButtonUp="OptionsList_PreviewMouseLeftButtonUp"
+                                     MouseMove="OptionsList_MouseMove"
+                                     Drop="OptionsList_Drop">
+                                     <ListBox.ItemContainerStyle>
+                                         <Style TargetType="ListBoxItem">
+                                             <Setter Property="Padding" Value="0"/>
+                                             <Setter Property="Background" Value="Transparent"/>
+                                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                             <Setter Property="Template">
+                                                 <Setter.Value>
+                                                     <ControlTemplate TargetType="ListBoxItem">
+                                                         <Border x:Name="Bd" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{TemplateBinding Background}" Padding="10,8" CornerRadius="8" Margin="0,0,0,6">
+                                                             <ContentPresenter />
+                                                         </Border>
+                                                         <ControlTemplate.Triggers>
+                                                             <Trigger Property="IsMouseOver" Value="True">
+                                                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                                             </Trigger>
+                                                             <Trigger Property="IsSelected" Value="True">
+                                                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                                 <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
+                                                             </Trigger>
+                                                         </ControlTemplate.Triggers>
+                                                     </ControlTemplate>
+                                                 </Setter.Value>
+                                             </Setter>
+                                         </Style>
+                                     </ListBox.ItemContainerStyle>
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Margin="0,2">

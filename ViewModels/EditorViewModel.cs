@@ -99,6 +99,20 @@ namespace PautaDinamicaApp.ViewModels
 
             AvailableTypes = Enum.GetValues(typeof(FieldType)).Cast<FieldType>()
                                 .Where(t => t != FieldType.Separator)
+                                .OrderBy(t => t switch
+                                {
+                                    FieldType.Text => "Texto corto",
+                                    FieldType.Numeric => "Número",
+                                    FieldType.Date => "Fecha",
+                                    FieldType.Time => "Hora",
+                                    FieldType.Dropdown => "Lista de elementos",
+                                    FieldType.Calculation => "Porcentaje",
+                                    FieldType.Boolean => "Binario",
+                                    FieldType.Average => "Promedio",
+                                    FieldType.TextArea => "Texto largo",
+                                    FieldType.FileAttachment => "Archivo Adjunto",
+                                    _ => t.ToString()
+                                })
                                 .ToList();
             EmailMethods = Enum.GetValues(typeof(EmailMethod));
 

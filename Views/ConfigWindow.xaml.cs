@@ -161,11 +161,34 @@ namespace PautaDinamicaApp
         private void EditorGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             _startPoint = e.GetPosition(null);
+            _draggedItem = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+            _isDraggingNow = false;
+
+            if (_draggedItem != null)
+            {
+                var source = e.OriginalSource as DependencyObject;
+                if (IsFocusableControl(source)) return;
+                
+                // Marcamos Handled = true para evitar selección inmediata en MouseDown
+                e.Handled = true;
+            }
+        }
+
+        private void EditorGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isDraggingNow && _draggedItem != null && !IsFocusableControl(e.OriginalSource as DependencyObject))
+            {
+                if (EditorGrid.SelectedItem != _draggedItem.DataContext)
+                {
+                    EditorGrid.SelectedItem = _draggedItem.DataContext;
+                }
+            }
+            _draggedItem = null;
         }
 
         private void EditorGrid_MouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed)
+            if (e.LeftButton == MouseButtonState.Pressed && _draggedItem != null)
             {
                 System.Windows.Point mousePos = e.GetPosition(null);
                 Vector diff = _startPoint - mousePos;
@@ -173,15 +196,24 @@ namespace PautaDinamicaApp
                 if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
                     Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
                 {
-                    System.Windows.Controls.ListBox listBox = (System.Windows.Controls.ListBox)sender;
-                    DependencyObject? originalSource = e.OriginalSource as DependencyObject;
-                    ListBoxItem? item = FindVisualParent<ListBoxItem>(originalSource);
+                    _isDraggingNow = true;
+                    FieldDefinition field = (FieldDefinition)_draggedItem.DataContext;
+                    EditorGrid.SelectedItem = field;
+                    DataObject dragData = new DataObject("FieldDefinition", field);
 
-                    if (item != null)
-                    {
-                        FieldDefinition field = (FieldDefinition)item.DataContext;
-                        DataObject dragData = new DataObject("FieldDefinition", field);
-                        DragDrop.DoDragDrop(item, dragData, DragDropEffects.Move);
+                    var dragWindow = CreateDragVisual(_draggedItem, field.Label);
+                    dragWindow.Show();
+
+                    System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
+                    _draggedItem.GiveFeedback += feedbackHandler;
+
+                    try {
+                        DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move);
+                    }
+                    finally {
+                        _draggedItem.GiveFeedback -= feedbackHandler;
+                        dragWindow.Close();
+                        _isDraggingNow = false;
                     }
                 }
             }
@@ -236,18 +268,23 @@ namespace PautaDinamicaApp
             _startPoint = e.GetPosition(null);
             _draggedItem = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
             _isDraggingNow = false;
+
+            if (_draggedItem != null && !IsFocusableControl(e.OriginalSource as DependencyObject))
+            {
+                e.Handled = true;
+            }
         }
 
         private void PautaList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            // Solo seleccionamos si NO hubo arrastre y no fue clic en botón/checkbox
-            if (!_isDraggingNow && _draggedItem != null && this.DataContext is ViewModels.EditorViewModel vm)
+            // Solo seleccionamos si NO hubo arrastre y no fue clic en botón/checkbox/textbox
+            if (!_isDraggingNow && _draggedItem != null && !IsFocusableControl(e.OriginalSource as DependencyObject) && this.DataContext is ViewModels.EditorViewModel vm)
             {
                 var pauta = _draggedItem.DataContext as PautaSchema;
                 if (pauta != null)
                 {
                     vm.EditingPauta = pauta;
-                    PautaList.SelectedItem = pauta; // Sincronizar visualmente si es necesario
+                    PautaList.SelectedItem = pauta;
                 }
             }
             _draggedItem = null;
@@ -268,19 +305,14 @@ namespace PautaDinamicaApp
 
                     if (pauta != null && !pauta.IsRenaming)
                     {
+                        PautaList.SelectedItem = pauta;
                         DataObject dragData = new DataObject("PautaSchema", pauta);
                         pauta.IsDragging = true;
 
-                        // Crear un visual para el arrastre
-                        var dragWindow = CreateDragVisual(_draggedItem);
+                        var dragWindow = CreateDragVisual(_draggedItem, pauta.Name);
                         dragWindow.Show();
 
-                        // Suscribirse al evento para actualizar la posición
-                        System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) =>
-                        {
-                            UpdateDragVisualPosition(dragWindow);
-                        };
-
+                        System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
                         _draggedItem.GiveFeedback += feedbackHandler;
                         
                         try {
@@ -395,9 +427,223 @@ namespace PautaDinamicaApp
             }
         }
 
+        private bool IsFocusableControl(DependencyObject? obj)
+        {
+            if (obj == null) return false;
+            var parent = obj;
+            while (parent != null && !(parent is ListBoxItem))
+            {
+                if (parent is System.Windows.Controls.Button || parent is System.Windows.Controls.CheckBox || parent is System.Windows.Controls.TextBox || parent is System.Windows.Controls.ComboBox || parent is System.Windows.Controls.Primitives.Thumb)
+                    return true;
+                parent = VisualTreeHelper.GetParent(parent);
+            }
+            return false;
+        }
+
+        // --- Drag & Drop para Excel Export ---
+
+        private void ExportGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _startPoint = e.GetPosition(null);
+            _draggedItem = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+            _isDraggingNow = false;
+
+            if (_draggedItem != null && !IsFocusableControl(e.OriginalSource as DependencyObject))
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void ExportGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isDraggingNow && _draggedItem != null && !IsFocusableControl(e.OriginalSource as DependencyObject))
+            {
+                ExportGrid.SelectedItem = _draggedItem.DataContext;
+            }
+            _draggedItem = null;
+        }
+
+        private void ExportGrid_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed && _draggedItem != null)
+            {
+                System.Windows.Point mousePos = e.GetPosition(null);
+                Vector diff = _startPoint - mousePos;
+
+                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    _isDraggingNow = true;
+                    var column = _draggedItem.DataContext as ExportColumnConfig;
+                    if (column != null)
+                    {
+                        ExportGrid.SelectedItem = column;
+                        DataObject dragData = new DataObject("ExportColumnConfig", column);
+                        var dragWindow = CreateDragVisual(_draggedItem, column.CustomHeader ?? column.OriginalLabel);
+                        dragWindow.Show();
+
+                        System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
+                        _draggedItem.GiveFeedback += feedbackHandler;
+
+                        try { DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move); }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                    }
+                }
+            }
+        }
+
+        private void ExportGrid_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("ExportColumnConfig"))
+            {
+                var dropped = e.Data.GetData("ExportColumnConfig") as ExportColumnConfig;
+                var item = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+                if (dropped != null && this.DataContext is ViewModels.EditorViewModel vm)
+                {
+                    int oldIdx = vm.ExportColumns.IndexOf(dropped);
+                    int newIdx = item != null ? vm.ExportColumns.IndexOf((ExportColumnConfig)item.DataContext) : vm.ExportColumns.Count - 1;
+                    if (newIdx != -1 && oldIdx != newIdx) vm.ExportColumns.Move(oldIdx, newIdx);
+                }
+            }
+        }
+
+        // --- Drag & Drop para PDF Export ---
+
+        private void PdfGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _startPoint = e.GetPosition(null);
+            _draggedItem = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+            _isDraggingNow = false;
+
+            if (_draggedItem != null && !IsFocusableControl(e.OriginalSource as DependencyObject))
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void PdfGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isDraggingNow && _draggedItem != null && !IsFocusableControl(e.OriginalSource as DependencyObject))
+            {
+                PdfGrid.SelectedItem = _draggedItem.DataContext;
+            }
+            _draggedItem = null;
+        }
+
+        private void PdfGrid_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed && _draggedItem != null)
+            {
+                System.Windows.Point mousePos = e.GetPosition(null);
+                Vector diff = _startPoint - mousePos;
+
+                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    _isDraggingNow = true;
+                    var column = _draggedItem.DataContext as ExportColumnConfig;
+                    if (column != null)
+                    {
+                        PdfGrid.SelectedItem = column;
+                        DataObject dragData = new DataObject("PdfColumnConfig", column);
+                        var dragWindow = CreateDragVisual(_draggedItem, column.CustomHeader ?? column.OriginalLabel);
+                        dragWindow.Show();
+
+                        System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
+                        _draggedItem.GiveFeedback += feedbackHandler;
+
+                        try { DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move); }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                    }
+                }
+            }
+        }
+
+        private void PdfGrid_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("PdfColumnConfig"))
+            {
+                var dropped = e.Data.GetData("PdfColumnConfig") as ExportColumnConfig;
+                var item = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+                if (dropped != null && this.DataContext is ViewModels.EditorViewModel vm)
+                {
+                    int oldIdx = vm.PdfColumns.IndexOf(dropped);
+                    int newIdx = item != null ? vm.PdfColumns.IndexOf((ExportColumnConfig)item.DataContext) : vm.PdfColumns.Count - 1;
+                    if (newIdx != -1 && oldIdx != newIdx) vm.PdfColumns.Move(oldIdx, newIdx);
+                }
+            }
+        }
+
+        // --- Drag & Drop para Reglas PDF ---
+
+        private void PdfRulesList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _startPoint = e.GetPosition(null);
+            _draggedItem = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+            _isDraggingNow = false;
+
+            if (_draggedItem != null && !IsFocusableControl(e.OriginalSource as DependencyObject))
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void PdfRulesList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isDraggingNow && _draggedItem != null && !IsFocusableControl(e.OriginalSource as DependencyObject))
+            {
+                PdfRulesList.SelectedItem = _draggedItem.DataContext;
+            }
+            _draggedItem = null;
+        }
+
+        private void PdfRulesList_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed && _draggedItem != null)
+            {
+                System.Windows.Point mousePos = e.GetPosition(null);
+                Vector diff = _startPoint - mousePos;
+
+                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    _isDraggingNow = true;
+                    var rule = _draggedItem.DataContext as PdfReplacementRule;
+                    if (rule != null)
+                    {
+                        PdfRulesList.SelectedItem = rule;
+                        DataObject dragData = new DataObject("PdfReplacementRule", rule);
+                        var dragWindow = CreateDragVisual(_draggedItem, "Regla: " + rule.TargetValue);
+                        dragWindow.Show();
+
+                        System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
+                        _draggedItem.GiveFeedback += feedbackHandler;
+
+                        try { DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move); }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                    }
+                }
+            }
+        }
+
+        private void PdfRulesList_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("PdfReplacementRule"))
+            {
+                var dropped = e.Data.GetData("PdfReplacementRule") as PdfReplacementRule;
+                var item = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+                if (dropped != null && this.DataContext is ViewModels.EditorViewModel vm && vm.EditingPauta != null)
+                {
+                    int oldIdx = vm.EditingPauta.PdfReplacementRules.IndexOf(dropped);
+                    int newIdx = item != null ? vm.EditingPauta.PdfReplacementRules.IndexOf((PdfReplacementRule)item.DataContext) : vm.EditingPauta.PdfReplacementRules.Count - 1;
+                    if (newIdx != -1 && oldIdx != newIdx) vm.EditingPauta.PdfReplacementRules.Move(oldIdx, newIdx);
+                }
+            }
+        }
+
         // --- Ayudantes Visuales para Arrastre ---
 
-        private Window CreateDragVisual(FrameworkElement source)
+        private Window CreateDragVisual(FrameworkElement source, string text)
         {
             var visual = new Border
             {
@@ -409,11 +655,12 @@ namespace PautaDinamicaApp
                 Opacity = 0.7,
                 Child = new TextBlock
                 {
-                    Text = (source.DataContext as PautaSchema)?.Name ?? "Arrastrando...",
+                    Text = text,
                     FontWeight = FontWeights.Bold,
                     Foreground = this.TryFindResource("TextBrush") as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Black
                 }
             };
+
 
             var window = new Window
             {
@@ -435,8 +682,8 @@ namespace PautaDinamicaApp
         {
             if (GetCursorPos(out POINT lpPoint))
             {
-                window.Left = lpPoint.X + 15;
-                window.Top = lpPoint.Y + 15;
+                window.Left = lpPoint.X + 5;
+                window.Top = lpPoint.Y + 5;
             }
         }
 
