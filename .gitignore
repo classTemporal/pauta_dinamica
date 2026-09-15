@@ -46,3 +46,4 @@ data/*.json
 !data/config.json
 
 publish/
+/Build
