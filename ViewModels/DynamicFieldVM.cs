@@ -260,10 +260,11 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (Definition.KeepValueOnReset) { }
             else InitializeDefaultValue();
-
             IsValid = true;
             ValidationError = "";
             OnPropertyChanged(nameof(Value));
+            if (Definition.Type == FieldType.FileAttachment)
+                OnPropertyChanged(nameof(Paths));
         }
 
         public bool Validate()
