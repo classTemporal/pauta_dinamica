@@ -46,4 +46,13 @@ data/*.json
 !data/config.json
 
 publish/
+publish_final/
+publish_output/
 /Build
+
+# Compiled binaries
+*.exe
+*.dll
+*.pdb
+*.bin
+*.dat
