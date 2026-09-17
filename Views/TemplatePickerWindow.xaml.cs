@@ -73,18 +73,27 @@ namespace PautaDinamicaApp.Views
             }
         }
 
-        private void TemplatesList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void TemplatesList_PreviewMouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            // Solo reaccionar al doble-clic izquierdo del ratón.
-            // MouseDoubleClick dispara con cualquier botón, incluido el derecho.
+            // PreviewMouseDoubleClick tunnea y no se suprime cuando los handlers
+            // de PreviewMouseLeftButtonDown marcan e.Handled = true (lo que ocurría
+            // con MouseDoubleClick, que es bubbling y sintetizado de los eventos
+            // de botón). Solo reaccionar al doble-clic izquierdo.
             if (e.ChangedButton != System.Windows.Input.MouseButton.Left) return;
 
-            // No insertar si está en modo multi-select o si el clic fue en un botón/control
+            // No insertar si está en modo multi-select, si el clic fue en un
+            // botón/control, o si se está arrastrando un elemento.
             if (IsMultiSelectMode || _isDraggingNow) return;
             if (IsFocusableControl(e.OriginalSource as DependencyObject)) return;
 
-            if (TemplatesList.SelectedItem is MessageTemplate template)
+            // Resolver el item double-clicado directamente desde la fuente del
+            // evento, en lugar de confiar solo en SelectedItem, de modo que
+            // funcione de forma predecible con los handlers de drag activos.
+            var listBoxItem = FindVisualParent<System.Windows.Controls.ListBoxItem>(e.OriginalSource as DependencyObject);
+            object? item = listBoxItem?.DataContext ?? TemplatesList.SelectedItem;
+            if (item is MessageTemplate template)
             {
+                TemplatesList.SelectedItem = template;
                 SelectedTemplateContent = template.Content;
                 DialogResult = true;
                 Close();
