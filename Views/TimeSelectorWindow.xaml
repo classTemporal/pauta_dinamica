@@ -36,7 +36,7 @@
                 <Button Content="LIMPIAR" Click="ClearButton_Click" Height="40" Margin="0,0,5,0"
                         Style="{StaticResource DangerButton}"/>
                 <Button Grid.Column="1" Content="CANCELAR" Click="CancelButton_Click" Height="40" Margin="5,0,5,0"
-                        Style="{StaticResource SecondaryButton}"/>
+                        Style="{StaticResource DangerButton}"/>
                 <Button Grid.Column="2" Content="ACEPTAR" Click="OkButton_Click" Height="40" Margin="5,0,0,0"
                         Style="{StaticResource SuccessButton}"/>
             </Grid>
