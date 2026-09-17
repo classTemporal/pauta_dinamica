@@ -75,6 +75,10 @@ namespace PautaDinamicaApp.Views
 
         private void TemplatesList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
+            // Solo reaccionar al doble-clic izquierdo del ratón.
+            // MouseDoubleClick dispara con cualquier botón, incluido el derecho.
+            if (e.ChangedButton != System.Windows.Input.MouseButton.Left) return;
+
             // No insertar si está en modo multi-select o si el clic fue en un botón/control
             if (IsMultiSelectMode || _isDraggingNow) return;
             if (IsFocusableControl(e.OriginalSource as DependencyObject)) return;
