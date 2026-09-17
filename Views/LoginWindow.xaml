@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Acceso - CHECK-O" Height="580" Width="420"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        KeyDown="Window_KeyDown"
         Background="Transparent" Foreground="{DynamicResource TextBrush}" WindowStyle="None" AllowsTransparency="True"
         Icon="pack://application:,,,/Assets/logo.ico">
     
