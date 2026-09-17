@@ -67,10 +67,16 @@
         </Viewbox>
 
         <StackPanel Grid.Row="2" Margin="0,20,0,0">
-            <Button Content="✨ USAR FECHA DE 'HOY' (DINÁMICO)" Click="TodayButton_Click" Height="45" Margin="0,0,0,10" 
-                    Style="{DynamicResource SecondaryButton}"/>
-            <Button Content="LIMPIAR" Click="ClearButton_Click" Height="45" Margin="0,0,0,10"
-                    Style="{DynamicResource DangerButton}"/>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Content="✨ USAR FECHA DE 'HOY' (DINÁMICO)" Click="TodayButton_Click" Height="45" Margin="0,0,5,0"
+                        Style="{DynamicResource SecondaryButton}"/>
+                <Button Grid.Column="1" Content="LIMPIAR" Click="ClearButton_Click" Height="45" Margin="5,0,0,0"
+                        Style="{DynamicResource DangerButton}"/>
+            </Grid>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

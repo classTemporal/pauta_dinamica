@@ -25,10 +25,16 @@
         </StackPanel>
 
         <StackPanel Grid.Row="2" Margin="0,15,0,0">
-            <Button Content="🕒 USAR HORA ACTUAL (DINÁMICO)" Click="NowButton_Click" Height="40" Margin="0,0,0,8" 
-                    Style="{StaticResource SecondaryButton}"/>
-            <Button Content="LIMPIAR" Click="ClearButton_Click" Height="40" Margin="0,0,0,8"
-                    Style="{StaticResource DangerButton}"/>
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Content="🕒 USAR HORA ACTUAL (DINÁMICO)" Click="NowButton_Click" Height="40" Margin="0,0,5,0"
+                        Style="{StaticResource SecondaryButton}"/>
+                <Button Grid.Column="1" Content="LIMPIAR" Click="ClearButton_Click" Height="40" Margin="5,0,0,0"
+                        Style="{StaticResource DangerButton}"/>
+            </Grid>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
