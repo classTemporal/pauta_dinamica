@@ -73,6 +73,20 @@ namespace PautaDinamicaApp.Views
             }
         }
 
+        private void TemplatesList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // No insertar si está en modo multi-select o si el clic fue en un botón/control
+            if (IsMultiSelectMode || _isDraggingNow) return;
+            if (IsFocusableControl(e.OriginalSource as DependencyObject)) return;
+
+            if (TemplatesList.SelectedItem is MessageTemplate template)
+            {
+                SelectedTemplateContent = template.Content;
+                DialogResult = true;
+                Close();
+            }
+        }
+
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
