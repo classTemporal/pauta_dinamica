@@ -49,13 +49,18 @@ namespace PautaDinamicaApp.Services
         {
             if (sender is not ScrollViewer scrollViewer) return;
 
-            // The PreviewMouseWheel event tunnels from the mouse-targeted
-            // child up through the ScrollViewer. When the ScrollViewer is
-            // inside a Popup, setting CanContentScroll=false (done in the
-            // property changed callback) should make native wheel handling
-            // work. As a fallback, we also explicitly scroll here and mark
-            // the event as handled so the parent window behind the dropdown
-            // does not scroll instead.
+            // This ScrollViewer only lives inside a ComboBox Popup, therefore
+            // it is only reachable via input routing while the dropdown is
+            // open. Any wheel input that arrives here belongs to the dropdown.
+            //
+            // We route the wheel to the viewer so the list scrolls, AND we
+            // ALWAYS mark the event handled. This suppresses the default
+            // ComboBox mouse-wheel behavior (changing the selected item as you
+            // hover), which previously closed or reordered the selection
+            // accidentally when scrolling (Card 38). Without the unconditional
+            // handling, when the list has no overflow (it fits entirely inside
+            // MaxDropDownHeight) the unhandled wheel still stepped the
+            // ComboBox selection even though nothing needed scrolling.
             if (scrollViewer.ExtentHeight > scrollViewer.ActualHeight)
             {
                 var delta = e.Delta;
@@ -63,9 +68,9 @@ namespace PautaDinamicaApp.Services
                     scrollViewer.LineUp();
                 else
                     scrollViewer.LineDown();
-
-                e.Handled = true;
             }
+
+            e.Handled = true;
         }
 
         public static readonly DependencyProperty EnableHeightResizeProperty =
