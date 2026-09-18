@@ -225,7 +225,7 @@ namespace PautaDinamicaApp.ViewModels
 
             var settings = _storageService.LoadSettings();
             string exportFolder = settings.ExcelExportPath;
-            string fileName = $"Plantillas_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            string fileName = $"Plantillas_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
             string finalPath = "";
 
             if (System.IO.Directory.Exists(exportFolder))

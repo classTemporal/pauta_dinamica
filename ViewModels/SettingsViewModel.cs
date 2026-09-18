@@ -459,7 +459,7 @@ namespace PautaDinamicaApp.ViewModels
                 string exportFolder = Settings.ExcelExportPath;
                 string pautaName = SelectedPauta?.Name ?? "Pauta";
                 string cleanName = string.Join("_", pautaName.Split(System.IO.Path.GetInvalidFileNameChars()));
-                string fileName = $"Contactos_{cleanName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                string fileName = $"Contactos_{cleanName}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
 
                 if (System.IO.Directory.Exists(exportFolder))
                 {

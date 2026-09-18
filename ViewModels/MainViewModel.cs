@@ -848,7 +848,7 @@ namespace PautaDinamicaApp.ViewModels
                 }
 
                 string presetPart = !string.IsNullOrEmpty(selectedPresetName) ? $"_{selectedPresetName}" : "";
-                string fileName = $"{baseName}{presetPart}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                string fileName = $"{baseName}{presetPart}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
                 filePath = Path.Combine(exportDir, fileName);
             }
 

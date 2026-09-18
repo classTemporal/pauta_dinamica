@@ -1275,7 +1275,7 @@ namespace PautaDinamicaApp.ViewModels
                             string exportDir = settings.ExcelExportPath;
                             if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
 
-                            string fileName = $"Resp_{EditingPauta.Name}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                            string fileName = $"Resp_{EditingPauta.Name}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
                             string filePath = Path.Combine(exportDir, fileName);
 
                             try
@@ -1331,7 +1331,7 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     string exportDir = settings.ExcelExportPath;
                     if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
-                    string filePath = Path.Combine(exportDir, $"Final_{p.Name}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+                    string filePath = Path.Combine(exportDir, $"Final_{p.Name}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
                     try
                     {
