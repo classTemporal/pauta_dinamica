@@ -316,7 +316,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void OpenTemplateManagement()
         {
-            var vm = new TemplateManagementViewModel();
+            var vm = new TemplateManagementViewModel(SelectedPauta?.Id ?? string.Empty);
             var win = new Views.TemplateManagementWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
             win.ShowDialog();
         }

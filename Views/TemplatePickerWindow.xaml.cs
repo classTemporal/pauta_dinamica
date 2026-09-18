@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 
@@ -15,12 +13,30 @@ namespace PautaDinamicaApp.Views
 {
     public partial class TemplatePickerWindow : Window, INotifyPropertyChanged
     {
-        private ObservableCollection<MessageTemplate> _templates;
         private readonly StorageService _storageService;
+        private readonly string _pautaId;
+        private readonly PautaSchema? _currentPauta;
+
+        // Category navigation
+        private ObservableCollection<CategoryItem> _categories = new();
+        private CategoryItem? _selectedCategory;
+
+        // Templates filtered (flat list when in "all un-categorized" mode)
+        private ObservableCollection<MessageTemplate> _displayedTemplates = new();
+        private readonly ObservableCollection<MessageTemplate> _allTemplates = new();
+
+        // Search
+        private string _searchText = string.Empty;
+
+        // Misc
         private bool _isMultiSelectMode;
         private System.Windows.Point _startPoint;
         private System.Windows.Controls.ListBoxItem? _draggedItem;
         private bool _isDraggingNow;
+
+        // View state flags
+        private bool _isCategoryMode = true; // true = show category pane; false = show flat list
+        private bool _isCategorizedMode = true; // true = templates are categorized; false = all in "Sin Categorizar"
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -32,7 +48,7 @@ namespace PautaDinamicaApp.Views
         public string SelectedTemplateContent { get; private set; } = string.Empty;
 
         public bool IsValid => true;
-        
+
         public bool IsMultiSelectMode
         {
             get => _isMultiSelectMode;
@@ -43,20 +59,188 @@ namespace PautaDinamicaApp.Views
                     _isMultiSelectMode = value;
                     if (!value)
                     {
-                        foreach (var t in _templates) t.IsSelected = false;
+                        foreach (var t in _allTemplates) t.IsSelected = false;
                     }
                     OnPropertyChanged();
                 }
             }
         }
 
-        public TemplatePickerWindow(List<MessageTemplate> templates)
+        // --- Public properties for binding ---
+
+        public ObservableCollection<CategoryItem> Categories
+        {
+            get => _categories;
+            set { _categories = value; OnPropertyChanged(); }
+        }
+
+        public CategoryItem? SelectedCategory
+        {
+            get => _selectedCategory;
+            set
+            {
+                if (_selectedCategory != value)
+                {
+                    // Update IsSelected flags
+                    if (_selectedCategory != null) _selectedCategory.IsSelected = false;
+                    if (value != null) value.IsSelected = true;
+                    _selectedCategory = value;
+                    OnPropertyChanged();
+                    ApplySearchAndCategoryFilter();
+                }
+            }
+        }
+
+        public ObservableCollection<MessageTemplate> DisplayedTemplates
+        {
+            get => _displayedTemplates;
+            set { _displayedTemplates = value; OnPropertyChanged(); }
+        }
+
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (_searchText != value)
+                {
+                    _searchText = value;
+                    OnPropertyChanged();
+                    ApplySearchAndCategoryFilter();
+                }
+            }
+        }
+
+        public string CurrentPautaName
+        {
+            get => _currentPauta?.Name ?? (_pautaId == "default" ? "Todas las Pautas" : _pautaId);
+        }
+
+        public bool IsCategoryMode
+        {
+            get => _isCategoryMode;
+            set { _isCategoryMode = value; OnPropertyChanged(); }
+        }
+
+        public bool IsCategorizedMode
+        {
+            get => _isCategorizedMode;
+            set { _isCategorizedMode = value; OnPropertyChanged(); }
+        }
+
+        public TemplatePickerWindow(string pautaId)
         {
             InitializeComponent();
-            _templates = new ObservableCollection<MessageTemplate>(templates);
             _storageService = new StorageService();
-            TemplatesList.ItemsSource = _templates;
+            _pautaId = pautaId;
+
+            // Load the pauta schema to get its name for display
+            var allPautas = _storageService.LoadPautas();
+            _currentPauta = allPautas.FirstOrDefault(p => p.Id == _pautaId);
+
+            LoadTemplates();
+
+            // Determine if templates are categorized (any template has a non-empty category)
+            // or if they're all in "Sin Categorizar" mode (category empty for all)
+            bool hasAnyCategory = _allTemplates.Any(t => !string.IsNullOrWhiteSpace(t.Category));
+            if (hasAnyCategory)
+            {
+                IsCategorizedMode = true;
+                BuildCategoryList();
+            }
+            else
+            {
+                IsCategorizedMode = false;
+                BuildFlatCategoryList();
+            }
+
+            // Initially select first category
+            SelectedCategory = Categories.FirstOrDefault();
+
+            TemplatesList.ItemsSource = _displayedTemplates;
             DataContext = this;
+        }
+
+        private void LoadTemplates()
+        {
+            // Load templates for this pauta, falling back to global if none exist
+            var pautaTemplates = _storageService.LoadTemplatesForPauta(_pautaId);
+
+            // If no pauta-specific templates, fall back to global templates (PautaId == "")
+            if (!pautaTemplates.Any())
+            {
+                pautaTemplates = _storageService.LoadTemplates().Where(t => string.IsNullOrEmpty(t.PautaId)).ToList();
+            }
+
+            foreach (var t in pautaTemplates) _allTemplates.Add(t);
+
+            // Initial display: all templates (filtered by search if any)
+            DisplayedTemplates = new ObservableCollection<MessageTemplate>(_allTemplates);
+        }
+
+        private void BuildCategoryList()
+        {
+            var categories = new ObservableCollection<CategoryItem>();
+
+            // Group templates by category
+            var grouped = _allTemplates
+                .GroupBy(t => string.IsNullOrWhiteSpace(t.Category) ? "Sin Categorizar" : t.Category)
+                .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var group in grouped)
+            {
+                categories.Add(new CategoryItem { Name = group.Key, Count = group.Count() });
+            }
+
+            Categories = categories;
+        }
+
+        private void BuildFlatCategoryList()
+        {
+            // All templates are in "Sin Categorizar"
+            // Show a single "Todas las plantillas" category
+            var categories = new ObservableCollection<CategoryItem>();
+            categories.Add(new CategoryItem { Name = "Todas las Plantillas", Count = _allTemplates.Count });
+            Categories = categories;
+        }
+
+        private void ApplySearchAndCategoryFilter()
+        {
+            string search = _searchText?.ToLower() ?? "";
+            bool hasSearch = !string.IsNullOrWhiteSpace(search);
+
+            // Determine which templates to show based on category selection
+            IEnumerable<MessageTemplate> filtered;
+
+            if (IsCategorizedMode)
+            {
+                if (SelectedCategory?.Name == "Sin Categorizar" || SelectedCategory?.Name == "Todas las Plantillas")
+                {
+                    // Show uncategorized templates (empty category)
+                    filtered = _allTemplates.Where(t => string.IsNullOrWhiteSpace(t.Category));
+                }
+                else if (SelectedCategory != null)
+                {
+                    filtered = _allTemplates.Where(t => string.Equals(t.Category, SelectedCategory.Name, StringComparison.OrdinalIgnoreCase));
+                }
+                else
+                {
+                    filtered = _allTemplates;
+                }
+            }
+            else
+            {
+                // Flat mode: show all
+                filtered = _allTemplates;
+            }
+
+            // Apply search filter on top
+            if (hasSearch)
+            {
+                filtered = filtered.Where(t => t.Content?.ToLower().Contains(search) == true);
+            }
+
+            DisplayedTemplates = new ObservableCollection<MessageTemplate>(filtered.ToList());
         }
 
         private void Select_Click(object sender, RoutedEventArgs e)
@@ -75,20 +259,11 @@ namespace PautaDinamicaApp.Views
 
         private void TemplatesList_PreviewMouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            // PreviewMouseDoubleClick tunnea y no se suprime cuando los handlers
-            // de PreviewMouseLeftButtonDown marcan e.Handled = true (lo que ocurría
-            // con MouseDoubleClick, que es bubbling y sintetizado de los eventos
-            // de botón). Solo reaccionar al doble-clic izquierdo.
             if (e.ChangedButton != System.Windows.Input.MouseButton.Left) return;
-
-            // No insertar si está en modo multi-select, si el clic fue en un
-            // botón/control, o si se está arrastrando un elemento.
             if (IsMultiSelectMode || _isDraggingNow) return;
             if (IsFocusableControl(e.OriginalSource as DependencyObject)) return;
 
-            // Resolver el item double-clicado directamente desde la fuente del
-            // evento, en lugar de confiar solo en SelectedItem, de modo que
-            // funcione de forma predecible con los handlers de drag activos.
+            // Resolve the double-clicked item from event source
             var listBoxItem = FindVisualParent<System.Windows.Controls.ListBoxItem>(e.OriginalSource as DependencyObject);
             object? item = listBoxItem?.DataContext ?? TemplatesList.SelectedItem;
             if (item is MessageTemplate template)
@@ -104,6 +279,14 @@ namespace PautaDinamicaApp.Views
         {
             DialogResult = false;
             Close();
+        }
+
+        private void CategoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button btn && btn.DataContext is CategoryItem cat)
+            {
+                SelectedCategory = cat;
+            }
         }
 
         private void ShowAdd_Click(object sender, RoutedEventArgs e)
@@ -132,10 +315,36 @@ namespace PautaDinamicaApp.Views
             var newTemplate = new MessageTemplate
             {
                 Id = Guid.NewGuid().ToString(),
-                Content = content
+                Content = content,
+                PautaId = _pautaId
             };
 
-            _templates.Add(newTemplate);
+            // If we're in categorized mode and a category is selected (not "Sin Categorizar"),
+            // assign the template to that category
+            if (IsCategorizedMode && SelectedCategory != null &&
+                SelectedCategory.Name != "Sin Categorizar" && SelectedCategory.Name != "Todas las Plantillas")
+            {
+                newTemplate.Category = SelectedCategory.Name;
+            }
+            else
+            {
+                newTemplate.Category = string.Empty; // "Sin Categorizar"
+            }
+
+            _allTemplates.Add(newTemplate);
+
+            // Rebuild categories and refresh display
+            if (IsCategorizedMode)
+                BuildCategoryList();
+            else
+                BuildFlatCategoryList();
+
+            // Keep the selected category
+            if (Categories.Any())
+            {
+                SelectedCategory = Categories.FirstOrDefault(c => c.Name == (SelectedCategory?.Name ?? Categories[0].Name));
+            }
+
             SaveCurrentState();
 
             // Reset UI
@@ -150,12 +359,12 @@ namespace PautaDinamicaApp.Views
 
         private void SaveCurrentState()
         {
-            _storageService.SaveTemplates(_templates.ToList());
+            _storageService.SaveTemplates(_allTemplates.ToList());
         }
 
         private void MoveUp_Click(object sender, RoutedEventArgs e)
         {
-            var selected = _templates.Where(t => t.IsSelected).ToList();
+            var selected = _allTemplates.Where(t => t.IsSelected).ToList();
             if (!selected.Any())
             {
                 if (sender is FrameworkElement fe && fe.DataContext is MessageTemplate t)
@@ -165,21 +374,22 @@ namespace PautaDinamicaApp.Views
                 else return;
             }
 
-            var orderedSelected = selected.OrderBy(t => _templates.IndexOf(t)).ToList();
+            var orderedSelected = selected.OrderBy(t => _allTemplates.IndexOf(t)).ToList();
             foreach (var t in orderedSelected)
             {
-                int idx = _templates.IndexOf(t);
-                if (idx > 0 && !_templates[idx - 1].IsSelected)
+                int idx = _allTemplates.IndexOf(t);
+                if (idx > 0 && !_allTemplates[idx - 1].IsSelected)
                 {
-                    _templates.Move(idx, idx - 1);
+                    _allTemplates.Move(idx, idx - 1);
                 }
             }
+            RefreshDisplay();
             SaveCurrentState();
         }
 
         private void MoveDown_Click(object sender, RoutedEventArgs e)
         {
-            var selected = _templates.Where(t => t.IsSelected).ToList();
+            var selected = _allTemplates.Where(t => t.IsSelected).ToList();
             if (!selected.Any())
             {
                 if (sender is FrameworkElement fe && fe.DataContext is MessageTemplate t)
@@ -189,46 +399,71 @@ namespace PautaDinamicaApp.Views
                 else return;
             }
 
-            var orderedSelected = selected.OrderByDescending(t => _templates.IndexOf(t)).ToList();
+            var orderedSelected = selected.OrderByDescending(t => _allTemplates.IndexOf(t)).ToList();
             foreach (var t in orderedSelected)
             {
-                int idx = _templates.IndexOf(t);
-                if (idx < _templates.Count - 1 && !_templates[idx + 1].IsSelected)
+                int idx = _allTemplates.IndexOf(t);
+                if (idx < _allTemplates.Count - 1 && !_allTemplates[idx + 1].IsSelected)
                 {
-                    _templates.Move(idx, idx + 1);
+                    _allTemplates.Move(idx, idx + 1);
                 }
             }
+            RefreshDisplay();
             SaveCurrentState();
         }
 
         private void SelectAll_Click(object sender, RoutedEventArgs e)
         {
-            bool all = _templates.All(t => t.IsSelected);
-            foreach (var t in _templates) t.IsSelected = !all;
+            bool all = _displayedTemplates.All(t => t.IsSelected);
+            foreach (var t in _displayedTemplates) t.IsSelected = !all;
         }
 
         private void DeleteSelected_Click(object sender, RoutedEventArgs e)
         {
-            var selected = _templates.Where(t => t.IsSelected).ToList();
+            var selected = _allTemplates.Where(t => t.IsSelected).ToList();
             if (selected.Any() && System.Windows.MessageBox.Show($"¿Eliminar {selected.Count} plantillas?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
-                foreach (var t in selected) _templates.Remove(t);
+                foreach (var t in selected) _allTemplates.Remove(t);
+                RefreshDisplay();
                 SaveCurrentState();
             }
         }
 
         private void OpenConfig_Click(object sender, RoutedEventArgs e)
         {
-            var vm = new ViewModels.TemplateManagementViewModel();
+            var vm = new ViewModels.TemplateManagementViewModel(_pautaId);
             var win = new TemplateManagementWindow { DataContext = vm, Owner = this };
-            
-            // Suscribir al cierre si es necesario, o simplemente recargar al volver
+
             win.ShowDialog();
 
             // Recargar plantillas por si hubo cambios en la otra ventana
-            var updated = _storageService.LoadTemplates();
-            _templates.Clear();
-            foreach (var t in updated) _templates.Add(t);
+            _allTemplates.Clear();
+            var updated = _storageService.LoadTemplatesForPauta(_pautaId);
+            foreach (var t in updated) _allTemplates.Add(t);
+
+            // Rebuild categories and refresh
+            bool hasAnyCategory = _allTemplates.Any(t => !string.IsNullOrWhiteSpace(t.Category));
+            IsCategorizedMode = hasAnyCategory;
+            if (IsCategorizedMode)
+                BuildCategoryList();
+            else
+                BuildFlatCategoryList();
+
+            if (Categories.Any())
+            {
+                SelectedCategory = Categories.FirstOrDefault();
+            }
+        }
+
+        private void RefreshDisplay()
+        {
+            // Rebuild categories (counts changed)
+            if (IsCategorizedMode)
+                BuildCategoryList();
+            else
+                BuildFlatCategoryList();
+
+            ApplySearchAndCategoryFilter();
         }
 
         // --- Drag & Drop Implementation ---
@@ -270,7 +505,7 @@ namespace PautaDinamicaApp.Views
                     {
                         TemplatesList.SelectedItem = template;
                         System.Windows.DataObject dragData = new System.Windows.DataObject("MessageTemplate", template);
-                        
+
                         var dragWindow = CreateDragVisual(_draggedItem, "Plantilla: " + template.Content);
                         dragWindow.Show();
 
@@ -292,11 +527,12 @@ namespace PautaDinamicaApp.Views
                 var item = FindVisualParent<System.Windows.Controls.ListBoxItem>(e.OriginalSource as DependencyObject);
                 if (dropped != null)
                 {
-                    int oldIdx = _templates.IndexOf(dropped);
-                    int newIdx = item != null ? _templates.IndexOf((MessageTemplate)item.DataContext) : _templates.Count - 1;
+                    int oldIdx = _allTemplates.IndexOf(dropped);
+                    int newIdx = item != null ? _allTemplates.IndexOf((MessageTemplate)item.DataContext) : _allTemplates.Count - 1;
                     if (newIdx != -1 && oldIdx != newIdx)
                     {
-                        _templates.Move(oldIdx, newIdx);
+                        _allTemplates.Move(oldIdx, newIdx);
+                        RefreshDisplay();
                         SaveCurrentState();
                     }
                 }
@@ -325,8 +561,9 @@ namespace PautaDinamicaApp.Views
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        protected virtual void OnPropertyChanged([CallerMemberName] string? name = null)
+        protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
         private Window CreateDragVisual(FrameworkElement source, string text)
         {
             var visual = new Border
@@ -369,5 +606,23 @@ namespace PautaDinamicaApp.Views
                 window.Top = lpPoint.Y + 5;
             }
         }
+    }
+
+    /// <summary>
+    /// Represents a category (or group) in the template picker's category navigation.
+    /// </summary>
+    public class CategoryItem : INotifyPropertyChanged
+    {
+        private string _name = string.Empty;
+        private int _count;
+        private bool _isSelected;
+
+        public string Name { get => _name; set { _name = value; OnPropertyChanged(); } }
+        public int Count { get => _count; set { _count = value; OnPropertyChanged(); } }
+        public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

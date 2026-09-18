@@ -17,6 +17,7 @@ namespace PautaDinamicaApp.ViewModels
         private bool _isSelected;
         public MessageTemplate Model { get; }
         public string Content => Model.Content;
+        public string Category => Model.Category ?? string.Empty;
 
         public bool IsSelected
         {
@@ -38,11 +39,13 @@ namespace PautaDinamicaApp.ViewModels
     public class TemplateManagementViewModel : ViewModelBase
     {
         private readonly StorageService _storageService;
+        private readonly string _pautaId;
         private ObservableCollection<TemplateItemVM> _templates = new();
         private string _newTemplateContent = string.Empty;
         private bool _isMultiSelectMode;
         private TemplateItemVM? _editingTemplate;
         private bool _isEditing;
+        private string _selectedCategory = string.Empty;
 
         public ObservableCollection<TemplateItemVM> Templates { get => _templates; set => SetProperty(ref _templates, value); }
         public string NewTemplateContent { get => _newTemplateContent; set => SetProperty(ref _newTemplateContent, value); }
@@ -62,6 +65,14 @@ namespace PautaDinamicaApp.ViewModels
 
         public string AddButtonText => IsEditing ? "💾 ACTUALIZAR" : "➕ AGREGAR";
 
+        public string SelectedCategory
+        {
+            get => _selectedCategory;
+            set => SetProperty(ref _selectedCategory, value);
+        }
+
+        public ObservableCollection<string> AvailableCategories { get; } = new();
+
         public ICommand AddTemplateCommand { get; }
         public ICommand DeleteTemplateCommand { get; }
         public ICommand DeleteSelectedCommand { get; }
@@ -79,9 +90,10 @@ namespace PautaDinamicaApp.ViewModels
 
         public event Action? RequestClose;
 
-        public TemplateManagementViewModel()
+        public TemplateManagementViewModel(string? pautaId = null)
         {
             _storageService = new StorageService();
+            _pautaId = pautaId ?? string.Empty;
             LoadTemplates();
 
             AddTemplateCommand = new RelayCommand(_ => AddTemplate(), _ => !string.IsNullOrWhiteSpace(NewTemplateContent));
@@ -141,13 +153,32 @@ namespace PautaDinamicaApp.ViewModels
 
         private void LoadTemplates()
         {
-            var models = _storageService.LoadTemplates();
+            var models = _storageService.LoadTemplatesForPauta(_pautaId);
             Templates = new ObservableCollection<TemplateItemVM>(models.Select(m => new TemplateItemVM(m)));
+
+            // Build available categories from existing templates
+            var cats = models.Where(t => !string.IsNullOrWhiteSpace(t.Category))
+                .Select(t => t.Category)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            AvailableCategories.Clear();
+            foreach (var c in cats) AvailableCategories.Add(c);
         }
 
         private void SaveTemplates()
         {
-            _storageService.SaveTemplates(Templates.Select(t => t.Model).ToList());
+            // Templates are stored globally with PautaId association.
+            // Load the global store, remove all templates for this pauta, then add the current ones.
+            var global = _storageService.LoadTemplates();
+            global.RemoveAll(t => t.PautaId == _pautaId);
+            var updated = Templates.Select(t =>
+            {
+                t.Model.PautaId = _pautaId;
+                return t.Model;
+            }).ToList();
+            global.AddRange(updated);
+            _storageService.SaveTemplates(global);
         }
 
         private void AddTemplate()
@@ -155,12 +186,17 @@ namespace PautaDinamicaApp.ViewModels
             if (IsEditing && _editingTemplate != null)
             {
                 _editingTemplate.Model.Content = NewTemplateContent.Trim();
+                _editingTemplate.Model.PautaId = _pautaId;
+                if (!string.IsNullOrWhiteSpace(_selectedCategory))
+                    _editingTemplate.Model.Category = _selectedCategory;
+                else
+                    _editingTemplate.Model.Category = string.Empty;
                 _editingTemplate.NotifyContentChanged();
                 CancelEdit();
             }
             else
             {
-                var newModel = new MessageTemplate { Content = NewTemplateContent.Trim() };
+                var newModel = new MessageTemplate { Content = NewTemplateContent.Trim(), PautaId = _pautaId, Category = _selectedCategory };
                 Templates.Add(new TemplateItemVM(newModel));
                 NewTemplateContent = string.Empty;
             }
@@ -171,6 +207,7 @@ namespace PautaDinamicaApp.ViewModels
             if (template == null) return;
             _editingTemplate = template;
             NewTemplateContent = template.Model.Content;
+            SelectedCategory = template.Model.Category ?? string.Empty;
             IsEditing = true;
         }
 
@@ -250,16 +287,20 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     var worksheet = workbook.Worksheets.Add("Plantillas");
                     worksheet.Cell(1, 1).Value = "Contenido";
-                    worksheet.Cell(1, 1).Style.Font.Bold = true; // Keep this line from original
+                    worksheet.Cell(1, 1).Style.Font.Bold = true;
+                    worksheet.Cell(1, 2).Value = "Categoría";
+                    worksheet.Cell(1, 2).Style.Font.Bold = true;
 
                     int rowNum = 2;
                     foreach (var t in listToExport)
                     {
                         worksheet.Cell(rowNum, 1).Value = t.Model.Content;
                         if (t.Model.Content.Contains("\n")) worksheet.Cell(rowNum, 1).Style.Alignment.SetWrapText(true);
+                        worksheet.Cell(rowNum, 2).Value = t.Model.Category ?? "";
                         rowNum++;
                     }
                     worksheet.Column(1).Width = 100;
+                    worksheet.Column(2).Width = 30;
                     workbook.SaveAs(finalPath);
                     System.Windows.MessageBox.Show($"Plantillas exportadas exitosamente en:\n{finalPath}", "Éxito");
                 }
@@ -287,9 +328,10 @@ namespace PautaDinamicaApp.ViewModels
                         foreach (var row in rows)
                         {
                             string content = row.Cell(1).GetValue<string>();
+                            string category = row.Cell(2).GetValue<string>() ?? string.Empty;
                             if (!string.IsNullOrWhiteSpace(content))
                             {
-                                Templates.Add(new TemplateItemVM(new MessageTemplate { Content = content }));
+                                Templates.Add(new TemplateItemVM(new MessageTemplate { Content = content, PautaId = _pautaId, Category = category }));
                                 count++;
                             }
                         }

@@ -156,9 +156,9 @@ namespace PautaDinamicaApp.ViewModels
         private void OpenTemplatePicker()
         {
             var storage = new StorageService();
-            var templates = storage.LoadTemplates();
-
-            var win = new PautaDinamicaApp.Views.TemplatePickerWindow(templates);
+            var mainVm = System.Windows.Application.Current.MainWindow.DataContext as MainViewModel;
+            string pautaId = mainVm?.CurrentPauta?.Id ?? string.Empty;
+            var win = new PautaDinamicaApp.Views.TemplatePickerWindow(pautaId);
             win.Owner = System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
             if (win.ShowDialog() == true)
             {
