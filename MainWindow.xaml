@@ -279,8 +279,6 @@
                             Content="✖️ Cancelar" Height="40" Padding="20,0" Margin="0,0,10,0"
                             Style="{StaticResource DangerButton}"
                             Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                    <Button Command="{Binding SendEmailsCommand}" 
-                            Content="📧 Enviar todos los correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
                 </StackPanel>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -462,6 +460,7 @@
                         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                     Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                             <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                            <Button Content="📧 Enviar todos los correos" Command="{Binding SendEmailsCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
                             <Button Content="📥 Importar Excel" Command="{Binding ImportFromExcelCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5" Background="#6f42c1"/>
                             <Button Content="📊 Exportar a Excel" Command="{Binding ExportToExcelCommand}" Padding="10,8" Style="{StaticResource ExcelButton}" Margin="0,5,0,5"/>
                         </WrapPanel>
