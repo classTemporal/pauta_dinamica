@@ -367,7 +367,28 @@
                                     </Thumb>
                                 </Grid>
                                 <Separator Background="{DynamicResource BorderBrush}" Margin="0,5,0,20"/>
-                                
+
+                                <!-- Reglas de Envío (Exclusión) -->
+                                <TextBlock Text="Reglas de Envío (Exclusión)" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,5"/>
+                                <TextBlock Text="Evite enviar correos para registros que coincidan con un valor específico (ej: calificación = 100%)." 
+                                           FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15"/>
+
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                                    <StackPanel>
+                                        <TextBlock Text="No enviar correo si el campo..." Style="{StaticResource LabelStyle}"/>
+                                        <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
+                                                  SelectedValue="{Binding SelectedPauta.ExcludeByFieldId}"
+                                                  SelectedValuePath="Id"
+                                                  DisplayMemberPath="Label"
+                                                  Margin="0,0,0,10" Height="35"/>
+
+                                        <TextBlock Text="...tiene exactamente este valor:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBox Text="{Binding SelectedPauta.ExcludeByFieldValue}" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Ejemplo: Excluir si 'Calificación' tiene el valor '100%'" 
+                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic"/>
+                                    </StackPanel>
+                                </Border>
+
                                 <TextBlock Text="Reglas de Traducción (Reemplazo Automático)" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,5"/>
                                 <TextBlock Text="Traduzca valores internos (ej: '1' a 'Excelente') para que el correo sea legible." 
                                            FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15"/>

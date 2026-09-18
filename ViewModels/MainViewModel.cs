@@ -2004,8 +2004,9 @@ namespace PautaDinamicaApp.ViewModels
                 return;
             }
 
-            // Aplicar lógica de exclusión si estamos enviando múltiples
-            if (toProcess.Count > 1 && !string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldId))
+            // Aplicar lógica de exclusión por calificación/campo valor
+            // Funciona tanto para envío individual como múltiple.
+            if (!string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldId) && !string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldValue))
             {
                 int totalBefore = toProcess.Count;
                 toProcess = toProcess.Where(entry =>
