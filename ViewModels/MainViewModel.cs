@@ -2030,6 +2030,48 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
 
+            // --- VALIDACIÓN DE CORREOS FALTANTES (Card 31) ---
+            // Si el envío es automático (UseAutomatedRecipient) y hay agentes sin correo asociado,
+            // bloquear el envío y mostrar un mensaje con opción de ir al directorio de contactos.
+            if (CurrentPauta.UseAutomatedRecipient && !string.IsNullOrEmpty(CurrentPauta.EmailNameFieldId))
+            {
+                var contacts = CurrentPauta.RecipientContacts ?? new List<RecipientContact>();
+                var missingEmailAgents = new List<string>();
+
+                foreach (var entry in toProcess)
+                {
+                    if (entry.Values.TryGetValue(CurrentPauta.EmailNameFieldId, out var nameVal) && nameVal != null)
+                    {
+                        string nameText = nameVal.ToString()?.Trim() ?? "";
+                        if (string.IsNullOrWhiteSpace(nameText)) continue;
+
+                        var contact = contacts.FirstOrDefault(c => string.Equals(c.Name?.Trim(), nameText, StringComparison.OrdinalIgnoreCase));
+                        if (contact == null || string.IsNullOrWhiteSpace(contact.Email))
+                        {
+                            missingEmailAgents.Add(nameText);
+                        }
+                    }
+                }
+
+                if (missingEmailAgents.Any())
+                {
+                    string agentList = string.Join("\n", missingEmailAgents.Distinct().Select(a => $"• {a}"));
+                    string msg = $"No se puede enviar el correo porque los siguientes agentes no tienen correo electrónico asociado:\n\n{agentList}\n\n" +
+                                 "Diríjase al Directorio de Contactos para completar los correos.\n\n¿Abrir Directorio de Contactos ahora?";
+
+                    var result = MessageBox.Show(msg, "Correos Faltantes", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // Abrir la ventana de Configuración > pestaña Correo > Directorio de Contactos
+                        var settingsVm = new ViewModels.SettingsViewModel(CurrentPauta.Id);
+                        var settingsWin = new Views.SettingsWindow { DataContext = settingsVm, Owner = System.Windows.Application.Current.MainWindow };
+                        settingsVm.RequestClose += () => settingsWin.Close();
+                        settingsWin.ShowDialog();
+                    }
+                    return; // Bloquear el envío
+                }
+            }
+
             if (toProcess.Count > 1)
             {
                 var confirm = MessageBox.Show($"Se prepararán {toProcess.Count} correos individuales. ¿Continuar?", "Confirmar Envío", MessageBoxButton.YesNo);
