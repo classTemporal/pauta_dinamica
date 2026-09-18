@@ -1481,6 +1481,7 @@ namespace PautaDinamicaApp.ViewModels
                     if (e.PropertyName == nameof(DynamicFieldVM.Value) && !_isCalculating)
                     {
                         RefreshCalculations();
+                        CheckDuplicateWarning(f);
                     }
                 };
             }
@@ -1822,6 +1823,41 @@ namespace PautaDinamicaApp.ViewModels
         }
 
         private bool CanSaveRecord() => true;
+
+        /// <summary>
+        /// Checks the current value of a field against all existing records in real-time
+        /// and sets a visible warning on the field if a duplicate is detected.
+        /// </summary>
+        private void CheckDuplicateWarning(DynamicFieldVM field)
+        {
+            // Clear any previous warning first
+            field.DuplicateWarning = "";
+
+            var def = field.Definition;
+            bool checkType = def.Type == FieldType.Text || def.Type == FieldType.Numeric || def.Type == FieldType.TextArea;
+
+            // Only check if the feature is enabled on this field and there is a value
+            if (!checkType || !def.WarnOnDuplicate)
+                return;
+
+            string strValue = field.Value?.ToString() ?? "";
+            if (string.IsNullOrWhiteSpace(strValue))
+                return;
+
+            string currentValue = strValue.Trim();
+
+            // Search for the same value in other existing records (exclude the one being edited)
+            bool isDuplicate = Records.Any(r =>
+                r != SelectedRecord &&
+                r.Values.TryGetValue(field.Definition.Id, out var val) &&
+                val != null &&
+                string.Equals(val.ToString()!.Trim(), currentValue, StringComparison.OrdinalIgnoreCase));
+
+            if (isDuplicate)
+            {
+                field.DuplicateWarning = $"⚠️ Valor duplicado: '{currentValue}' ya existe en otro registro.";
+            }
+        }
 
         private void SaveCurrentRecord()
         {

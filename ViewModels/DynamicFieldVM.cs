@@ -13,6 +13,7 @@ namespace PautaDinamicaApp.ViewModels
     {
         private object? _value;
         private string? _validationError;
+        private string? _duplicateWarning;
         private bool _isValid = true;
 
         public FieldDefinition Definition { get; }
@@ -243,6 +244,20 @@ namespace PautaDinamicaApp.ViewModels
             set => SetProperty(ref _validationError, value);
         }
 
+        public string? DuplicateWarning
+        {
+            get => _duplicateWarning;
+            set
+            {
+                if (SetProperty(ref _duplicateWarning, value))
+                {
+                    OnPropertyChanged(nameof(HasDuplicateWarning));
+                }
+            }
+        }
+
+        public bool HasDuplicateWarning => !string.IsNullOrEmpty(_duplicateWarning);
+
         public override bool IsValid
         {
             get => _isValid;
@@ -262,6 +277,8 @@ namespace PautaDinamicaApp.ViewModels
             else InitializeDefaultValue();
             IsValid = true;
             ValidationError = "";
+            DuplicateWarning = "";
+            OnPropertyChanged(nameof(HasDuplicateWarning));
             OnPropertyChanged(nameof(Value));
             if (Definition.Type == FieldType.FileAttachment)
                 OnPropertyChanged(nameof(Paths));

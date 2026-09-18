@@ -55,6 +55,13 @@
                    Visibility="{Binding IsValid, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
     </DataTemplate>
 
+    <!-- Duplicate Warning Template (real-time red alert) -->
+    <DataTemplate x:Key="FieldDuplicateWarningTemplate">
+        <TextBlock Text="{Binding DuplicateWarning}" Foreground="{StaticResource ErrorBrush}" 
+                   FontSize="10" Margin="0,2,0,0" TextWrapping="Wrap"
+                   Visibility="{Binding HasDuplicateWarning, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+    </DataTemplate>
+
     <!-- Estilo para TextBox -->
     <Style TargetType="TextBox">
         <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
@@ -251,6 +258,7 @@
             <Grid>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldCounterTemplate}"/>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldDuplicateWarningTemplate}"/>
             </Grid>
         </StackPanel>
     </DataTemplate>
@@ -268,6 +276,7 @@
             <Grid>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldCounterTemplate}"/>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldDuplicateWarningTemplate}"/>
             </Grid>
         </StackPanel>
     </DataTemplate>
@@ -398,6 +407,7 @@
             <Grid>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldCounterTemplate}"/>
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldErrorTemplate}"/>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FieldDuplicateWarningTemplate}"/>
             </Grid>
         </StackPanel>
     </DataTemplate>
