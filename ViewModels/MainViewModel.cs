@@ -71,6 +71,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ToggleThemeCommand { get; }
         public ICommand ClearFiltersCommand { get; }
         public ICommand OpenAttachmentsFolderCommand { get; }
+        public ICommand ToggleHeaderCommand { get; }
 
         public UserModel? CurrentUser => SessionService.CurrentUser;
         private DateTime _currentAuditStartTime = DateTime.Now;
@@ -278,6 +279,7 @@ namespace PautaDinamicaApp.ViewModels
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
             ToggleFiltersCommand = new RelayCommand(_ => IsFiltersPanelExpanded = !IsFiltersPanelExpanded);
             ChangeLayoutCommand = new RelayCommand(_ => RotateLayout());
+            ToggleHeaderCommand = new RelayCommand(_ => IsHeaderVisible = !IsHeaderVisible);
             
             // Comandos para Pick Date/Time (mismo comportamiento que en Config)
             PickDateFromCommand = new RelayCommand(p => PickDate(true));
@@ -1400,6 +1402,13 @@ namespace PautaDinamicaApp.ViewModels
 
         private bool _isMultiSelectMode;
         public bool IsMultiSelectMode { get => _isMultiSelectMode; set => SetProperty(ref _isMultiSelectMode, value); }
+
+        private bool _isHeaderVisible = true;
+        public bool IsHeaderVisible
+        {
+            get => _isHeaderVisible;
+            set { if (SetProperty(ref _isHeaderVisible, value)) { /* visibility change triggers via binding */ } }
+        }
 
         private void LoadPautas()
         {

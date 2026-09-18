@@ -76,7 +76,8 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Padding="20,15" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Padding="20,15" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                Visibility="{Binding IsHeaderVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -128,6 +129,9 @@
 
                     <Button Content="⚙️ CONFIG. GENERAL" Command="{Binding OpenSettingsCommand}" 
                             Style="{StaticResource GhostButton}" Padding="10,0" Height="32" Margin="0,0,10,0"/>
+                    <Button Content="👁️" Command="{Binding ToggleHeaderCommand}"
+                            Style="{StaticResource GhostButton}" Width="32" Height="32" Padding="0" Margin="0,0,10,0"
+                            ToolTip="Ocultar/Mostrar encabezado"/>
                     <Button Content="✏️ CONFIG. PAUTA" Command="{Binding OpenConfigCommand}" 
                             Style="{StaticResource GhostButton}" Padding="10,0" Height="32"/>
                 </StackPanel>
