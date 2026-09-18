@@ -245,7 +245,9 @@ namespace PautaDinamicaApp.ViewModels
 
             // Aplicar tema guardado del usuario al iniciar
             _settings = _storageService.LoadSettings();
-            new ThemeService().SetTheme(_settings.Theme);
+            var ts = new ThemeService();
+            ts.SetTheme(_settings.Theme);
+            ts.ApplyAccentColor(_settings.AccentColor);
 
             _recordsView = CollectionViewSource.GetDefaultView(_records);
             _recordsView.Filter = FilterRecords;
@@ -565,7 +567,19 @@ namespace PautaDinamicaApp.ViewModels
             }
             catch { /* Ignorar error al guardar default */ }
 
-            new ThemeService().SetTheme(newTheme);
+            // Also ensure accent color persists on the default profile
+            var ts = new ThemeService();
+            ts.SetTheme(newTheme);
+            ts.ApplyAccentColor(settings.AccentColor);
+            try
+            {
+                var defaultStorage = new StorageService("default");
+                var defaultSettings = defaultStorage.LoadSettings();
+                defaultSettings.Theme = newTheme;
+                defaultSettings.AccentColor = settings.AccentColor;
+                defaultStorage.SaveSettings(defaultSettings);
+            }
+            catch { /* Ignorar error al guardar default */ }
         }
 
         private void OpenAttachmentsFolder()

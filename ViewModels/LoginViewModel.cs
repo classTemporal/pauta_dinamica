@@ -85,7 +85,9 @@ namespace PautaDinamicaApp.ViewModels
             var settings = storage.LoadSettings();
             settings.Theme = settings.Theme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
             storage.SaveSettings(settings);
-            new ThemeService().SetTheme(settings.Theme);
+            var ts = new ThemeService();
+            ts.SetTheme(settings.Theme);
+            ts.ApplyAccentColor(settings.AccentColor);
         }
 
 
@@ -130,13 +132,14 @@ namespace PautaDinamicaApp.ViewModels
 
             if (_sessionService.Login(SelectedUser.Username, Password))
             {
-                // Sincronizar tema: Copiar el tema de la pantalla de login (default) al perfil del usuario
+                // Sincronizar tema y tinte: Copiar del perfil de login (default) al perfil del usuario
                 var storageDefault = new StorageService("default");
-                var currentTheme = storageDefault.LoadSettings().Theme;
+                var defaultSettings = storageDefault.LoadSettings();
 
                 var storageUser = new StorageService(SelectedUser.Username);
                 var userSettings = storageUser.LoadSettings();
-                userSettings.Theme = currentTheme;
+                userSettings.Theme = defaultSettings.Theme;
+                userSettings.AccentColor = defaultSettings.AccentColor;
                 storageUser.SaveSettings(userSettings);
 
                 OnLoginSuccess?.Invoke();

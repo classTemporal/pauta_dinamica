@@ -7,6 +7,7 @@ using System.Linq;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using System.Windows;
+using System.Windows.Media;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 
@@ -34,6 +35,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand CancelCommand { get; }
         public ICommand OpenTemplateManagementCommand { get; }
         public ICommand UnlockAdminSettingsCommand { get; }
+        public ICommand PickAccentColorCommand { get; }
 
         public string AdminPassword { get => _adminPassword; set => SetProperty(ref _adminPassword, value); }
         public bool IsAdminSettingsUnlocked { get => _isAdminSettingsUnlocked; set => SetProperty(ref _isAdminSettingsUnlocked, value); }
@@ -73,12 +75,63 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     Settings.Theme = value;
                     OnPropertyChanged();
-                    new ThemeService().SetTheme(value);
+                    var ts = new ThemeService();
+                    ts.SetTheme(value);
+                    ts.ApplyAccentColor(Settings.AccentColor);
                 }
             }
         }
 
         public Array Themes => Enum.GetValues(typeof(Services.AppTheme));
+
+        // Popular accent color presets (name → hex)
+        public Dictionary<string, string> AccentColors { get; } = new()
+        {
+            { "Azul", "#007bff" },
+            { "Rosa", "#ff6090" },
+            { "Rojo", "#dc3545" },
+            { "Verde", "#28a745" },
+            { "Amarillo", "#ffc107" },
+            { "Púrpura", "#6f42c1" },
+            { "Teal", "#20c997" },
+            { "Naranja", "#fd7e14" }
+        };
+
+        private string _selectedAccentColorName = "Azul";
+        public string SelectedAccentColorName
+        {
+            get => _selectedAccentColorName;
+            set
+            {
+                if (SetProperty(ref _selectedAccentColorName, value))
+                {
+                    if (AccentColors.TryGetValue(value, out var hex))
+                    {
+                        Settings.AccentColor = hex;
+                        CustomAccentColor = "";
+                        new ThemeService().ApplyAccentColor(hex);
+                    }
+                }
+            }
+        }
+
+        private string _customAccentColor = "";
+        public string CustomAccentColor
+        {
+            get => _customAccentColor;
+            set
+            {
+                if (SetProperty(ref _customAccentColor, value))
+                {
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        Settings.AccentColor = value;
+                        _selectedAccentColorName = "";
+                        new ThemeService().ApplyAccentColor(value);
+                    }
+                }
+            }
+        }
 
         public Dictionary<string, string> SpellCheckLanguages { get; } = new()
         {
@@ -214,6 +267,10 @@ namespace PautaDinamicaApp.ViewModels
             ApplyCommand = new RelayCommand(_ => SaveSettings(false));
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
             PickColorCommand = new RelayCommand(_ => PickColor());
+            PickAccentColorCommand = new RelayCommand(_ => PickAccentColor());
+
+            // Initialize accent color selection from saved settings
+            InitializeAccentColor();
 
             AddContactCommand = new RelayCommand(_ => AddContact());
             DeleteContactCommand = new RelayCommand(p => DeleteContact(p as RecipientContact));
@@ -621,13 +678,58 @@ namespace PautaDinamicaApp.ViewModels
         private void PickColor()
         {
             if (SelectedPauta == null) return;
-
             using (var dialog = new ColorDialog())
             {
                 if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
                     var c = dialog.Color;
                     SelectedPauta.ColoringColor = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+                }
+            }
+        }
+
+        private void PickAccentColor()
+        {
+            using (var dialog = new ColorDialog())
+            {
+                // Set initial color from current Settings.AccentColor
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(Settings.AccentColor))
+                    {
+                        var wpfColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(Settings.AccentColor);
+                        dialog.Color = System.Drawing.Color.FromArgb(wpfColor.A, wpfColor.R, wpfColor.G, wpfColor.B);
+                    }
+                }
+                catch { /* Use default color in dialog */ }
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    var c = dialog.Color;
+                    string hex = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+                    CustomAccentColor = hex;
+                }
+            }
+        }
+
+        private void InitializeAccentColor()
+        {
+            // Determine if the saved accent color matches a preset or is custom
+            if (!string.IsNullOrWhiteSpace(Settings.AccentColor))
+            {
+                var match = AccentColors.FirstOrDefault(kvp =>
+                    kvp.Value.Equals(Settings.AccentColor, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(match.Key))
+                {
+                    _selectedAccentColorName = match.Key;
+                    OnPropertyChanged(nameof(SelectedAccentColorName));
+                    _customAccentColor = "";
+                }
+                else
+                {
+                    _customAccentColor = Settings.AccentColor;
+                    _selectedAccentColorName = "";
+                    OnPropertyChanged(nameof(CustomAccentColor));
+                    OnPropertyChanged(nameof(SelectedAccentColorName));
                 }
             }
         }
@@ -675,6 +777,22 @@ namespace PautaDinamicaApp.ViewModels
 
             _storageService.SaveSettings(Settings);
             _storageService.SavePautas(Pautas.ToList());
+
+            // Apply accent color and theme immediately
+            var ts = new ThemeService();
+            ts.SetTheme(Settings.Theme);
+            ts.ApplyAccentColor(Settings.AccentColor);
+
+            // Sync accent color to the default (login) profile so it persists across sessions
+            try
+            {
+                var defaultStorage = new StorageService("default");
+                var defaultSettings = defaultStorage.LoadSettings();
+                defaultSettings.AccentColor = Settings.AccentColor;
+                defaultSettings.Theme = Settings.Theme;
+                defaultStorage.SaveSettings(defaultSettings);
+            }
+            catch { /* Ignorar error al guardar default */ }
 
             if (close)
             {

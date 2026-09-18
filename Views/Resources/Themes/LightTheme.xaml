@@ -4,7 +4,7 @@
     <SolidColorBrush x:Key="BackgroundBrush" Color="#f5f7fa"/>
     <SolidColorBrush x:Key="CardBackgroundBrush" Color="#ffffff"/>
     <SolidColorBrush x:Key="BorderBrush" Color="#e2e8f0"/>
-    <SolidColorBrush x:Key="AccentBrush" Color="#007bff"/>
+    <!-- AccentBrush is defined dynamically in AccentColor.xaml via ThemeService -->
     <SolidColorBrush x:Key="TextBrush" Color="#0f172a"/>
     <SolidColorBrush x:Key="InputForeground" Color="#0f172a"/>
     

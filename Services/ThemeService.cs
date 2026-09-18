@@ -3,6 +3,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Microsoft.Win32;
 
 namespace PautaDinamicaApp.Services
@@ -17,8 +18,11 @@ namespace PautaDinamicaApp.Services
     {
         private const string DarkThemePath = "Views/Resources/Themes/DarkTheme.xaml";
         private const string LightThemePath = "Views/Resources/Themes/LightTheme.xaml";
+        private const string AccentColorPath = "Views/Resources/Themes/AccentColor.xaml";
 
         public static AppTheme CurrentTheme { get; private set; } = AppTheme.Light;
+
+        private const string DefaultAccentColor = "#007bff";
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
@@ -54,6 +58,27 @@ namespace PautaDinamicaApp.Services
             }
         }
 
+        public void ApplyAccentColor(string colorHex)
+        {
+            var mergedDicts = System.Windows.Application.Current.Resources.MergedDictionaries;
+
+            var existingAccentDict = mergedDicts.FirstOrDefault(d =>
+                d.Source != null && d.Source.OriginalString.Contains("AccentColor.xaml"));
+
+            if (existingAccentDict is ResourceDictionary dict)
+            {
+                // Replace the AccentBrush value in the existing dictionary
+                dict["AccentBrush"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex));
+            }
+            else
+            {
+                // Insert a new dictionary with the accent brush at the end (after theme)
+                var newAccentDict = new ResourceDictionary();
+                newAccentDict.Add("AccentBrush", new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex)));
+                mergedDicts.Add(newAccentDict);
+            }
+        }
+
         public void ApplyThemeToWindow(Window window, AppTheme theme)
         {
             if (window == null) return;
@@ -84,5 +109,7 @@ namespace PautaDinamicaApp.Services
             catch { }
             return AppTheme.Light; // Default
         }
+
+        public static string GetDefaultAccentColor() => DefaultAccentColor;
     }
 }

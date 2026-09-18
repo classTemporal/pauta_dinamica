@@ -57,6 +57,34 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- Color del Tema (Tinte/Accent) -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                                <StackPanel>
+                                    <TextBlock Text="Color del Tinte:" Style="{StaticResource LabelStyle}"/>
+                                    <TextBlock Text="Personalice el color principal de la interfaz (botones, enlaces, resaltados)." 
+                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,10"/>
+                                    <ComboBox ItemsSource="{Binding AccentColors}" 
+                                              SelectedItem="{Binding SelectedAccentColorName, Mode=TwoWay}"
+                                              DisplayMemberPath="Key"
+                                              Height="35" Width="150" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="Color personalizado:" Style="{StaticResource LabelStyle}" Margin="0,15,0,0"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <Button Command="{Binding PickAccentColorCommand}" 
+                                                Style="{StaticResource GhostButton}" Height="36" Padding="8,2" FontSize="11" ToolTip="Seleccionar color personalizado">
+                                            <UniformGrid Columns="2">
+                                                <Border Width="20" Height="20" CornerRadius="4"
+                                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                                    <Border.Background>
+                                                        <SolidColorBrush Color="{Binding Settings.AccentColor, Converter={StaticResource StringToBrushConverter}}"/>
+                                                    </Border.Background>
+                                                </Border>
+                                                <TextBlock Text="..." Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                            </UniformGrid>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Ortografía -->
                             <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
                                 <StackPanel>
