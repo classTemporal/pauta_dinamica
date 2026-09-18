@@ -135,6 +135,7 @@
         <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource InputBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="MaxDropDownHeight" Value="300"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -183,7 +184,7 @@
                                         <DropShadowEffect BlurRadius="10" Opacity="0.2" ShadowDepth="2"/>
                                     </Border.Effect>
                                 </Border>
-                                <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
+                                <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True" CanContentScroll="False" helpers:UIHelpers.EnableDropDownScroll="True">
                                     <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
                                 </ScrollViewer>
                             </Grid>
