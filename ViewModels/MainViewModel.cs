@@ -215,6 +215,7 @@ namespace PautaDinamicaApp.ViewModels
                 DashboardLayout.Right => "Derecha",
                 DashboardLayout.Top => "Arriba",
                 DashboardLayout.Bottom => "Abajo",
+                DashboardLayout.BottomNoSticky => "Abajo (sin pegamento)",
                 _ => "Izquierda"
             };
             set
@@ -225,12 +226,13 @@ namespace PautaDinamicaApp.ViewModels
                     "Derecha" => DashboardLayout.Right,
                     "Arriba" => DashboardLayout.Top,
                     "Abajo" => DashboardLayout.Bottom,
+                    "Abajo (sin pegamento)" => DashboardLayout.BottomNoSticky,
                     _ => DashboardLayout.Left
                 };
             }
         }
 
-        public List<string> DashboardLayoutOptions => new List<string> { "Izquierda", "Derecha", "Arriba", "Abajo" };
+        public List<string> DashboardLayoutOptions => new List<string> { "Izquierda", "Derecha", "Arriba", "Abajo", "Abajo (sin pegamento)" };
 
         public ICommand ToggleFiltersCommand { get; }
         public ICommand ChangeLayoutCommand { get; }
@@ -298,6 +300,7 @@ namespace PautaDinamicaApp.ViewModels
                 DashboardLayout.Top => DashboardLayout.Right,
                 DashboardLayout.Right => DashboardLayout.Bottom,
                 DashboardLayout.Bottom => DashboardLayout.Left,
+                DashboardLayout.BottomNoSticky => DashboardLayout.Left,
                 _ => DashboardLayout.Left
             };
         }
