@@ -596,6 +596,17 @@ namespace PautaDinamicaApp.ViewModels
             TargetValue = r.TargetValue
         }).ToList();
 
+        private string LoadPautaName()
+        {
+            if (string.IsNullOrEmpty(_pautaId)) return "SinPauta";
+            try
+            {
+                var pauta = _storageService.LoadPautas().FirstOrDefault(p => p.Id == _pautaId);
+                return string.IsNullOrWhiteSpace(pauta?.Name) ? "SinPauta" : pauta.Name;
+            }
+            catch { return "SinPauta"; }
+        }
+
         private void ExportToExcel(IEnumerable<SelectableOptionVM> list, string baseName)
         {
             var items = list.ToList();
@@ -603,7 +614,8 @@ namespace PautaDinamicaApp.ViewModels
 
             var settings = _storageService.LoadSettings();
             string exportFolder = settings.ExcelExportPath;
-            string fileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            string pautaName = LoadPautaName();
+            string fileName = $"{baseName}_{pautaName}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
             string finalPath = "";
 
             if (System.IO.Directory.Exists(exportFolder))
