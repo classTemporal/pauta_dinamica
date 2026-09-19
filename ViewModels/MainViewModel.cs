@@ -1489,6 +1489,33 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (CurrentPauta == null) return;
             var config = _storageService.LoadConfiguration(CurrentPauta.Id).OrderBy(f => f.Order).ToList();
+            
+            // Card 39: Apply DashboardFieldOrder from PautaSchema if available
+            // This allows the dashboard to display fields in a different order than the main config list
+            if (CurrentPauta.DashboardFieldOrder != null && CurrentPauta.DashboardFieldOrder.Any())
+            {
+                var orderedConfig = new List<FieldDefinition>();
+                var orderedIds = new HashSet<string>(CurrentPauta.DashboardFieldOrder);
+                
+                // First, add fields in the dashboard-specified order
+                foreach (var fieldId in CurrentPauta.DashboardFieldOrder)
+                {
+                    var field = config.FirstOrDefault(f => f.Id == fieldId);
+                    if (field != null) orderedConfig.Add(field);
+                }
+                
+                // Then, add any remaining fields that weren't in the dashboard order
+                foreach (var field in config)
+                {
+                    if (!orderedIds.Contains(field.Id))
+                    {
+                        orderedConfig.Add(field);
+                    }
+                }
+                
+                config = orderedConfig;
+            }
+            
             var fields = config.Where(c => c.Type != FieldType.Separator).Select(c => new DynamicFieldVM(c)).ToList();
 
             foreach (var f in fields)
