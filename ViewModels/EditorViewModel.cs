@@ -590,6 +590,29 @@ namespace PautaDinamicaApp.ViewModels
             RecalculatePdfOrder();
         }
 
+        /// <summary>
+        /// Card 40: Synchronizes DashboardFieldOrder with the current Fields collection order.
+        /// This ensures that when fields are reordered via drag-drop in ConfigWindow, the
+        /// dashboard display order is kept in sync. Only non-separator fields are included.
+        /// </summary>
+        public void SyncDashboardFieldOrderFromFields()
+        {
+            if (EditingPauta == null) return;
+
+            // Build the new dashboard order from the current Fields collection order,
+            // excluding separators (which are not displayed as individual dashboard items).
+            var newOrder = Fields
+                .Where(f => f.Type != FieldType.Separator)
+                .Select(f => f.Id)
+                .ToList();
+
+            // Only update if there's at least one field
+            if (newOrder.Any())
+            {
+                EditingPauta.DashboardFieldOrder = newOrder;
+            }
+        }
+
         private void RecalculatePdfOrder()
         {
             for (int i = 0; i < PdfColumns.Count; i++)

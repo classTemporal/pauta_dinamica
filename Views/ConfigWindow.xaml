@@ -301,6 +301,7 @@
                          PreviewMouseLeftButtonDown="PautaList_PreviewMouseLeftButtonDown"
                          PreviewMouseLeftButtonUp="PautaList_PreviewMouseLeftButtonUp"
                          MouseMove="PautaList_MouseMove"
+                         DragOver="ListBox_DragOver"
                          Drop="PautaList_Drop">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
@@ -467,6 +468,7 @@
                                  PreviewMouseLeftButtonDown="EditorGrid_PreviewMouseLeftButtonDown"
                                  PreviewMouseLeftButtonUp="EditorGrid_PreviewMouseLeftButtonUp"
                                  MouseMove="EditorGrid_MouseMove"
+                                 DragOver="ListBox_DragOver"
                                  Drop="EditorGrid_Drop">
                              <ListBox.ItemTemplate>
                                  <DataTemplate>
@@ -772,6 +774,7 @@
                                  PreviewMouseLeftButtonDown="ExportGrid_PreviewMouseLeftButtonDown"
                                  PreviewMouseLeftButtonUp="ExportGrid_PreviewMouseLeftButtonUp"
                                  MouseMove="ExportGrid_MouseMove"
+                                 DragOver="ListBox_DragOver"
                                  Drop="ExportGrid_Drop">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
@@ -988,6 +991,7 @@
                                  PreviewMouseLeftButtonDown="PdfGrid_PreviewMouseLeftButtonDown"
                                  PreviewMouseLeftButtonUp="PdfGrid_PreviewMouseLeftButtonUp"
                                  MouseMove="PdfGrid_MouseMove"
+                                 DragOver="ListBox_DragOver"
                                  Drop="PdfGrid_Drop">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
@@ -1168,6 +1172,7 @@
                                      PreviewMouseLeftButtonDown="PdfRulesList_PreviewMouseLeftButtonDown"
                                      PreviewMouseLeftButtonUp="PdfRulesList_PreviewMouseLeftButtonUp"
                                      MouseMove="PdfRulesList_MouseMove"
+                                     DragOver="ListBox_DragOver"
                                      Drop="PdfRulesList_Drop">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
