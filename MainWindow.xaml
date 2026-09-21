@@ -71,11 +71,13 @@
     <Grid Background="{DynamicResource BackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Padding="20,15" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+        <Border Grid.Row="0" Padding="20,15" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,0"
+                CornerRadius="8,8,0,0"
                 Visibility="{Binding IsHeaderVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -126,37 +128,52 @@
                                Fill="{DynamicResource AccentBrush}" Width="16" Height="16" Stretch="Uniform"/>
                     </Button>
 
-                    <!-- Documentación y Guía del Sistema -->
-                    <Button Command="{Binding ShowGeneralHelpCommand}" 
-                            Style="{StaticResource GhostButton}" 
-                            Padding="10,2" Margin="0,0,10,0" Height="32"
-                            ToolTip="Documentación y Guía del Sistema">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="📘 Documentación y Guía" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- Usuario y Cerrar Sesión -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,15,0" VerticalAlignment="Center">
-                        <TextBlock Text="👤 Usuario: " FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding CurrentUser.Username}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,15,0"/>
-                        <Button Command="{Binding LogoutCommand}" 
-                                Style="{StaticResource GhostButton}" Foreground="{DynamicResource DangerBrush}"
-                                Padding="10,2" Margin="0" Height="25" Content="CERRAR SESIÓN"/>
-                    </StackPanel>
-
                     <Button Content="⚙️ CONFIG. GENERAL" Command="{Binding OpenSettingsCommand}" 
                             Style="{StaticResource GhostButton}" Padding="10,0" Height="32" Margin="0,0,10,0"/>
-                    <Button Content="👁️" Command="{Binding ToggleHeaderCommand}"
-                            Style="{StaticResource GhostButton}" Width="32" Height="32" Padding="0" Margin="0,0,10,0"
-                            ToolTip="Ocultar/Mostrar encabezado"/>
                     <Button Content="✏️ CONFIG. PAUTA" Command="{Binding OpenConfigCommand}" 
                             Style="{StaticResource GhostButton}" Padding="10,0" Height="32"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" Margin="20">
+        <!-- Botón toggle del header: flecha ▲ cuando está visible (se puede ocultar), flecha ▼ cuando está oculto (se puede mostrar) -->
+        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                HorizontalAlignment="Stretch" VerticalAlignment="Top" CornerRadius="0"
+                Visibility="Visible">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="0"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsHeaderVisible}" Value="False">
+                            <Setter Property="CornerRadius" Value="0,0,4,4"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Button Command="{Binding ToggleHeaderCommand}"
+                    Style="{StaticResource GhostButton}" Height="28" Padding="0"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                    ToolTip="Ocultar/Mostrar encabezado">
+                <TextBlock x:Name="ToggleButtonContent" FontSize="14" FontWeight="Bold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="▲"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHeaderVisible}" Value="True">
+                                    <Setter Property="Text" Value="▲"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsHeaderVisible}" Value="False">
+                                    <Setter Property="Text" Value="▼"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Button>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition x:Name="Row0">
                     <RowDefinition.Style>
@@ -519,20 +536,22 @@
                         </Border>
                     </StackPanel>
                     
-                    <DataGrid x:Name="RecordsGrid" ItemsSource="{Binding RecordsView}" 
-                               AutoGenerateColumns="False"
-                               IsReadOnly="True"
-                               Background="Transparent"
-                               Foreground="{DynamicResource TextBrush}"
-                               BorderThickness="0"
-                               GridLinesVisibility="None"
-                               HeadersVisibility="Column"
-                               CanUserAddRows="False"
-                               HorizontalScrollBarVisibility="Visible"
-                               SelectionUnit="FullRow"
-                               SelectionMode="Extended"
-                               AlternationCount="2"
-                               Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,5,0,0">
+                        <DataGrid x:Name="RecordsGrid" ItemsSource="{Binding RecordsView}" 
+                                   AutoGenerateColumns="False"
+                                   IsReadOnly="True"
+                                   Background="Transparent"
+                                   Foreground="{DynamicResource TextBrush}"
+                                   BorderThickness="0"
+                                   GridLinesVisibility="None"
+                                   HeadersVisibility="Column"
+                                   CanUserAddRows="False"
+                                   HorizontalScrollBarVisibility="Visible"
+                                   VerticalScrollBarVisibility="Auto"
+                                   SelectionUnit="FullRow"
+                                   SelectionMode="Extended"
+                                   AlternationCount="2"
+                                   Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                         
                         <DataGrid.Resources>
                             <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
@@ -660,6 +679,7 @@
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
+                    </ScrollViewer>
                 </DockPanel>
             </Border>
         </Grid>

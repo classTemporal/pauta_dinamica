@@ -36,7 +36,11 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand OpenTemplateManagementCommand { get; }
         public ICommand UnlockAdminSettingsCommand { get; }
         public ICommand PickAccentColorCommand { get; }
+        public ICommand OpenHelpCommand { get; }
+        public ICommand SwitchUserCommand { get; }
+        public ICommand LogoutCommand { get; }
 
+        public UserModel? CurrentUser => SessionService.CurrentUser;
         public string AdminPassword { get => _adminPassword; set => SetProperty(ref _adminPassword, value); }
         public bool IsAdminSettingsUnlocked { get => _isAdminSettingsUnlocked; set => SetProperty(ref _isAdminSettingsUnlocked, value); }
 
@@ -283,6 +287,9 @@ namespace PautaDinamicaApp.ViewModels
             AutoDetectAgentesCommand = new RelayCommand(_ => AutoDetectAgentes());
             OpenEmailDirectoryFromWarningCommand = new RelayCommand(_ => OpenEmailDirectory());
             OpenTemplateManagementCommand = new RelayCommand(_ => OpenTemplateManagement());
+            OpenHelpCommand = new RelayCommand(_ => OpenHelp());
+            SwitchUserCommand = new RelayCommand(_ => SwitchUser());
+            LogoutCommand = new RelayCommand(_ => Logout());
             UnlockAdminSettingsCommand = new RelayCommand(_ => UnlockAdminSettings());
 
             AddEmailReplacementRuleCommand = new RelayCommand(_ => AddEmailReplacementRule());
@@ -822,6 +829,101 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
             return true;
+        }
+
+        private void OpenHelp()
+        {
+            var vm = new HelpViewModel("Documentación General", BuildGeneralHelpContent());
+            var win = new Views.HelpWindow { DataContext = vm };
+            win.Owner = System.Windows.Application.Current.MainWindow;
+            win.ShowDialog();
+        }
+
+        private void SwitchUser()
+        {
+            var session = new SessionService();
+            session.Logout();
+
+            var loginWin = new Views.LoginWindow();
+            loginWin.Show();
+
+            foreach (Window window in System.Windows.Application.Current.Windows)
+            {
+                if (window is Views.SettingsWindow)
+                {
+                    window.Close();
+                    break;
+                }
+            }
+        }
+
+        private void Logout()
+        {
+            var session = new SessionService();
+            session.Logout();
+
+            var loginWin = new Views.LoginWindow();
+            loginWin.Show();
+
+            foreach (Window window in System.Windows.Application.Current.Windows)
+            {
+                if (window is Views.SettingsWindow)
+                {
+                    window.Close();
+                    break;
+                }
+            }
+        }
+
+        private static string BuildGeneralHelpContent()
+        {
+            var content = new System.Text.StringBuilder();
+            content.AppendLine("# 📘 Documentación del Sistema");
+            content.AppendLine("");
+            content.AppendLine("**Versión:** 2.1.0");
+            content.AppendLine("**Creador:** Angel Gustavo Pacheco Manzanero");
+            content.AppendLine("");
+            content.AppendLine("### 🚀 Resumen del Sistema");
+            content.AppendLine("Pauta Dinámica es una herramienta avanzada diseñada para la **Auditoría de Calidad** y el **Control de Procesos**. Su objetivo principal es permitir la creación de formularios 100% dinámicos, eliminando la dependencia de hojas de cálculo estáticas y automatizando la generación de reportes y envío de métricas.");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("");
+            content.AppendLine("## 💡 Guía de Uso");
+            content.AppendLine("");
+            content.AppendLine("### 1. Gestión de Pautas (Diseño)");
+            content.AppendLine("En el botón **CONFIG. PAUTA** puedes crear la estructura de tus formularios:");
+            content.AppendLine("- **Campos Dinámicos:** Agrega textos, números, fechas, menús desplegables y campos de cálculo.");
+            content.AppendLine("- **Agrupación:** Usa el botón **BOX** para crear secciones visuales que organizan los campos.");
+            content.AppendLine("- **Personalización:** Marca campos como obligatorios o haz que conserven su valor al limpiar el formulario.");
+            content.AppendLine("- **Instrucciones:** En la pestaña 'Instrucciones de Apoyo' puedes dejar guías específicas para cada pauta.");
+            content.AppendLine("");
+            content.AppendLine("### 2. Registro de Datos");
+            content.AppendLine("- Selecciona una pauta en el menú superior izquierdo.");
+            content.AppendLine("- Completa los campos en el panel izquierdo y presiona **Guardar Registro**.");
+            content.AppendLine("- Los registros aparecerán en la tabla central de la derecha.");
+            content.AppendLine("");
+            content.AppendLine("### 3. Exportación y Reportes");
+            content.AppendLine("- **Excel/JSON:** Exporta toda la base de datos o registros seleccionados a formatos editables.");
+            content.AppendLine("- **PDF:** Genera reportes visuales con un solo clic. Puedes configurar la carpeta de salida en **CONFIG. GENERAL**.");
+            content.AppendLine("");
+            content.AppendLine("### 4. Sistema de Correos y Directorio");
+            content.AppendLine("- **Envío Individual/Masivo:** Selecciona registros y presiona el icono de sobre para enviar correos pre-formateados.");
+            content.AppendLine("- **Directorio de Agentes:** En la configuración general, puedes asociar nombres de agentes con sus correos para que el sistema los detecte automáticamente.");
+            content.AppendLine("- **Plantillas:** Personaliza el asunto y cuerpo del mensaje usando `[Nombre del Campo]` como comodín.");
+            content.AppendLine("");
+            content.AppendLine("### 5. Resaltado Visual");
+            content.AppendLine("- Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en **CONFIG. GENERAL > Rutas**.");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("");
+            content.AppendLine("## 🔗 Enlaces del Desarrollador");
+            content.AppendLine("");
+            content.AppendLine("- **LinkedIn:** [Angel Temporal Pacheco](https://www.linkedin.com/in/angel-temporal-pacheco/)");
+            content.AppendLine("- **GitHub:** [classTemporal](https://github.com/classTemporal)");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("*Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.*");
+            return content.ToString();
         }
     }
 }
