@@ -2067,7 +2067,7 @@ namespace PautaDinamicaApp.ViewModels
 
             if (!toProcess.Any())
             {
-                MessageBoxHelper.ShowNonCritical("No hay registros para enviar.");
+                MessageBoxHelper.ShowNonCritical("No hay registros para enviar.", "Aviso");
                 return;
             }
 
