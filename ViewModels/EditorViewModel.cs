@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using PautaDinamicaApp;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using PautaDinamicaApp.Views;
@@ -470,7 +471,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ResetExportConfig()
         {
-            if (MessageBox.Show("¿Restablecer el orden y nombres de exportación a los valores por defecto?", "Confirmar", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            if (MessageBoxHelper.ShowNonCritical("¿Restablecer el orden y nombres de exportación a los valores por defecto?", "Confirmar", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
 
             var validFields = Fields.Where(f => f.Type != FieldType.Separator).OrderBy(f => f.Order).ToList();
             var newConfig = new ObservableCollection<ExportColumnConfig>();
@@ -493,7 +494,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ResetPdfConfig()
         {
-            if (MessageBox.Show("¿Restablecer el orden y nombres del PDF a los valores por defecto?", "Confirmar", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            if (MessageBoxHelper.ShowNonCritical("¿Restablecer el orden y nombres del PDF a los valores por defecto?", "Confirmar", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
 
             var validFields = Fields.OrderBy(f => f.Order).ToList();
             var newConfig = new ObservableCollection<ExportColumnConfig>();
@@ -703,7 +704,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void RemoveField(FieldDefinition? field)
         {
-            if (field != null && MessageBox.Show($"¿Eliminar campo [{field.Label}]?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (field != null && MessageBoxHelper.ShowNonCritical($"¿Eliminar campo [{field.Label}]?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 Fields.Remove(field);
                 var exportItem = ExportColumns.FirstOrDefault(x => x.FieldId == field.Id);
@@ -826,12 +827,12 @@ namespace PautaDinamicaApp.ViewModels
                 string json = JsonSerializer.Serialize(package, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(filePath, json);
 
-                if (MessageBox.Show($"Configuración completa exportada con éxito en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical($"Configuración completa exportada con éxito en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
                 {
                     if (Directory.Exists(exportDir)) System.Diagnostics.Process.Start("explorer.exe", exportDir);
                 }
             }
-            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+            catch (Exception ex) { MessageBoxHelper.Show("Error: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
 
         private void ImportConfig()
@@ -854,7 +855,7 @@ namespace PautaDinamicaApp.ViewModels
                         {
                             // Formato antiguo: Solo lista de campos
                             var importedFields = JsonSerializer.Deserialize<ObservableCollection<FieldDefinition>>(json);
-                            if (importedFields != null && MessageBox.Show("El archivo solo contiene el diseño de campos. ¿Reemplazar diseño actual?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                            if (importedFields != null && MessageBoxHelper.ShowNonCritical("El archivo solo contiene el diseño de campos. ¿Reemplazar diseño actual?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                             {
                                 Fields = importedFields;
                                 foreach (var f in Fields) f.EnsureDefaultOptions();
@@ -866,7 +867,7 @@ namespace PautaDinamicaApp.ViewModels
                         {
                             // Formato nuevo: Paquete completo
                             var package = JsonSerializer.Deserialize<PautaFullExportPackage>(json);
-                            if (package != null && MessageBox.Show("El archivo contiene una configuración COMPLETA (Metadatos, Estructura, PDF, Excel). ¿Reemplazar configuración actual?", "Confirmar Importación Completa", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                            if (package != null && MessageBoxHelper.ShowNonCritical("El archivo contiene una configuración COMPLETA (Metadatos, Estructura, PDF, Excel). ¿Reemplazar configuración actual?", "Confirmar Importación Completa", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                             {
                                 // 1. Campos
                                 Fields = new ObservableCollection<FieldDefinition>(package.Fields);
@@ -910,16 +911,16 @@ namespace PautaDinamicaApp.ViewModels
                                 // Guardar en caché de memoria para que persista al cambiar de pauta dentro de la sesión
                                 _unsavedConfigs[ep.Id] = Fields.ToList();
 
-                                MessageBox.Show("Configuración importada con éxito en memoria. Recuerde Guardar para confirmar los cambios.");
+                                MessageBoxHelper.ShowNonCritical("Configuración importada con éxito en memoria. Recuerde Guardar para confirmar los cambios.", "Éxito");
                             }
                         }
                         else
                         {
-                            MessageBox.Show("El formato del archivo JSON no es reconocido.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageBoxHelper.Show("El formato del archivo JSON no es reconocido.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                     }
                 }
-                catch (Exception ex) { MessageBox.Show("Error al importar: " + ex.Message); }
+                catch (Exception ex) { MessageBoxHelper.Show("Error al importar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
             }
         }
 
@@ -973,7 +974,7 @@ namespace PautaDinamicaApp.ViewModels
         private void DeleteSelected()
         {
             var selected = Fields.Where(f => f.IsSelected).ToList();
-            if (selected.Any() && MessageBox.Show($"¿Eliminar {selected.Count} campos?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (selected.Any() && MessageBoxHelper.ShowNonCritical($"¿Eliminar {selected.Count} campos?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 foreach (var f in selected)
                 {
@@ -1150,14 +1151,14 @@ namespace PautaDinamicaApp.ViewModels
             WasDatabaseModified = true;
 
             EditingPauta = newPauta;
-            MessageBox.Show($"Pauta '{source.Name}' duplicada con éxito en memoria. Recuerde Guardar para confirmar los cambios.");
+            MessageBoxHelper.ShowNonCritical($"Pauta '{source.Name}' duplicada con éxito en memoria. Recuerde Guardar para confirmar los cambios.", "Éxito");
         }
 
         private void DeletePauta(PautaSchema? p)
         {
             if (p == null) return;
-            if (Pautas.Count <= 1) { MessageBox.Show("Debe quedar una pauta."); return; }
-            if (MessageBox.Show($"¿Borrar '{p.Name}' al guardar?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (Pautas.Count <= 1) { MessageBoxHelper.Show("Debe quedar una pauta.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+            if (MessageBoxHelper.Show("¿Borrar '{p.Name}' al guardar?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question, true) == MessageBoxResult.Yes)
             {
                 Pautas.Remove(p);
                 if (!_pautasToDelete.Contains(p)) _pautasToDelete.Add(p);
@@ -1169,8 +1170,8 @@ namespace PautaDinamicaApp.ViewModels
         {
             var selected = Pautas.Where(p => p.IsSelected).ToList();
             if (!selected.Any()) return;
-            if (selected.Count >= Pautas.Count) { MessageBox.Show("No puedes borrar todas."); return; }
-            if (MessageBox.Show($"¿Borrar {selected.Count} pautas al guardar?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (selected.Count >= Pautas.Count) { MessageBoxHelper.Show("No puedes borrar todas.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+            if (MessageBoxHelper.Show("¿Borrar {selected.Count} pautas al guardar?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question, true) == MessageBoxResult.Yes)
             {
                 foreach (var p in selected)
                 {
@@ -1201,18 +1202,18 @@ namespace PautaDinamicaApp.ViewModels
                 var fullData = new { Pautas = Pautas.ToList(), Configs = Pautas.ToDictionary(p => p.Id, p => _storageService.LoadConfiguration(p.Id)), Records = Pautas.ToDictionary(p => p.Id, p => _storageService.LoadRecords(p.Id)) };
                 File.WriteAllText(filePath, JsonSerializer.Serialize(fullData, new JsonSerializerOptions { WriteIndented = true }));
 
-                if (MessageBox.Show($"Respaldo completo exportado con éxito en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical($"Respaldo completo exportado con éxito en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
                 {
                     if (Directory.Exists(exportDir)) System.Diagnostics.Process.Start("explorer.exe", exportDir);
                 }
             }
-            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+            catch (Exception ex) { MessageBoxHelper.Show("Error: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
 
         private void ImportAllDatabase()
         {
             var ofd = new OpenFileDialog { Filter = "Database JSON (*.json)|*.json" };
-            if (ofd.ShowDialog() == true && MessageBox.Show("¿Reemplazar TODO el sistema?", "Atención", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (ofd.ShowDialog() == true && MessageBoxHelper.Show("¿Reemplazar TODO el sistema?", "Atención", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 try
                 {
@@ -1237,11 +1238,11 @@ namespace PautaDinamicaApp.ViewModels
                             };
 
                             File.WriteAllText(backupFile, JsonSerializer.Serialize(currentData, new JsonSerializerOptions { WriteIndented = true }));
-                            MessageBox.Show($"Se ha creado un respaldo automático de seguridad del sistema actual en:\n{backupFile}", "Respaldo Automático", MessageBoxButton.OK, MessageBoxImage.Information);
+                            MessageBoxHelper.Show($"Se ha creado un respaldo automático de seguridad del sistema actual en:\n{backupFile}", "Respaldo Automático", MessageBoxButton.OK, MessageBoxImage.Information);
                         }
                         catch (Exception ex)
                         {
-                            if (MessageBox.Show($"Ocurrió un error al intentar crear el respaldo de seguridad automático:\n{ex.Message}\n\n¿Desea proceder de todas formas bajo su propio riesgo?", "Fallo de Respaldo", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                            if (MessageBoxHelper.Show($"Ocurrió un error al intentar crear el respaldo de seguridad automático:\n{ex.Message}\n\n¿Desea proceder de todas formas bajo su propio riesgo?", "Fallo de Respaldo", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) != MessageBoxResult.Yes)
                             {
                                 return; // Abortar si falló el respaldo y el usuario no quiere continuar
                             }
@@ -1268,10 +1269,10 @@ namespace PautaDinamicaApp.ViewModels
                         WasDatabaseModified = true;
                         ShouldClearRecords = true; 
                         
-                        MessageBox.Show("Base de datos cargada en memoria. Revise los cambios y haga clic en 'Guardar' para aplicarlos permanentemente o en 'Cancelar' para descartarlos.");
+                        MessageBoxHelper.Show("Base de datos cargada en memoria. Revise los cambios y haga clic en 'Guardar' para aplicarlos permanentemente o en 'Cancelar' para descartarlos.", "Importación Completa", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                 }
-                catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+                catch (Exception ex) { MessageBoxHelper.Show("Error: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
             }
         }
 
@@ -1284,7 +1285,7 @@ namespace PautaDinamicaApp.ViewModels
             // 1. Validaciones
             if (Fields.Any(f => string.IsNullOrWhiteSpace(f.Label)))
             {
-                MessageBox.Show("Hay campos sin nombre.");
+                MessageBoxHelper.Show("Hay campos sin nombre.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             var duplicates = Fields.GroupBy(f => f.Label.Trim().ToLower())
@@ -1293,7 +1294,7 @@ namespace PautaDinamicaApp.ViewModels
                                    .ToList();
             if (duplicates.Any())
             {
-                MessageBox.Show($"Hay nombres duplicados:\n{string.Join(", ", duplicates)}", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxHelper.Show($"Hay nombres duplicados:\n{string.Join(", ", duplicates)}", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1321,7 +1322,7 @@ namespace PautaDinamicaApp.ViewModels
                     var records = _storageService.LoadRecords(EditingPauta.Id);
                     if (records.Any())
                     {
-                        var res = MessageBox.Show($"La pauta '{EditingPauta.Name}' tiene {records.Count} registros.\n¿Modificar base de datos y respaldar registros a Excel?", "Cambio Estructural", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+                        var res = MessageBoxHelper.Show($"La pauta '{EditingPauta.Name}' tiene {records.Count} registros.\n¿Modificar base de datos y respaldar registros a Excel?", "Cambio Estructural", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, true);
                         if (res == MessageBoxResult.Cancel) return;
                         if (res == MessageBoxResult.Yes)
                         {
@@ -1343,9 +1344,9 @@ namespace PautaDinamicaApp.ViewModels
                                 string jsonPath = Path.Combine(jsonDir, $"Config_Resp_{EditingPauta.Name}_{DateTime.Now:yyyyMMdd_HHmm}.json");
                                 File.WriteAllText(jsonPath, JsonSerializer.Serialize(oldConfig, new JsonSerializerOptions { WriteIndented = true }));
 
-                                MessageBox.Show($"Respaldos realizados con éxito:\n- Excel: {filePath}\n- JSON: {jsonPath}");
+                                MessageBoxHelper.ShowNonCritical($"Respaldos realizados con éxito:\n- Excel: {filePath}\n- JSON: {jsonPath}", "Éxito");
 
-                                if (MessageBox.Show("¿Desea abrir la carpeta de exportación?", "Respaldos realizados", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                                if (MessageBoxHelper.ShowNonCritical("¿Desea abrir la carpeta de exportación?", "Respaldos realizados", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                                 {
                                     if (Directory.Exists(exportDir)) System.Diagnostics.Process.Start("explorer.exe", exportDir);
                                 }
@@ -1356,7 +1357,7 @@ namespace PautaDinamicaApp.ViewModels
                                 // Si es la pauta activa en Main, avisar para limpiar UI
                                 if (EditingPauta.Id == _activePautaIdInMain) ShouldClearRecords = true;
                             }
-                            catch (Exception ex) { MessageBox.Show("Error al realizar respaldos: " + ex.Message); return; }
+                            catch (Exception ex) { MessageBoxHelper.Show("Error al realizar respaldos: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error); return; }
                         }
                         else return;
                     }
@@ -1380,7 +1381,7 @@ namespace PautaDinamicaApp.ViewModels
             foreach (var p in _pautasToDelete)
             {
                 var records = _storageService.LoadRecords(p.Id);
-                if (records.Any() && MessageBox.Show($"La pauta '{p.Name}' tiene registros. ¿Respaldar a Excel antes de borrar?", "Eliminación", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (records.Any() && MessageBoxHelper.Show("¿Respaldar a Excel antes de borrar?", "Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
                 {
                     string exportDir = settings.ExcelExportPath;
                     if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
@@ -1389,9 +1390,9 @@ namespace PautaDinamicaApp.ViewModels
                     try
                     {
                         ExportToExcelInternal(filePath, records, _storageService.LoadConfiguration(p.Id), p.ExportConfig);
-                        MessageBox.Show($"Respaldo final guardado en:\n{filePath}");
+                        MessageBoxHelper.ShowNonCritical($"Respaldo final guardado en:\n{filePath}", "Éxito");
                     }
-                    catch (Exception ex) { MessageBox.Show("Error al respaldar pauta borrada: " + ex.Message); }
+                    catch (Exception ex) { MessageBoxHelper.Show("Error al respaldar pauta borrada: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
                 }
 
                 // Respaldo JSON si el archivo existe
@@ -1399,7 +1400,7 @@ namespace PautaDinamicaApp.ViewModels
                 string configPath = Path.Combine(appDataStruct, $"pauta_{p.Id}_config.json");
                 if (File.Exists(configPath))
                 {
-                    if (MessageBox.Show($"¿Respaldar JSON de '{p.Name}' antes de borrar?", "Borrar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                    if (MessageBoxHelper.Show("¿Respaldar JSON de '{p.Name}' antes de borrar?", "Borrar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
                     {
                         string jsonDir = settings.JsonBackupPath;
                         if (!Directory.Exists(jsonDir)) Directory.CreateDirectory(jsonDir);
@@ -1408,9 +1409,9 @@ namespace PautaDinamicaApp.ViewModels
                         try
                         {
                             File.WriteAllText(jsonPath, JsonSerializer.Serialize(_storageService.LoadConfiguration(p.Id), new JsonSerializerOptions { WriteIndented = true }));
-                            MessageBox.Show($"Configuración respaldada en:\n{jsonPath}");
+                            MessageBoxHelper.ShowNonCritical($"Configuración respaldada en:\n{jsonPath}", "Éxito");
                         }
-                        catch (Exception ex) { MessageBox.Show("Error respaldo JSON: " + ex.Message); }
+                        catch (Exception ex) { MessageBoxHelper.Show("Error respaldo JSON: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
                     }
                 }
 
@@ -1435,7 +1436,7 @@ namespace PautaDinamicaApp.ViewModels
             _storageService.SavePautas(Pautas.ToList());
             IsSaveSuccessful = true;
             WasDatabaseModified = true;
-            MessageBox.Show("Cambios guardados con éxito.");
+            MessageBoxHelper.ShowNonCritical("Cambios guardados con éxito.", "Éxito");
         }
 
         private void ExportToExcelInternal(string filePath, List<AuditEntry> records, List<FieldDefinition> rawFields, List<ExportColumnConfig> exportConfig)
@@ -1650,11 +1651,11 @@ namespace PautaDinamicaApp.ViewModels
             if (preset == null) return;
             if (ExportPresets.Count <= 1)
             {
-                MessageBox.Show("Debe existir al menos una configuración de exportación.");
+                MessageBoxHelper.Show("Debe existir al menos una configuración de exportación.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (MessageBox.Show($"¿Eliminar la configuración '{preset.Name}'?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show($"¿Eliminar la configuración '{preset.Name}'?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 ExportPresets.Remove(preset);
                 SelectedExportPreset = ExportPresets.FirstOrDefault();
@@ -1701,7 +1702,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (EditingPauta != null && rule != null)
             {
-                if (MessageBox.Show("¿Eliminar esta regla de reemplazo PDF?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical("¿Eliminar esta regla de reemplazo PDF?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                 {
                     EditingPauta.PdfReplacementRules.Remove(rule);
                 }
@@ -1714,7 +1715,7 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = EditingPauta.PdfReplacementRules.Where(r => r.IsSelected).ToList();
             if (toRemove.Count == 0) return;
 
-            if (MessageBox.Show($"¿Eliminar las {toRemove.Count} reglas PDF seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar las {toRemove.Count} reglas PDF seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 foreach (var r in toRemove) EditingPauta.PdfReplacementRules.Remove(r);
             }
