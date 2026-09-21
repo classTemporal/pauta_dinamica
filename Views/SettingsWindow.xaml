@@ -99,10 +99,26 @@
                                               Height="35" Width="200" HorizontalAlignment="Left"/>
                                     <TextBlock Text="Nota: Requiere el paquete de idioma de Windows." 
                                                FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="0,8,0,0"/>
-                                </StackPanel>
-                            </Border>
+                                    </StackPanel>
+                                    </Border>
 
-                            <TextBlock Text="💡 Estos ajustes se aplican a toda la aplicación de forma global." 
+                                    <!-- Mensajes emergentes no críticos -->
+                                    <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,20,0,0">
+                                    <StackPanel>
+                                    <CheckBox IsChecked="{Binding ShowNonCriticalMessages}" Margin="0,0,0,5">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Mostrar mensajes emergentes no críticos" 
+                                                           FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Desactiva avisos como '¿Desea abrir la carpeta?' o 'Plantillas aplicadas correctamente' pero mantiene siempre los mensajes críticos (errores, respaldos, advertencias estructurales)."
+                                                       FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                    </StackPanel>
+                                    </Border>
+
+                                    <TextBlock Text="💡 Estos ajustes se aplican a toda la aplicación de forma global." 
                                        FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="5,20,0,0"/>
                         </StackPanel>
                     </Border>

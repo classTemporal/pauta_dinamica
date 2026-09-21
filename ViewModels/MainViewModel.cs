@@ -1,3 +1,5 @@
+using PautaDinamicaApp;
+using PautaDinamicaApp.Models;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -594,7 +596,7 @@ namespace PautaDinamicaApp.ViewModels
             }
             else
             {
-                MessageBox.Show("Aún no hay archivos adjuntos para esta pauta.");
+                MessageBoxHelper.Show("Aún no hay archivos adjuntos para esta pauta.", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -1073,12 +1075,12 @@ namespace PautaDinamicaApp.ViewModels
                     }
                     workbook.SaveAs(filePath);
                 }
-                if (!silent) MessageBox.Show($"Exportación a Excel exitosa en:\n{filePath}");
+                if (!silent) MessageBoxHelper.ShowNonCritical($"Exportación a Excel exitosa en:\n{filePath}", "Éxito");
                 return true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al exportar Excel: {ex.Message}");
+                MessageBoxHelper.Show($"Error al exportar Excel: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -1100,7 +1102,7 @@ namespace PautaDinamicaApp.ViewModels
                 string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(filePath, json);
 
-                if (MessageBox.Show($"Exportación a JSON exitosa.\n\nArchivo guardado en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical($"Exportación a JSON exitosa.\n\nArchivo guardado en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
                 {
                     if (Directory.Exists(exportDir)) System.Diagnostics.Process.Start("explorer.exe", exportDir);
                 }
@@ -1108,7 +1110,7 @@ namespace PautaDinamicaApp.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al exportar JSON: {ex.Message}");
+                MessageBoxHelper.Show($"Error al exportar JSON: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -1168,7 +1170,7 @@ namespace PautaDinamicaApp.ViewModels
 
                         if (columnMap.Count == 0 && timestampColIndex == -1)
                         {
-                            MessageBox.Show("No se pudieron mapear las columnas. Asegúrate de que los nombres de cabecera coincidan con la Pauta actual.", "Error Importación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            MessageBoxHelper.Show("No se pudieron mapear las columnas. Asegúrate de que los nombres de cabecera coincidan con la Pauta actual.", "Error Importación", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
 
@@ -1246,13 +1248,13 @@ namespace PautaDinamicaApp.ViewModels
                         }
 
                         if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
-                        MessageBox.Show($"Importación completada. Se importaron {importedCount} registros.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                        MessageBoxHelper.ShowNonCritical($"Importación completada. Se importaron {importedCount} registros.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                         RefreshCalculations();
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error al importar: {ex.Message}");
+                    MessageBoxHelper.Show($"Error al importar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -1275,14 +1277,14 @@ namespace PautaDinamicaApp.ViewModels
                     }
                 }
 
-                if (MessageBox.Show($"Se generaron {count} PDFs en:\n{folderPath}\n\n¿Abrir carpeta?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical($"Se generaron {count} PDFs en:\n{folderPath}\n\n¿Abrir carpeta?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                 {
                     System.Diagnostics.Process.Start("explorer.exe", folderPath);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al generar PDFs: {ex.Message}");
+                MessageBoxHelper.Show($"Error al generar PDFs: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1372,7 +1374,7 @@ namespace PautaDinamicaApp.ViewModels
 
                 if (!silent)
                 {
-                    if (MessageBox.Show($"PDF Generado con éxito en:\n{filePath}\n\n¿Abrir ahora?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                    if (MessageBoxHelper.ShowNonCritical($"PDF Generado con éxito en:\n{filePath}\n\n¿Abrir ahora?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                     {
                         new System.Diagnostics.Process { StartInfo = new System.Diagnostics.ProcessStartInfo(filePath) { UseShellExecute = true } }.Start();
                     }
@@ -1381,7 +1383,7 @@ namespace PautaDinamicaApp.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al generar PDF: {ex.Message}");
+                MessageBoxHelper.Show($"Error al generar PDF: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return null;
             }
         }
@@ -1833,7 +1835,7 @@ namespace PautaDinamicaApp.ViewModels
                     // Aquí solo limpiamos y refrescamos la vista actual del MainViewModel.
                     Records.Clear();
                     RefreshFields();
-                    MessageBox.Show("La vista se ha refrescado debido a cambios estructurales o restauración de base de datos.");
+                    MessageBoxHelper.ShowNonCritical("La vista se ha refrescado debido a cambios estructurales o restauración de base de datos.", "Éxito");
                 }
                 else
                 {
@@ -1930,7 +1932,7 @@ namespace PautaDinamicaApp.ViewModels
             if (CurrentFields.Any(f => !f.IsValid))
             {
                 string errors = string.Join("\n", CurrentFields.Where(f => !f.IsValid).Select(f => $"- {f.Label}: {f.ValidationError}"));
-                MessageBox.Show($"Por favor, corrija los siguientes errores:\n\n{errors}", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxHelper.Show($"Por favor, corrija los siguientes errores:\n\n{errors}", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1956,11 +1958,11 @@ namespace PautaDinamicaApp.ViewModels
 
                     if (isDuplicate)
                     {
-                        var result = MessageBox.Show(
-                            $"El valor '{currentValue}' en el campo '{field.Label}' ya existe en otro registro.\n\n¿Desea agregarlo de todas formas?",
-                            "Valor Duplicado Detectado",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Warning);
+                        var result = MessageBoxHelper.Show(
+                                                    $"El valor '{currentValue}' en el campo '{field.Label}' ya existe en otro registro.\n\n¿Desea agregarlo de todas formas?",
+                                                    "Valor Duplicado Detectado",
+                                                    MessageBoxButton.YesNo,
+                                                    MessageBoxImage.Warning, true);
 
                         if (result == MessageBoxResult.No) return;
                     }
@@ -1992,7 +1994,7 @@ namespace PautaDinamicaApp.ViewModels
             // Reiniciar todo para la siguiente auditoría (limpia campos y resetea el temporizador)
             CreateNewRecord();
 
-            MessageBox.Show("Registro guardado correctamente.");
+            MessageBoxHelper.ShowNonCritical("Registro guardado correctamente.", "Éxito");
         }
 
         private void EditRecord(AuditEntry? entry)
@@ -2005,7 +2007,7 @@ namespace PautaDinamicaApp.ViewModels
         private void DeleteRecord(AuditEntry? entry)
         {
             if (entry == null) return;
-            if (MessageBox.Show("¿Eliminar registro?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.ShowNonCritical("¿Eliminar registro?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 Records.Remove(entry);
                 if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
@@ -2015,7 +2017,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void DeleteAllRecords()
         {
-            if (MessageBox.Show("¿Eliminar TODOS los registros de esta pauta?", "Confirmar Eliminación Total", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show("¿Eliminar TODOS los registros de esta pauta?", "Confirmar Eliminación Total", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 bool wasEditing = SelectedRecord != null;
                 Records.Clear();
@@ -2035,7 +2037,7 @@ namespace PautaDinamicaApp.ViewModels
             var selected = Records.Where(r => r.IsSelected).ToList();
             if (!selected.Any())
             {
-                MessageBox.Show("No hay registros seleccionados.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBoxHelper.ShowNonCritical("No hay registros seleccionados.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -2047,7 +2049,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (CurrentPauta == null)
             {
-                MessageBox.Show("No hay una pauta activa.");
+                MessageBoxHelper.Show("No hay una pauta activa.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -2065,7 +2067,7 @@ namespace PautaDinamicaApp.ViewModels
 
             if (!toProcess.Any())
             {
-                MessageBox.Show("No hay registros para enviar.");
+                MessageBoxHelper.ShowNonCritical("No hay registros para enviar.", "Aviso");
                 return;
             }
 
@@ -2087,7 +2089,7 @@ namespace PautaDinamicaApp.ViewModels
                 int excluded = totalBefore - toProcess.Count;
                 if (excluded > 0)
                 {
-                    var res = MessageBox.Show($"Se han excluido {excluded} registros según la regla de la pauta.\n\n¿Desea continuar con los {toProcess.Count} restantes?", "Filtro de Exclusión", MessageBoxButton.YesNo);
+                    var res = MessageBoxHelper.Show($"Se han excluido {excluded} registros según la regla de la pauta.\n\n¿Desea continuar con los {toProcess.Count} restantes?", "Filtro de Exclusión", MessageBoxButton.YesNo, MessageBoxImage.Question, true);
                     if (res == MessageBoxResult.No) return;
                 }
             }
@@ -2121,7 +2123,7 @@ namespace PautaDinamicaApp.ViewModels
                     string msg = $"No se puede enviar el correo porque los siguientes agentes no tienen correo electrónico asociado:\n\n{agentList}\n\n" +
                                  "Diríjase al Directorio de Contactos para completar los correos.\n\n¿Abrir Directorio de Contactos ahora?";
 
-                    var result = MessageBox.Show(msg, "Correos Faltantes", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                    var result = MessageBoxHelper.Show(msg, "Correos Faltantes", MessageBoxButton.YesNo, MessageBoxImage.Warning, true);
                     if (result == MessageBoxResult.Yes)
                     {
                         // Abrir la ventana de Configuración > pestaña Correo > Directorio de Contactos
@@ -2136,7 +2138,7 @@ namespace PautaDinamicaApp.ViewModels
 
             if (toProcess.Count > 1)
             {
-                var confirm = MessageBox.Show($"Se prepararán {toProcess.Count} correos individuales. ¿Continuar?", "Confirmar Envío", MessageBoxButton.YesNo);
+                var confirm = MessageBoxHelper.ShowNonCritical($"Se prepararán {toProcess.Count} correos individuales. ¿Continuar?", "Confirmar Envío", MessageBoxButton.YesNo);
                 if (confirm == MessageBoxResult.No) return;
             }
 
@@ -2165,7 +2167,7 @@ namespace PautaDinamicaApp.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error al procesar registro: {ex.Message}");
+                    MessageBoxHelper.Show($"Error al exportar Excel: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
 
@@ -2185,7 +2187,7 @@ namespace PautaDinamicaApp.ViewModels
                     }
                 }
 
-                if (MessageBox.Show(msg + "\n\n¿Desea abrir la carpeta de los reportes ahora?", "Proceso Finalizado", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical(msg + "\n\n¿Desea abrir la carpeta de los reportes ahora?", "Proceso Finalizado", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
                 {
                     if (Directory.Exists(globalSettings.PdfReportPath))
                     {
@@ -2214,7 +2216,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             var selected = Records.Where(r => r.IsSelected).ToList();
             if (!selected.Any()) return;
-            if (MessageBox.Show($"¿Eliminar {selected.Count}?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar {selected.Count}?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 bool wasEditingDeleted = SelectedRecord != null && selected.Contains(SelectedRecord);
                 foreach (var rec in selected) Records.Remove(rec);

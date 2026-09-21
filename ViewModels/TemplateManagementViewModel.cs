@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using PautaDinamicaApp;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using ClosedXML.Excel;
@@ -108,7 +109,7 @@ namespace PautaDinamicaApp.ViewModels
             StartEditCommand = new RelayCommand(p => StartEdit(p as TemplateItemVM));
             CancelEditCommand = new RelayCommand(_ => CancelEdit());
             SaveChangesCommand = new RelayCommand(_ => SaveAndClose());
-            ApplyChangesCommand = new RelayCommand(_ => { SaveTemplates(); System.Windows.MessageBox.Show("Plantillas aplicadas correctamente.", "Éxito"); });
+            ApplyChangesCommand = new RelayCommand(_ => { SaveTemplates(); MessageBoxHelper.ShowNonCritical("Plantillas aplicadas correctamente.", "Éxito"); });
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
         }
 
@@ -147,7 +148,7 @@ namespace PautaDinamicaApp.ViewModels
         private void SaveAndClose()
         {
             SaveTemplates();
-            System.Windows.MessageBox.Show("Plantillas guardadas correctamente.", "Éxito");
+            MessageBoxHelper.ShowNonCritical("Plantillas guardadas correctamente.", "Éxito");
             RequestClose?.Invoke();
         }
 
@@ -222,7 +223,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (template != null)
             {
-                if (System.Windows.MessageBox.Show("¿Eliminar esta plantilla?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical("¿Eliminar esta plantilla?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     if (_editingTemplate == template) CancelEdit();
                     Templates.Remove(template);
@@ -235,7 +236,7 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = Templates.Where(t => t.IsSelected).ToList();
             if (!toRemove.Any()) return;
 
-            if (System.Windows.MessageBox.Show($"¿Eliminar {toRemove.Count} plantillas seleccionadas?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar {toRemove.Count} plantillas seleccionadas?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 foreach (var t in toRemove) Templates.Remove(t);
             }
@@ -302,12 +303,12 @@ namespace PautaDinamicaApp.ViewModels
                     worksheet.Column(1).Width = 100;
                     worksheet.Column(2).Width = 30;
                     workbook.SaveAs(finalPath);
-                    System.Windows.MessageBox.Show($"Plantillas exportadas exitosamente en:\n{finalPath}", "Éxito");
+                    MessageBoxHelper.ShowNonCritical($"Plantillas exportadas exitosamente en:\n{finalPath}", "Éxito");
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Error al exportar: {ex.Message}");
+                MessageBoxHelper.Show($"Error al exportar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -337,13 +338,13 @@ namespace PautaDinamicaApp.ViewModels
                         }
                         if (count > 0)
                         {
-                            System.Windows.MessageBox.Show($"{count} plantillas importadas. Recuerde guardar los cambios.");
+                            MessageBoxHelper.ShowNonCritical($"{count} plantillas importadas. Recuerde guardar los cambios.", "Éxito");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show("Error al importar: " + ex.Message);
+                    MessageBoxHelper.Show("Error al importar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }

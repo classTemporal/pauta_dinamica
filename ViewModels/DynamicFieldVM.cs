@@ -1,3 +1,5 @@
+using PautaDinamicaApp;
+using PautaDinamicaApp.Models;
 using System;
 using System.Collections.Generic;
 using PautaDinamicaApp.Models;
@@ -42,7 +44,7 @@ namespace PautaDinamicaApp.ViewModels
             var currentPaths = GetPathsList();
             if (!Definition.AllowMultipleAttachments && currentPaths.Count > 0)
             {
-                System.Windows.MessageBox.Show("Solo se permite un archivo adjunto en este campo.", "Límite Alcanzado");
+                MessageBoxHelper.ShowNonCritical("Solo se permite un archivo adjunto en este campo.", "Límite Alcanzado", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 

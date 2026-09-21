@@ -1,3 +1,4 @@
+using PautaDinamicaApp;
 using System;
 using System.ComponentModel;
 using System.Windows.Input;
@@ -221,6 +222,19 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        public bool ShowNonCriticalMessages
+        {
+            get => Settings.ShowNonCriticalMessages;
+            set
+            {
+                if (Settings.ShowNonCriticalMessages != value)
+                {
+                    Settings.ShowNonCriticalMessages = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public ICommand AddContactCommand { get; }
         public ICommand DeleteContactCommand { get; }
         public ICommand ImportContactsCommand { get; }
@@ -314,11 +328,11 @@ namespace PautaDinamicaApp.ViewModels
             {
                 IsAdminSettingsUnlocked = true;
                 AdminPassword = "";
-                System.Windows.MessageBox.Show("Opciones administrativas desbloqueadas.", "Acceso Concedido", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBoxHelper.Show("Opciones administrativas desbloqueadas.", "Acceso Concedido", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
-                System.Windows.MessageBox.Show("Contraseña administrativa incorrecta.", "Acceso Denegado", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBoxHelper.Show("Contraseña administrativa incorrecta.", "Acceso Denegado", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -369,7 +383,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (contact != null)
             {
-                if (System.Windows.MessageBox.Show($"¿Desea eliminar a {contact.Name}?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical($"¿Desea eliminar a {contact.Name}?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     CurrentContacts.Remove(contact);
                     SyncContacts();
@@ -382,7 +396,7 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = CurrentContacts.Where(c => c.IsSelected).ToList();
             if (toRemove.Count == 0) return;
 
-            if (System.Windows.MessageBox.Show($"¿Desea eliminar los {toRemove.Count} contactos seleccionados?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.ShowNonCritical($"¿Desea eliminar los {toRemove.Count} contactos seleccionados?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 foreach (var c in toRemove) CurrentContacts.Remove(c);
                 SyncContacts();
@@ -411,7 +425,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (SelectedPauta != null && rule != null)
             {
-                if (System.Windows.MessageBox.Show("¿Eliminar esta regla?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical("¿Eliminar esta regla?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                 {
                     SelectedPauta.EmailReplacementRules.Remove(rule);
                 }
@@ -424,7 +438,7 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = SelectedPauta.EmailReplacementRules.Where(r => r.IsSelected).ToList();
             if (toRemove.Count == 0) return;
 
-            if (System.Windows.MessageBox.Show($"¿Eliminar las {toRemove.Count} reglas seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar las {toRemove.Count} reglas seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 foreach (var r in toRemove) SelectedPauta.EmailReplacementRules.Remove(r);
             }
@@ -556,7 +570,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (CurrentContacts.Count > 0)
             {
-                var confirm = System.Windows.MessageBox.Show("¡ATENCIÓN! Al importar se ELIMINARÁN todos los contactos actuales y se reemplazarán por los del archivo.\n\n¿Desea realizar un respaldo automático en Excel de sus contactos actuales antes de continuar?", "Importar y Reemplazar", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+                var confirm = MessageBoxHelper.Show("¡ATENCIÓN! Al importar se ELIMINARÁN todos los contactos actuales y se reemplazarán por los del archivo.\n\n¿Desea realizar un respaldo automático en Excel de sus contactos actuales antes de continuar?", "Importar y Reemplazar", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, true);
 
                 if (confirm == MessageBoxResult.Cancel) return;
                 if (confirm == MessageBoxResult.Yes)
@@ -583,7 +597,7 @@ namespace PautaDinamicaApp.ViewModels
                         var usedRange = worksheet.RangeUsed();
                         if (usedRange == null)
                         {
-                            System.Windows.MessageBox.Show("El archivo de Excel parece estar vacío.");
+                            MessageBoxHelper.Show("El archivo de Excel parece estar vacío.", "Importar", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
 
@@ -603,12 +617,12 @@ namespace PautaDinamicaApp.ViewModels
                             }
                         }
                         SyncContacts();
-                        System.Windows.MessageBox.Show($"{count} contactos importados y reemplazados correctamente.");
+                        MessageBoxHelper.ShowNonCritical($"{count} contactos importados y reemplazados correctamente.", "Éxito");
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show("Error al importar: " + ex.Message);
+                    MessageBoxHelper.Show("Error al importar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -672,12 +686,12 @@ namespace PautaDinamicaApp.ViewModels
                     worksheet.Columns().AdjustToContents();
                     workbook.SaveAs(finalPath);
                     if (string.IsNullOrEmpty(targetPath)) // Solo avisar si no fue automatización externa
-                        System.Windows.MessageBox.Show($"Contactos exportados correctamente en:\n{finalPath}", "Exportación Exitosa");
+                        MessageBoxHelper.ShowNonCritical($"Contactos exportados correctamente en:\n{finalPath}", "Exportación Exitosa");
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show("Error al exportar: " + ex.Message);
+                MessageBoxHelper.Show("Error al exportar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -783,7 +797,7 @@ namespace PautaDinamicaApp.ViewModels
                     !ValidateTemplateString(pauta.EmailSubjectTemplate, pautaLabels, $"'{pauta.Name}' (Asunto)", out err) ||
                     !ValidateTemplateString(pauta.EmailBodyTemplate, pautaLabels, $"'{pauta.Name}' (Cuerpo)", out err))
                 {
-                    System.Windows.MessageBox.Show(err, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBoxHelper.Show(err, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
             }
@@ -809,13 +823,13 @@ namespace PautaDinamicaApp.ViewModels
 
             if (close)
             {
-                System.Windows.MessageBox.Show("Configuración guardada correctamente.", "Éxito");
+                MessageBoxHelper.ShowNonCritical("Configuración guardada correctamente.", "Éxito");
                 IsSaved = true;
                 RequestClose?.Invoke();
             }
             else
             {
-                System.Windows.MessageBox.Show("Cambios aplicados correctamente.", "Éxito");
+                MessageBoxHelper.ShowNonCritical("Cambios aplicados correctamente.", "Éxito");
             }
         }
 

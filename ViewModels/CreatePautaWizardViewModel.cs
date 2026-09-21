@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using PautaDinamicaApp;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using System.Windows;
@@ -451,7 +452,7 @@ namespace PautaDinamicaApp.ViewModels
         private void RemoveField(FieldDefinition? field)
         {
             if (field == null) return;
-            var result = MessageBox.Show($"¿Eliminar campo [{field.Label}]?", "Confirmar", MessageBoxButton.YesNo);
+            var result = MessageBoxHelper.ShowNonCritical($"¿Eliminar campo [{field.Label}]?", "Confirmar", MessageBoxButton.YesNo);
             if (result == MessageBoxResult.Yes)
             {
                 Fields.Remove(field);
@@ -601,7 +602,7 @@ namespace PautaDinamicaApp.ViewModels
         private void RemoveContact(RecipientContact? contact)
         {
             if (contact == null) return;
-            var result = MessageBox.Show($"¿Eliminar contacto '{contact.Name}'?", "Confirmar", MessageBoxButton.YesNo);
+            var result = MessageBoxHelper.ShowNonCritical($"¿Eliminar contacto '{contact.Name}'?", "Confirmar", MessageBoxButton.YesNo);
             if (result == MessageBoxResult.Yes)
             {
                 RecipientContacts.Remove(contact);

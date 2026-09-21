@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using PautaDinamicaApp;
 using PautaDinamicaApp.Models;
 using MessageBox = System.Windows.MessageBox;
 using MessageBoxButton = System.Windows.MessageBoxButton;
@@ -136,7 +137,7 @@ namespace PautaDinamicaApp
 
                 if (vm.IsSaveSuccessful)
                 {
-                    System.Windows.MessageBox.Show("Cambios aplicados correctamente.", "Éxito");
+                    MessageBoxHelper.ShowNonCritical("Cambios aplicados correctamente.", "Éxito");
                 }
             }
         }
@@ -153,11 +154,11 @@ namespace PautaDinamicaApp
             {
                 if (vm.HasPendingChanges())
                 {
-                    var result = System.Windows.MessageBox.Show(
+                    var result = MessageBoxHelper.Show(
                         "Se han detectado cambios sin guardar. Si sale ahora, perderá todos los cambios realizados.\r\n\r\n¿Desea salir de todos modos?",
                         "Cambios sin guardar",
                         MessageBoxButton.YesNo,
-                        MessageBoxImage.Warning);
+                        MessageBoxImage.Warning, true);
 
                     if (result == MessageBoxResult.No)
                     {

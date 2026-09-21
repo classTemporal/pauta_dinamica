@@ -1,3 +1,5 @@
+using PautaDinamicaApp;
+using PautaDinamicaApp.Models;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -147,7 +149,7 @@ namespace PautaDinamicaApp.ViewModels
             else
             {
                 ClearSensitiveData();
-                MessageBox.Show("Contraseña incorrecta.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBoxHelper.Show("Contraseña incorrecta.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -155,7 +157,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (string.IsNullOrWhiteSpace(NewUsername))
             {
-                MessageBox.Show("Ingrese un nombre de usuario.");
+                MessageBoxHelper.Show("Ingrese un nombre de usuario.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -163,7 +165,7 @@ namespace PautaDinamicaApp.ViewModels
             string cleanUsername = NewUsername.Trim();
             if (cleanUsername.Contains(" "))
             {
-                MessageBox.Show("El nombre de usuario no puede contener espacios.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxHelper.Show("El nombre de usuario no puede contener espacios.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -177,11 +179,11 @@ namespace PautaDinamicaApp.ViewModels
                 IsManageMode = false; // Go back to login
                 NewUsername = "";
                 ClearSensitiveData();
-                MessageBox.Show($"Usuario '{SelectedUser?.Username}' creado con éxito.");
+                MessageBoxHelper.ShowNonCritical($"Usuario '{SelectedUser?.Username}' creado con éxito.", "Éxito");
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBoxHelper.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -206,11 +208,11 @@ namespace PautaDinamicaApp.ViewModels
             if (!isAuthorized)
             {
                 ClearSensitiveData();
-                MessageBox.Show("Autorización incorrecta para eliminar el usuario.", "Error", MessageBoxButton.OK, MessageBoxImage.Stop);
+                MessageBoxHelper.Show("Autorización incorrecta para eliminar el usuario.", "Error", MessageBoxButton.OK, MessageBoxImage.Stop);
                 return;
             }
 
-            var res = MessageBox.Show($"¿Realmente desea eliminar al usuario '{user.Username}'?\nEsta acción respaldará sus datos pero borrará el perfil.",
+            var res = MessageBoxHelper.Show($"¿Realmente desea eliminar al usuario '{user.Username}'?\nEsta acción respaldará sus datos pero borrará el perfil.",
                 "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
             if (res == MessageBoxResult.Yes)
@@ -218,7 +220,7 @@ namespace PautaDinamicaApp.ViewModels
                 _sessionService.DeleteUser(user.Username);
                 ClearSensitiveData();
                 LoadUsers();
-                MessageBox.Show($"Usuario '{user.Username}' eliminado.");
+                MessageBoxHelper.ShowNonCritical($"Usuario '{user.Username}' eliminado.", "Éxito");
             }
         }
 
@@ -229,7 +231,7 @@ namespace PautaDinamicaApp.ViewModels
             if (string.IsNullOrWhiteSpace(ResetNewPassword))
             {
                 ClearSensitiveData();
-                MessageBox.Show("Por favor, ingrese la nueva contraseña que desea establecer.", "Dato Faltante");
+                MessageBoxHelper.Show("Por favor, ingrese la nueva contraseña que desea establecer.", "Dato Faltante", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -241,7 +243,7 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     u.PasswordHash = SessionService.HashPassword(ResetNewPassword);
                     _sessionService.SaveUsers(users);
-                    MessageBox.Show("Contraseña actualizada con éxito.", "Éxito");
+                    MessageBoxHelper.ShowNonCritical("Contraseña actualizada con éxito.", "Éxito");
                     IsMasterResetMode = false;
                     ClearSensitiveData();
                     LoadUsers();
@@ -250,7 +252,7 @@ namespace PautaDinamicaApp.ViewModels
             else
             {
                 ClearSensitiveData();
-                MessageBox.Show("Clave de Autorización Incorrecta.", "Error");
+                MessageBoxHelper.Show("Clave de Autorización Incorrecta.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

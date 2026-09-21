@@ -6,8 +6,9 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using PautaDinamicaApp.Models;
+using PautaDinamicaApp;
 using PautaDinamicaApp.Services;
+using PautaDinamicaApp.Models;
 
 namespace PautaDinamicaApp.Views
 {
@@ -253,7 +254,7 @@ namespace PautaDinamicaApp.Views
             }
             else
             {
-                System.Windows.MessageBox.Show("Por favor, selecciona una plantilla de la lista.", "Selección Requerida");
+                MessageBoxHelper.Show("Por favor, selecciona una plantilla de la lista.", "Selección Requerida", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -308,7 +309,7 @@ namespace PautaDinamicaApp.Views
             string content = NewTemplateTextBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(content))
             {
-                System.Windows.MessageBox.Show("El contenido de la plantilla no puede estar vacío.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxHelper.Show("El contenido de la plantilla no puede estar vacío.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -421,7 +422,7 @@ namespace PautaDinamicaApp.Views
         private void DeleteSelected_Click(object sender, RoutedEventArgs e)
         {
             var selected = _allTemplates.Where(t => t.IsSelected).ToList();
-            if (selected.Any() && System.Windows.MessageBox.Show($"¿Eliminar {selected.Count} plantillas?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (selected.Any() && MessageBoxHelper.ShowNonCritical($"¿Eliminar {selected.Count} plantillas?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 foreach (var t in selected) _allTemplates.Remove(t);
                 RefreshDisplay();

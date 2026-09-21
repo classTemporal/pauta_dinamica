@@ -56,12 +56,6 @@ namespace PautaDinamicaApp.Views
             DialogResult = true;
         }
 
-        private void ClearButton_Click(object sender, RoutedEventArgs e)
-        {
-            SelectedValue = "";
-            DialogResult = true;
-        }
-
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
             if (MainCalendar.SelectedDate.HasValue)
