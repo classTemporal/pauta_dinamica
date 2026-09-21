@@ -2,7 +2,6 @@ using PautaDinamicaApp;
 using PautaDinamicaApp.Models;
 using System;
 using System.Collections.Generic;
-using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using System.Windows.Input;
 using System.Linq;

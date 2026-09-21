@@ -10,7 +10,6 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.IO;
-using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using PautaDinamicaApp.Views;
 using ClosedXML.Excel;

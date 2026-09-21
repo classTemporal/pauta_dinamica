@@ -44,7 +44,7 @@ namespace PautaDinamicaApp
                         Converter = (IValueConverter)System.Windows.Application.Current.Resources["DictionaryValueConverter"],
                         ConverterParameter = field.Id
                     },
-                    Width = DataGridLength.Auto,
+                    Width = new DataGridLength(150),
                     MinWidth = 180,
                     CanUserSort = false // Evitar crash por comparación de diccionarios
                 };

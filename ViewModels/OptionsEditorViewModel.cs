@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using ClosedXML.Excel;
 using Microsoft.Win32;
-using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using MessageBox = System.Windows.MessageBox;
 using MessageBoxButton = System.Windows.MessageBoxButton;
