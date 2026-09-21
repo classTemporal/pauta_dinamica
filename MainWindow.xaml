@@ -47,11 +47,15 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="{x:Type GroupItem}">
-                            <StackPanel Margin="0,0,0,15">
-                                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource AccentBrush}" 
-                                           FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                                <ItemsPresenter />
-                            </StackPanel>
+                            <Border Background="Transparent" 
+                                    CornerRadius="0" Margin="0,0,0,15" Padding="0"
+                                    BorderBrush="Transparent" BorderThickness="0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource AccentBrush}" 
+                                               FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                                    <ItemsPresenter />
+                                </StackPanel>
+                            </Border>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
@@ -355,7 +359,7 @@
             <DockPanel>
                 <DockPanel.Style>
                     <Style TargetType="DockPanel">
-                        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                        <Setter Property="Background" Value="Transparent"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Left">
                                 <Setter Property="Grid.Column" Value="0"/>
@@ -382,13 +386,12 @@
                                 <Setter Property="Grid.RowSpan" Value="1"/>
                                 <Setter Property="Margin" Value="0,0,0,10"/>
                                 <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Padding" Value="0"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
                                 <Setter Property="Grid.Column" Value="0"/>
                                 <Setter Property="Grid.Row" Value="1"/>
-                                <Setter Property="Grid.RowSpan" Value="2"/>
-                                <Setter Property="Grid.ColumnSpan" Value="3"/>
+                                <Setter Property="Grid.RowSpan" Value="1"/>
+                                <Setter Property="Grid.ColumnSpan" Value="1"/>
                                 <Setter Property="Margin" Value="0,10,0,0"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -414,9 +417,9 @@
                     </Grid>
 
                     <!-- Filter and Sort Bar -->
-                    <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundBrush}" 
-                            CornerRadius="8" Padding="12,8" Margin="0,0,0,15"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundBrush}"
+                            CornerRadius="0" Padding="12,8" Margin="0,0,0,15"
+                            BorderThickness="0"
                             Visibility="{Binding IsFiltersPanelExpanded, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -514,7 +517,7 @@
                         </WrapPanel>
 
                         <!-- MultiSelect Actions -->
-                        <Border Background="{DynamicResource BorderBrush}" CornerRadius="4" Padding="5" Margin="0,5,0,0"
+                        <Border Background="Transparent" CornerRadius="0" Padding="5" Margin="0,5,0,0"
                                 Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                 <TextBlock Text="MODO SELECCIÓN" VerticalAlignment="Center" FontWeight="Bold" Foreground="#ffc107" Margin="10,5,20,5"/>
