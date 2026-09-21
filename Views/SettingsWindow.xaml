@@ -637,8 +637,8 @@
                 </ScrollViewer>
             </TabItem>
 
-            <!-- TAB GENERAL: Documentación, Usuario, Cerrar Sesión -->
-            <TabItem Header="🔧 General">
+            <!-- TAB SISTEMA: Documentación, Usuario, Cerrar Sesión -->
+            <TabItem Header="🔧 Sistema">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <Border Padding="20">
                         <StackPanel>
