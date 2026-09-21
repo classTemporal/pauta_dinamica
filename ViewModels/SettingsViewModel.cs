@@ -1,3 +1,4 @@
+using PautaDinamicaApp;
 using System;
 using System.ComponentModel;
 using System.Windows.Input;
@@ -36,7 +37,11 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand OpenTemplateManagementCommand { get; }
         public ICommand UnlockAdminSettingsCommand { get; }
         public ICommand PickAccentColorCommand { get; }
+        public ICommand OpenHelpCommand { get; }
+        public ICommand SwitchUserCommand { get; }
+        public ICommand LogoutCommand { get; }
 
+        public UserModel? CurrentUser => SessionService.CurrentUser;
         public string AdminPassword { get => _adminPassword; set => SetProperty(ref _adminPassword, value); }
         public bool IsAdminSettingsUnlocked { get => _isAdminSettingsUnlocked; set => SetProperty(ref _isAdminSettingsUnlocked, value); }
 
@@ -103,14 +108,14 @@ namespace PautaDinamicaApp.ViewModels
             get => _selectedAccentColorName;
             set
             {
-                if (SetProperty(ref _selectedAccentColorName, value))
+                if (_selectedAccentColorName == value) return;
+                _selectedAccentColorName = value;
+                if (AccentColors.TryGetValue(value, out var hex))
                 {
-                    if (AccentColors.TryGetValue(value, out var hex))
-                    {
-                        Settings.AccentColor = hex;
-                        CustomAccentColor = "";
-                        new ThemeService().ApplyAccentColor(hex);
-                    }
+                    Settings.AccentColor = hex;
+                    _customAccentColor = "";
+                    new ThemeService().ApplyAccentColor(hex);
+                    OnPropertyChanged(nameof(SelectedAccentColorName));
                 }
             }
         }
@@ -217,6 +222,19 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        public bool ShowNonCriticalMessages
+        {
+            get => Settings.ShowNonCriticalMessages;
+            set
+            {
+                if (Settings.ShowNonCriticalMessages != value)
+                {
+                    Settings.ShowNonCriticalMessages = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public ICommand AddContactCommand { get; }
         public ICommand DeleteContactCommand { get; }
         public ICommand ImportContactsCommand { get; }
@@ -271,6 +289,7 @@ namespace PautaDinamicaApp.ViewModels
 
             // Initialize accent color selection from saved settings
             InitializeAccentColor();
+            ApplyAccentColorToUI(Settings.AccentColor);
 
             AddContactCommand = new RelayCommand(_ => AddContact());
             DeleteContactCommand = new RelayCommand(p => DeleteContact(p as RecipientContact));
@@ -283,6 +302,9 @@ namespace PautaDinamicaApp.ViewModels
             AutoDetectAgentesCommand = new RelayCommand(_ => AutoDetectAgentes());
             OpenEmailDirectoryFromWarningCommand = new RelayCommand(_ => OpenEmailDirectory());
             OpenTemplateManagementCommand = new RelayCommand(_ => OpenTemplateManagement());
+            OpenHelpCommand = new RelayCommand(_ => OpenHelp());
+            SwitchUserCommand = new RelayCommand(_ => SwitchUser());
+            LogoutCommand = new RelayCommand(_ => Logout());
             UnlockAdminSettingsCommand = new RelayCommand(_ => UnlockAdminSettings());
 
             AddEmailReplacementRuleCommand = new RelayCommand(_ => AddEmailReplacementRule());
@@ -306,11 +328,11 @@ namespace PautaDinamicaApp.ViewModels
             {
                 IsAdminSettingsUnlocked = true;
                 AdminPassword = "";
-                System.Windows.MessageBox.Show("Opciones administrativas desbloqueadas.", "Acceso Concedido", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBoxHelper.Show("Opciones administrativas desbloqueadas.", "Acceso Concedido", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
-                System.Windows.MessageBox.Show("Contraseña administrativa incorrecta.", "Acceso Denegado", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBoxHelper.Show("Contraseña administrativa incorrecta.", "Acceso Denegado", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -361,7 +383,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (contact != null)
             {
-                if (System.Windows.MessageBox.Show($"¿Desea eliminar a {contact.Name}?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical($"¿Desea eliminar a {contact.Name}?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     CurrentContacts.Remove(contact);
                     SyncContacts();
@@ -374,7 +396,7 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = CurrentContacts.Where(c => c.IsSelected).ToList();
             if (toRemove.Count == 0) return;
 
-            if (System.Windows.MessageBox.Show($"¿Desea eliminar los {toRemove.Count} contactos seleccionados?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.ShowNonCritical($"¿Desea eliminar los {toRemove.Count} contactos seleccionados?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 foreach (var c in toRemove) CurrentContacts.Remove(c);
                 SyncContacts();
@@ -403,7 +425,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (SelectedPauta != null && rule != null)
             {
-                if (System.Windows.MessageBox.Show("¿Eliminar esta regla?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical("¿Eliminar esta regla?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                 {
                     SelectedPauta.EmailReplacementRules.Remove(rule);
                 }
@@ -416,7 +438,7 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = SelectedPauta.EmailReplacementRules.Where(r => r.IsSelected).ToList();
             if (toRemove.Count == 0) return;
 
-            if (System.Windows.MessageBox.Show($"¿Eliminar las {toRemove.Count} reglas seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar las {toRemove.Count} reglas seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 foreach (var r in toRemove) SelectedPauta.EmailReplacementRules.Remove(r);
             }
@@ -548,7 +570,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (CurrentContacts.Count > 0)
             {
-                var confirm = System.Windows.MessageBox.Show("¡ATENCIÓN! Al importar se ELIMINARÁN todos los contactos actuales y se reemplazarán por los del archivo.\n\n¿Desea realizar un respaldo automático en Excel de sus contactos actuales antes de continuar?", "Importar y Reemplazar", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+                var confirm = MessageBoxHelper.Show("¡ATENCIÓN! Al importar se ELIMINARÁN todos los contactos actuales y se reemplazarán por los del archivo.\n\n¿Desea realizar un respaldo automático en Excel de sus contactos actuales antes de continuar?", "Importar y Reemplazar", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, true);
 
                 if (confirm == MessageBoxResult.Cancel) return;
                 if (confirm == MessageBoxResult.Yes)
@@ -575,7 +597,7 @@ namespace PautaDinamicaApp.ViewModels
                         var usedRange = worksheet.RangeUsed();
                         if (usedRange == null)
                         {
-                            System.Windows.MessageBox.Show("El archivo de Excel parece estar vacío.");
+                            MessageBoxHelper.Show("El archivo de Excel parece estar vacío.", "Importar", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
 
@@ -595,12 +617,12 @@ namespace PautaDinamicaApp.ViewModels
                             }
                         }
                         SyncContacts();
-                        System.Windows.MessageBox.Show($"{count} contactos importados y reemplazados correctamente.");
+                        MessageBoxHelper.ShowNonCritical($"{count} contactos importados y reemplazados correctamente.", "Éxito");
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show("Error al importar: " + ex.Message);
+                    MessageBoxHelper.Show("Error al importar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -664,12 +686,12 @@ namespace PautaDinamicaApp.ViewModels
                     worksheet.Columns().AdjustToContents();
                     workbook.SaveAs(finalPath);
                     if (string.IsNullOrEmpty(targetPath)) // Solo avisar si no fue automatización externa
-                        System.Windows.MessageBox.Show($"Contactos exportados correctamente en:\n{finalPath}", "Exportación Exitosa");
+                        MessageBoxHelper.ShowNonCritical($"Contactos exportados correctamente en:\n{finalPath}", "Exportación Exitosa");
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show("Error al exportar: " + ex.Message);
+                MessageBoxHelper.Show("Error al exportar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -734,6 +756,11 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        private void ApplyAccentColorToUI(string colorHex)
+        {
+            new ThemeService().ApplyAccentColor(colorHex);
+        }
+
         private void BrowseFolder(Action<string> updateAction)
         {
             using (var dialog = new FolderBrowserDialog())
@@ -770,7 +797,7 @@ namespace PautaDinamicaApp.ViewModels
                     !ValidateTemplateString(pauta.EmailSubjectTemplate, pautaLabels, $"'{pauta.Name}' (Asunto)", out err) ||
                     !ValidateTemplateString(pauta.EmailBodyTemplate, pautaLabels, $"'{pauta.Name}' (Cuerpo)", out err))
                 {
-                    System.Windows.MessageBox.Show(err, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBoxHelper.Show(err, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
             }
@@ -796,13 +823,13 @@ namespace PautaDinamicaApp.ViewModels
 
             if (close)
             {
-                System.Windows.MessageBox.Show("Configuración guardada correctamente.", "Éxito");
+                MessageBoxHelper.ShowNonCritical("Configuración guardada correctamente.", "Éxito");
                 IsSaved = true;
                 RequestClose?.Invoke();
             }
             else
             {
-                System.Windows.MessageBox.Show("Cambios aplicados correctamente.", "Éxito");
+                MessageBoxHelper.ShowNonCritical("Cambios aplicados correctamente.", "Éxito");
             }
         }
 
@@ -822,6 +849,101 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
             return true;
+        }
+
+        private void OpenHelp()
+        {
+            var vm = new HelpViewModel("Documentación General", BuildGeneralHelpContent());
+            var win = new Views.HelpWindow { DataContext = vm };
+            win.Owner = System.Windows.Application.Current.MainWindow;
+            win.ShowDialog();
+        }
+
+        private void SwitchUser()
+        {
+            var session = new SessionService();
+            session.Logout();
+
+            var loginWin = new Views.LoginWindow();
+            loginWin.Show();
+
+            foreach (Window window in System.Windows.Application.Current.Windows)
+            {
+                if (window is Views.SettingsWindow)
+                {
+                    window.Close();
+                    break;
+                }
+            }
+        }
+
+        private void Logout()
+        {
+            var session = new SessionService();
+            session.Logout();
+
+            var loginWin = new Views.LoginWindow();
+            loginWin.Show();
+
+            foreach (Window window in System.Windows.Application.Current.Windows)
+            {
+                if (window is Views.SettingsWindow)
+                {
+                    window.Close();
+                    break;
+                }
+            }
+        }
+
+        private static string BuildGeneralHelpContent()
+        {
+            var content = new System.Text.StringBuilder();
+            content.AppendLine("# 📘 Documentación del Sistema");
+            content.AppendLine("");
+            content.AppendLine("**Versión:** 2.1.0");
+            content.AppendLine("**Creador:** Angel Gustavo Pacheco Manzanero");
+            content.AppendLine("");
+            content.AppendLine("### 🚀 Resumen del Sistema");
+            content.AppendLine("Pauta Dinámica es una herramienta avanzada diseñada para la **Auditoría de Calidad** y el **Control de Procesos**. Su objetivo principal es permitir la creación de formularios 100% dinámicos, eliminando la dependencia de hojas de cálculo estáticas y automatizando la generación de reportes y envío de métricas.");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("");
+            content.AppendLine("## 💡 Guía de Uso");
+            content.AppendLine("");
+            content.AppendLine("### 1. Gestión de Pautas (Diseño)");
+            content.AppendLine("En el botón **CONFIG. PAUTA** puedes crear la estructura de tus formularios:");
+            content.AppendLine("- **Campos Dinámicos:** Agrega textos, números, fechas, menús desplegables y campos de cálculo.");
+            content.AppendLine("- **Agrupación:** Usa el botón **BOX** para crear secciones visuales que organizan los campos.");
+            content.AppendLine("- **Personalización:** Marca campos como obligatorios o haz que conserven su valor al limpiar el formulario.");
+            content.AppendLine("- **Instrucciones:** En la pestaña 'Instrucciones de Apoyo' puedes dejar guías específicas para cada pauta.");
+            content.AppendLine("");
+            content.AppendLine("### 2. Registro de Datos");
+            content.AppendLine("- Selecciona una pauta en el menú superior izquierdo.");
+            content.AppendLine("- Completa los campos en el panel izquierdo y presiona **Guardar Registro**.");
+            content.AppendLine("- Los registros aparecerán en la tabla central de la derecha.");
+            content.AppendLine("");
+            content.AppendLine("### 3. Exportación y Reportes");
+            content.AppendLine("- **Excel/JSON:** Exporta toda la base de datos o registros seleccionados a formatos editables.");
+            content.AppendLine("- **PDF:** Genera reportes visuales con un solo clic. Puedes configurar la carpeta de salida en **CONFIG. GENERAL**.");
+            content.AppendLine("");
+            content.AppendLine("### 4. Sistema de Correos y Directorio");
+            content.AppendLine("- **Envío Individual/Masivo:** Selecciona registros y presiona el icono de sobre para enviar correos pre-formateados.");
+            content.AppendLine("- **Directorio de Agentes:** En la configuración general, puedes asociar nombres de agentes con sus correos para que el sistema los detecte automáticamente.");
+            content.AppendLine("- **Plantillas:** Personaliza el asunto y cuerpo del mensaje usando `[Nombre del Campo]` como comodín.");
+            content.AppendLine("");
+            content.AppendLine("### 5. Resaltado Visual");
+            content.AppendLine("- Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en **CONFIG. GENERAL > Rutas**.");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("");
+            content.AppendLine("## 🔗 Enlaces del Desarrollador");
+            content.AppendLine("");
+            content.AppendLine("- **LinkedIn:** [Angel Temporal Pacheco](https://www.linkedin.com/in/angel-temporal-pacheco/)");
+            content.AppendLine("- **GitHub:** [classTemporal](https://github.com/classTemporal)");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("*Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.*");
+            return content.ToString();
         }
     }
 }

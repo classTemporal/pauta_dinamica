@@ -65,17 +65,33 @@ namespace PautaDinamicaApp.Services
             var existingAccentDict = mergedDicts.FirstOrDefault(d =>
                 d.Source != null && d.Source.OriginalString.Contains("AccentColor.xaml"));
 
-            if (existingAccentDict is ResourceDictionary dict)
+            var brush = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex));
+
+            if (existingAccentDict != null)
             {
-                // Replace the AccentBrush value in the existing dictionary
-                dict["AccentBrush"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex));
+                // Cannot modify a ResourceDictionary that has a Source URI — remove and replace
+                int index = mergedDicts.IndexOf(existingAccentDict);
+                mergedDicts.RemoveAt(index);
+                var newAccentDict = new ResourceDictionary();
+                newAccentDict.Add("AccentBrush", brush);
+                mergedDicts.Insert(index, newAccentDict);
             }
             else
             {
-                // Insert a new dictionary with the accent brush at the end (after theme)
-                var newAccentDict = new ResourceDictionary();
-                newAccentDict.Add("AccentBrush", new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex)));
-                mergedDicts.Add(newAccentDict);
+                // Find an existing in-memory accent dict (no Source) to update in-place
+                var existingInMemory = mergedDicts.FirstOrDefault(d =>
+                    d.Source == null && d.Contains("AccentBrush"));
+
+                if (existingInMemory != null)
+                {
+                    existingInMemory["AccentBrush"] = brush;
+                }
+                else
+                {
+                    var newAccentDict = new ResourceDictionary();
+                    newAccentDict.Add("AccentBrush", brush);
+                    mergedDicts.Add(newAccentDict);
+                }
             }
         }
 

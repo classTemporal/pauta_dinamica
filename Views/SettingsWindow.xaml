@@ -37,7 +37,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <TabControl Background="Transparent" BorderThickness="0" Margin="10">
+        <TabControl x:Name="MainTabControl" Background="Transparent" BorderThickness="0" Margin="10">
             <!-- TAB GENERAL: Interfaz y Ortografía -->
             <TabItem Header="✨ General">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -64,7 +64,8 @@
                                     <TextBlock Text="Personalice el color principal de la interfaz (botones, enlaces, resaltados)." 
                                                FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,10"/>
                                     <ComboBox ItemsSource="{Binding AccentColors}" 
-                                              SelectedItem="{Binding SelectedAccentColorName, Mode=TwoWay}"
+                                              SelectedValuePath="Key"
+                                              SelectedValue="{Binding SelectedAccentColorName, Mode=TwoWay}"
                                               DisplayMemberPath="Key"
                                               Height="35" Width="150" HorizontalAlignment="Left"/>
                                     <TextBlock Text="Color personalizado:" Style="{StaticResource LabelStyle}" Margin="0,15,0,0"/>
@@ -98,10 +99,26 @@
                                               Height="35" Width="200" HorizontalAlignment="Left"/>
                                     <TextBlock Text="Nota: Requiere el paquete de idioma de Windows." 
                                                FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="0,8,0,0"/>
-                                </StackPanel>
-                            </Border>
+                                    </StackPanel>
+                                    </Border>
 
-                            <TextBlock Text="💡 Estos ajustes se aplican a toda la aplicación de forma global." 
+                                    <!-- Mensajes emergentes no críticos -->
+                                    <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,20,0,0">
+                                    <StackPanel>
+                                    <CheckBox IsChecked="{Binding ShowNonCriticalMessages}" Margin="0,0,0,5">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Mostrar mensajes emergentes no críticos" 
+                                                           FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Desactiva avisos como '¿Desea abrir la carpeta?' o 'Plantillas aplicadas correctamente' pero mantiene siempre los mensajes críticos (errores, respaldos, advertencias estructurales)."
+                                                       FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                    </StackPanel>
+                                    </Border>
+
+                                    <TextBlock Text="💡 Estos ajustes se aplican a toda la aplicación de forma global." 
                                        FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="5,20,0,0"/>
                         </StackPanel>
                     </Border>
@@ -617,6 +634,48 @@
                             </Border>
                         </StackPanel>
                     </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- TAB GENERAL: Documentación, Usuario, Cerrar Sesión -->
+            <TabItem Header="🔧 General">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border Padding="20">
+                        <StackPanel>
+                            <!-- Documentación -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                                <StackPanel>
+                                    <TextBlock Text="📘 Documentación y Guía del Sistema" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Consulta la guía completa del sistema: uso de pautas, registro de datos, exportación, correo electrónico y más." 
+                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15" TextWrapping="Wrap"/>
+                                    <Button Content="Abrir Documentación" Command="{Binding OpenHelpCommand}" 
+                                            Style="{StaticResource PrimaryButton}" Height="40" Width="200" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Usuario actual -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                                <StackPanel>
+                                    <TextBlock Text="👤 Usuario Actual" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Sesión activa:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,5"/>
+                                    <TextBlock Text="{Binding CurrentUser.Username}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15"/>
+                                    <Button Content="🔄 Cambiar Usuario" Command="{Binding SwitchUserCommand}" 
+                                            Style="{StaticResource SecondaryButton}" Height="40" Width="180" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Cerrar Sesión -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
+                                <StackPanel>
+                                    <TextBlock Text="🚪 Cerrar Sesión" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Cierra la sesión actual y regresa a la pantalla de login." 
+                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15" TextWrapping="Wrap"/>
+                                    <Button Content="CERRAR SESIÓN" Command="{Binding LogoutCommand}" 
+                                            Style="{StaticResource DangerButton}" Height="40" Width="180" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
                 </ScrollViewer>
             </TabItem>
         </TabControl>

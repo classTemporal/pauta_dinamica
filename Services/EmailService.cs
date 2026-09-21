@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Windows;
+using PautaDinamicaApp;
 using PautaDinamicaApp.Models;
 
 namespace PautaDinamicaApp.Services
@@ -96,12 +98,12 @@ namespace PautaDinamicaApp.Services
             to = (to ?? "").Trim();
             if (string.IsNullOrWhiteSpace(to))
             {
-                System.Windows.MessageBox.Show(
+                MessageBoxHelper.Show(
                     "No se pudo determinar el destinatario del correo (To vacío). Verifique que la pauta tenga configurada la plantilla de correo o el Directorio de Contactos.\n\n" +
                     "Si usa Detección Automática, asegúrese de que el agente tenga correo asociado.",
                     "Destinatario no encontrado",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Warning);
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 return;
             }
 
@@ -154,12 +156,12 @@ namespace PautaDinamicaApp.Services
             {
                 // Some Windows shells silently drop mailto URLs over 2000 chars. Warn the
                 // user but still attempt — truncated bodies may still be useful.
-                var warn = System.Windows.MessageBox.Show(
+                var warn = MessageBoxHelper.Show(
                     $"La longitud total del enlace 'mailto' ({url.Length} caracteres) supera el límite recomendado ({mailtoLimit}). " +
                     "El cliente de correo podría no abrirse o mostrar información incompleta. Considere usar el método Outlook en la configuración de la pauta.\n\n¿Desea continuar de todos modos?",
                     "Aviso de longitud mailto",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Warning);
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning, true);
                 if (warn == System.Windows.MessageBoxResult.No) return;
             }
 
@@ -169,7 +171,7 @@ namespace PautaDinamicaApp.Services
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show("No se pudo abrir el cliente de correo predeterminado: " + ex.Message);
+                MessageBoxHelper.Show("No se pudo abrir el cliente de correo predeterminado: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -226,7 +228,7 @@ namespace PautaDinamicaApp.Services
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show("Error al usar Outlook Interop: " + ex.Message + "\n\nIntente usar el método 'mailto' en la configuración general.", "Error correo");
+                MessageBoxHelper.Show("Error al usar Outlook Interop: " + ex.Message + "\n\nIntente usar el método 'mailto' en la configuración general.", "Error correo", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
