@@ -90,6 +90,21 @@ namespace PautaDinamicaApp.Services
             string subject = ProcessTemplate(pauta.EmailSubjectTemplate, entry, fields, pauta.EmailReplacementRules);
             string body = ProcessTemplate(pauta.EmailBodyTemplate, entry, fields, pauta.EmailReplacementRules);
 
+            // FIX (Card 37): "mensaje olvidado" — si el destinatario (To) quedó vacío, el
+            // correo se abría sin destinatario y podía enviarse en blanco. Bloqueamos el envío
+            // y avisamos al usuario en lugar de abrir Outlook/mailto sin remitente.
+            to = (to ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(to))
+            {
+                System.Windows.MessageBox.Show(
+                    "No se pudo determinar el destinatario del correo (To vacío). Verifique que la pauta tenga configurada la plantilla de correo o el Directorio de Contactos.\n\n" +
+                    "Si usa Detección Automática, asegúrese de que el agente tenga correo asociado.",
+                    "Destinatario no encontrado",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
             // Collect all attachments
             var attachments = new List<string>();
             if (!string.IsNullOrEmpty(pdfPath) && File.Exists(pdfPath)) attachments.Add(pdfPath);
@@ -124,11 +139,28 @@ namespace PautaDinamicaApp.Services
 
         private void SendViaMailto(string to, string cc, string subject, string body)
         {
-            string url = $"mailto:{Uri.EscapeDataString(to)}?cc={Uri.EscapeDataString(cc)}&subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}";
+            // RFC 6068: line breaks inside mailto body must be CRLF encoded as %0D%0A.
+            // Uri.EscapeDataString maps '\n' -> '%0A' which some clients ignore, so we
+            // normalize newlines to CRLF before encoding to preserve paragraphs.
+            string NormalizeLineBreaks(string s) => s?.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n") ?? "";
 
-            if (url.Length > 2000)
+            string url = "mailto:" + Uri.EscapeDataString(to) +
+                         "?cc=" + Uri.EscapeDataString(NormalizeLineBreaks(cc)) +
+                         "&subject=" + Uri.EscapeDataString(NormalizeLineBreaks(subject)) +
+                         "&body=" + Uri.EscapeDataString(NormalizeLineBreaks(body));
+
+            const int mailtoLimit = 2000;
+            if (url.Length > mailtoLimit)
             {
-                System.Windows.MessageBox.Show("El correo es demasiado largo para el método 'mailto'. Se ha truncado o podría no abrirse. Considere usar Outlook Interop.", "Aviso");
+                // Some Windows shells silently drop mailto URLs over 2000 chars. Warn the
+                // user but still attempt — truncated bodies may still be useful.
+                var warn = System.Windows.MessageBox.Show(
+                    $"La longitud total del enlace 'mailto' ({url.Length} caracteres) supera el límite recomendado ({mailtoLimit}). " +
+                    "El cliente de correo podría no abrirse o mostrar información incompleta. Considere usar el método Outlook en la configuración de la pauta.\n\n¿Desea continuar de todos modos?",
+                    "Aviso de longitud mailto",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+                if (warn == System.Windows.MessageBoxResult.No) return;
             }
 
             try
@@ -148,7 +180,7 @@ namespace PautaDinamicaApp.Services
                 Type? outlookType = Type.GetTypeFromProgID("Outlook.Application");
                 if (outlookType == null)
                 {
-                    throw new Exception("Microsoft Outlook no parece estar instalado.");
+                    throw new Exception("Microsoft Outlook no parece estar instalado o no se pudo crear la instancia COM.");
                 }
 
                 dynamic outlookApp = Activator.CreateInstance(outlookType)!;
@@ -157,7 +189,19 @@ namespace PautaDinamicaApp.Services
                 mailItem.To = to;
                 mailItem.CC = cc;
                 mailItem.Subject = subject;
-                mailItem.Body = body;
+
+                // FIX (Card 37): Se enviaba el cuerpo como texto plano vía .Body, por lo que
+                // plantillas con HTML (negritas, saltos de línea, comodines) se mostraban
+                // como etiquetas literales en Outlook. Se usa HTMLBody cuando el cuerpo contiene
+                // etiquetas HTML; si es texto plano se conserva .Body para evitar caracteres escapados.
+                if (IsHtml(body))
+                {
+                    mailItem.HTMLBody = body;
+                }
+                else
+                {
+                    mailItem.Body = body;
+                }
 
                 if (attachmentPaths != null)
                 {
@@ -165,7 +209,15 @@ namespace PautaDinamicaApp.Services
                     {
                         if (System.IO.File.Exists(path))
                         {
-                            mailItem.Attachments.Add(path);
+                            try
+                            {
+                                mailItem.Attachments.Add(path);
+                            }
+                            catch (Exception aex)
+                            {
+                                // Un adjunto inaccesible no debe abortar el envío del correo.
+                                System.Diagnostics.Debug.WriteLine($"Error adjuntando '{path}': {aex.Message}");
+                            }
                         }
                     }
                 }
@@ -176,6 +228,18 @@ namespace PautaDinamicaApp.Services
             {
                 System.Windows.MessageBox.Show("Error al usar Outlook Interop: " + ex.Message + "\n\nIntente usar el método 'mailto' en la configuración general.", "Error correo");
             }
+        }
+
+        /// <summary>
+        /// Determina si un cuerpo de correo contiene etiquetas HTML para decidir entre .Body y .HTMLBody.
+        /// </summary>
+        private static bool IsHtml(string? content)
+        {
+            if (string.IsNullOrWhiteSpace(content)) return false;
+            string lower = content.ToLowerInvariant();
+            return lower.Contains("<html") || lower.Contains("<body") ||
+                   lower.Contains("<br") || lower.Contains("<p>") || lower.Contains("<div") ||
+                   lower.Contains("<table") || lower.Contains("<a ") || lower.Contains("<b>") || lower.Contains("<strong");
         }
     }
 }

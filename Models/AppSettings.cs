@@ -13,7 +13,8 @@ namespace PautaDinamicaApp.Models
         Left,
         Right,
         Top,
-        Bottom
+        Bottom,
+        BottomNoSticky
     }
 
     public class AppSettings
@@ -24,6 +25,7 @@ namespace PautaDinamicaApp.Models
 
         // UI Theme
         public Services.AppTheme Theme { get; set; } = Services.ThemeService.GetSystemTheme();
+        public string AccentColor { get; set; } = "#007bff";
 
         // Admin Settings
         public bool EnableInternalTimer { get; set; } = true;

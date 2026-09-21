@@ -139,6 +139,16 @@ namespace PautaDinamicaApp.Models
         private System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule> _pdfReplacementRules = new();
         public System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule> PdfReplacementRules { get => _pdfReplacementRules; set => SetProperty(ref _pdfReplacementRules, value); }
 
+        // --- Orden de Campos en Dashboard (Card 39) ---
+        // Lista de IDs de campos que define el orden de visualización en el dashboard principal.
+        // Si está vacío, se usa el orden natural de la configuración.
+        private List<string> _dashboardFieldOrder = new();
+        public List<string> DashboardFieldOrder
+        {
+            get => _dashboardFieldOrder;
+            set => SetProperty(ref _dashboardFieldOrder, value);
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)

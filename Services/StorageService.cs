@@ -214,6 +214,32 @@ namespace PautaDinamicaApp.Services
             catch { }
         }
 
+        /// <summary>
+        /// Loads templates associated with a pauta. Falls back to global templates
+        /// (PautaId empty) so templates created before pauta-association still work.
+        /// </summary>
+        public List<MessageTemplate> LoadTemplatesForPauta(string? pautaId)
+        {
+            var all = LoadTemplates();
+            if (string.IsNullOrEmpty(pautaId))
+                return all.Where(t => string.IsNullOrEmpty(t.PautaId) || t.PautaId == pautaId).ToList();
+            return all.Where(t => t.PautaId == pautaId).ToList();
+        }
+
+        /// <summary>
+        /// Returns the list of distinct category names used by templates for a pauta.
+        /// </summary>
+        public List<string> LoadTemplateCategories(string? pautaId)
+        {
+            var templates = LoadTemplatesForPauta(pautaId);
+            return templates
+                .Where(t => !string.IsNullOrEmpty(t.Category))
+                .Select(t => t.Category)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
         // --- ATTACHMENT MANAGEMENT ---
         public string GetAttachmentsBaseDir()
         {

@@ -72,11 +72,11 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Padding="20,15" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Padding="20,15" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                Visibility="{Binding IsHeaderVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -126,8 +126,30 @@
                                Fill="{DynamicResource AccentBrush}" Width="16" Height="16" Stretch="Uniform"/>
                     </Button>
 
+                    <!-- Documentación y Guía del Sistema -->
+                    <Button Command="{Binding ShowGeneralHelpCommand}" 
+                            Style="{StaticResource GhostButton}" 
+                            Padding="10,2" Margin="0,0,10,0" Height="32"
+                            ToolTip="Documentación y Guía del Sistema">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📘 Documentación y Guía" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Usuario y Cerrar Sesión -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,15,0" VerticalAlignment="Center">
+                        <TextBlock Text="👤 Usuario: " FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding CurrentUser.Username}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                        <Button Command="{Binding LogoutCommand}" 
+                                Style="{StaticResource GhostButton}" Foreground="{DynamicResource DangerBrush}"
+                                Padding="10,2" Margin="0" Height="25" Content="CERRAR SESIÓN"/>
+                    </StackPanel>
+
                     <Button Content="⚙️ CONFIG. GENERAL" Command="{Binding OpenSettingsCommand}" 
                             Style="{StaticResource GhostButton}" Padding="10,0" Height="32" Margin="0,0,10,0"/>
+                    <Button Content="👁️" Command="{Binding ToggleHeaderCommand}"
+                            Style="{StaticResource GhostButton}" Width="32" Height="32" Padding="0" Margin="0,0,10,0"
+                            ToolTip="Ocultar/Mostrar encabezado"/>
                     <Button Content="✏️ CONFIG. PAUTA" Command="{Binding OpenConfigCommand}" 
                             Style="{StaticResource GhostButton}" Padding="10,0" Height="32"/>
                 </StackPanel>
@@ -144,6 +166,9 @@
                                 <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
                                     <Setter Property="Height" Value="{Binding DashboardFormHeight, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
                                 </DataTrigger>
+                                <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
+                                    <Setter Property="Height" Value="*"/>
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </RowDefinition.Style>
@@ -156,6 +181,9 @@
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding DashboardLayout}" Value="Top">
                                     <Setter Property="Height" Value="{Binding DashboardFormHeight, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
+                                    <Setter Property="Height" Value="Auto"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -251,9 +279,15 @@
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
                                 <Setter Property="Grid.Column" Value="0"/>
-                                <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.Row" Value="2"/>
                                 <Setter Property="Grid.ColumnSpan" Value="3"/>
                                 <Setter Property="Margin" Value="0,0,0,10"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.Row" Value="2"/>
+                                <Setter Property="Grid.ColumnSpan" Value="3"/>
+                                <Setter Property="Margin" Value="0,0,0,0"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -279,8 +313,6 @@
                             Content="✖️ Cancelar" Height="40" Padding="20,0" Margin="0,0,10,0"
                             Style="{StaticResource DangerButton}"
                             Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                    <Button Command="{Binding SendEmailsCommand}" 
-                            Content="📧 Enviar todos los correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
                 </StackPanel>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -341,6 +373,11 @@
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
                                 <Setter Property="Grid.Column" Value="0"/>
                                 <Setter Property="Grid.Row" Value="2"/>
+                                <Setter Property="Grid.ColumnSpan" Value="3"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.Row" Value="0"/>
                                 <Setter Property="Grid.ColumnSpan" Value="3"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -462,6 +499,7 @@
                         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                     Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                             <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                            <Button Content="📧 Enviar todos los correos" Command="{Binding SendEmailsCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
                             <Button Content="📥 Importar Excel" Command="{Binding ImportFromExcelCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5" Background="#6f42c1"/>
                             <Button Content="📊 Exportar a Excel" Command="{Binding ExportToExcelCommand}" Padding="10,8" Style="{StaticResource ExcelButton}" Margin="0,5,0,5"/>
                         </WrapPanel>
@@ -625,37 +663,6 @@
                 </DockPanel>
             </Border>
         </Grid>
-
-        <!-- Footer / Barra Inferior -->
-        <Border Grid.Row="2" Padding="20,5" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
-            <Grid>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Command="{Binding ShowGeneralHelpCommand}" 
-                            Style="{StaticResource GhostButton}" 
-                            Padding="10,2" Margin="0" Height="25">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="📘 Documentación y Guía del Sistema" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
-                        </StackPanel>
-                    </Button>
-                    <Separator Width="1" Height="15" Margin="10,0" Background="{DynamicResource BorderBrush}"/>
-                    <TextBlock Text="v2.1.0" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                </StackPanel>
-                
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <TextBlock Text="👤 Usuario: " FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding CurrentUser.Username}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,15,0"/>
-                    
-                    <Button Command="{Binding LogoutCommand}" 
-                            Style="{StaticResource GhostButton}" Foreground="{DynamicResource DangerBrush}"
-                            Padding="10,2" Margin="0" Height="25" Content="CERRAR SESIÓN"/>
-
-                    <TextBlock Text="CHECK-O - Auditoría de Calidad" 
-                               Margin="20,0,0,0"
-                               VerticalAlignment="Center" 
-                               FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic"/>
-                </StackPanel>
-            </Grid>
-        </Border>
     </Grid>
 
 </Window>

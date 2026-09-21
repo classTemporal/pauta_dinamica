@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Forms; // Using WinForms for FolderBrowserDialog
 using System.Collections.ObjectModel;
@@ -6,6 +7,7 @@ using System.Linq;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using System.Windows;
+using System.Windows.Media;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 
@@ -33,6 +35,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand CancelCommand { get; }
         public ICommand OpenTemplateManagementCommand { get; }
         public ICommand UnlockAdminSettingsCommand { get; }
+        public ICommand PickAccentColorCommand { get; }
 
         public string AdminPassword { get => _adminPassword; set => SetProperty(ref _adminPassword, value); }
         public bool IsAdminSettingsUnlocked { get => _isAdminSettingsUnlocked; set => SetProperty(ref _isAdminSettingsUnlocked, value); }
@@ -72,12 +75,63 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     Settings.Theme = value;
                     OnPropertyChanged();
-                    new ThemeService().SetTheme(value);
+                    var ts = new ThemeService();
+                    ts.SetTheme(value);
+                    ts.ApplyAccentColor(Settings.AccentColor);
                 }
             }
         }
 
         public Array Themes => Enum.GetValues(typeof(Services.AppTheme));
+
+        // Popular accent color presets (name → hex)
+        public Dictionary<string, string> AccentColors { get; } = new()
+        {
+            { "Azul", "#007bff" },
+            { "Rosa", "#ff6090" },
+            { "Rojo", "#dc3545" },
+            { "Verde", "#28a745" },
+            { "Amarillo", "#ffc107" },
+            { "Púrpura", "#6f42c1" },
+            { "Teal", "#20c997" },
+            { "Naranja", "#fd7e14" }
+        };
+
+        private string _selectedAccentColorName = "Azul";
+        public string SelectedAccentColorName
+        {
+            get => _selectedAccentColorName;
+            set
+            {
+                if (SetProperty(ref _selectedAccentColorName, value))
+                {
+                    if (AccentColors.TryGetValue(value, out var hex))
+                    {
+                        Settings.AccentColor = hex;
+                        CustomAccentColor = "";
+                        new ThemeService().ApplyAccentColor(hex);
+                    }
+                }
+            }
+        }
+
+        private string _customAccentColor = "";
+        public string CustomAccentColor
+        {
+            get => _customAccentColor;
+            set
+            {
+                if (SetProperty(ref _customAccentColor, value))
+                {
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        Settings.AccentColor = value;
+                        _selectedAccentColorName = "";
+                        new ThemeService().ApplyAccentColor(value);
+                    }
+                }
+            }
+        }
 
         public Dictionary<string, string> SpellCheckLanguages { get; } = new()
         {
@@ -104,15 +158,28 @@ namespace PautaDinamicaApp.ViewModels
             set
             {
                 if (_selectedPauta == value) return;
-                if (_selectedPauta != null) SyncContacts();
+                if (_selectedPauta != null)
+                {
+                    _selectedPauta.PropertyChanged -= OnSelectedPautaPropertyChanged;
+                    SyncContacts();
+                }
 
                 _selectedPauta = value;
                 if (value != null)
                 {
+                    value.PropertyChanged += OnSelectedPautaPropertyChanged;
                     LoadPautaData(value);
                 }
 
                 OnPropertyChanged();
+            }
+        }
+
+        private void OnSelectedPautaPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PautaSchema.EmailNameFieldId) && sender is PautaSchema)
+            {
+                AutoDetectAgentes();
             }
         }
 
@@ -122,6 +189,21 @@ namespace PautaDinamicaApp.ViewModels
 
         public ObservableCollection<RecipientContact> CurrentContacts { get => _currentContacts; set => SetProperty(ref _currentContacts, value); }
         public ObservableCollection<FieldDefinition> CurrentPautaFields { get => _currentPautaFields; set => SetProperty(ref _currentPautaFields, value); }
+
+        // Agentes detectados automáticamente que NO tienen correo asociado
+        private ObservableCollection<RecipientContact> _missingEmailContacts = new();
+        public ObservableCollection<RecipientContact> MissingEmailContacts
+        {
+            get => _missingEmailContacts;
+            set => SetProperty(ref _missingEmailContacts, value);
+        }
+
+        private bool _hasMissingEmails;
+        public bool HasMissingEmails
+        {
+            get => _hasMissingEmails;
+            set => SetProperty(ref _hasMissingEmails, value);
+        }
 
         public bool AllContactsSelected
         {
@@ -144,6 +226,8 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand OpenEmailDirectoryCommand { get; }
         public ICommand ToggleContactMultiSelectCommand { get; }
         public ICommand PickColorCommand { get; }
+        public ICommand AutoDetectAgentesCommand { get; }
+        public ICommand OpenEmailDirectoryFromWarningCommand { get; }
         public ICommand AddEmailReplacementRuleCommand { get; }
         public ICommand RemoveEmailReplacementRuleCommand { get; }
         public ICommand ToggleEmailRuleMultiSelectCommand { get; }
@@ -183,6 +267,10 @@ namespace PautaDinamicaApp.ViewModels
             ApplyCommand = new RelayCommand(_ => SaveSettings(false));
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
             PickColorCommand = new RelayCommand(_ => PickColor());
+            PickAccentColorCommand = new RelayCommand(_ => PickAccentColor());
+
+            // Initialize accent color selection from saved settings
+            InitializeAccentColor();
 
             AddContactCommand = new RelayCommand(_ => AddContact());
             DeleteContactCommand = new RelayCommand(p => DeleteContact(p as RecipientContact));
@@ -192,6 +280,8 @@ namespace PautaDinamicaApp.ViewModels
             SelectAllContactsCommand = new RelayCommand(p => { AllContactsSelected = (bool)(p ?? false); });
             OpenEmailDirectoryCommand = new RelayCommand(_ => OpenEmailDirectory());
             ToggleContactMultiSelectCommand = new RelayCommand(_ => IsContactMultiSelectMode = !IsContactMultiSelectMode);
+            AutoDetectAgentesCommand = new RelayCommand(_ => AutoDetectAgentes());
+            OpenEmailDirectoryFromWarningCommand = new RelayCommand(_ => OpenEmailDirectory());
             OpenTemplateManagementCommand = new RelayCommand(_ => OpenTemplateManagement());
             UnlockAdminSettingsCommand = new RelayCommand(_ => UnlockAdminSettings());
 
@@ -226,7 +316,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void OpenTemplateManagement()
         {
-            var vm = new TemplateManagementViewModel();
+            var vm = new TemplateManagementViewModel(SelectedPauta?.Id ?? string.Empty);
             var win = new Views.TemplateManagementWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
             win.ShowDialog();
         }
@@ -257,6 +347,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             CurrentContacts = new ObservableCollection<RecipientContact>(pauta.RecipientContacts ?? new());
             CurrentPautaFields = new ObservableCollection<FieldDefinition>(_storageService.LoadConfiguration(pauta.Id).Where(f => f.Type != FieldType.Separator));
+            AutoDetectAgentes();
         }
 
         private void AddContact()
@@ -386,6 +477,71 @@ namespace PautaDinamicaApp.ViewModels
             {
                 SelectedPauta.RecipientContacts = CurrentContacts.ToList();
             }
+            // Refresh missing-email tracking
+            var missing = CurrentContacts.Where(c => string.IsNullOrWhiteSpace(c.Email)).ToList();
+            MissingEmailContacts = new ObservableCollection<RecipientContact>(missing);
+            HasMissingEmails = missing.Any();
+        }
+
+        private void AutoDetectAgentes()
+        {
+            if (SelectedPauta == null) return;
+
+            // Only detect if a source field (Name/Agent) is selected
+            if (string.IsNullOrEmpty(SelectedPauta.EmailNameFieldId))
+            {
+                MissingEmailContacts.Clear();
+                HasMissingEmails = false;
+                return;
+            }
+
+            // Load records to extract unique agent names from the source field
+            var records = _storageService.LoadRecords(SelectedPauta.Id);
+            var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var record in records)
+            {
+                if (record.Values.TryGetValue(SelectedPauta.EmailNameFieldId, out var val) && val != null)
+                {
+                    string nameText = val.ToString()?.Trim() ?? "";
+                    if (!string.IsNullOrWhiteSpace(nameText))
+                    {
+                        uniqueNames.Add(nameText);
+                    }
+                }
+            }
+
+            // Merge: for each detected unique name, check if a contact already exists
+            var existingMap = CurrentContacts
+                .Where(c => !string.IsNullOrWhiteSpace(c.Name))
+                .ToDictionary(c => c.Name.Trim(), c => c, StringComparer.OrdinalIgnoreCase);
+
+            var newContacts = new List<RecipientContact>();
+            foreach (var name in uniqueNames)
+            {
+                if (existingMap.TryGetValue(name, out var existing))
+                {
+                    newContacts.Add(existing);
+                }
+                else
+                {
+                    // Auto-create a contact without email to trigger the red alert
+                    newContacts.Add(new RecipientContact { Name = name, Email = "" });
+                }
+            }
+
+            // Preserve any contacts that don't match any detected name
+            var detectedNames = new HashSet<string>(uniqueNames, StringComparer.OrdinalIgnoreCase);
+            foreach (var c in CurrentContacts)
+            {
+                if (!string.IsNullOrWhiteSpace(c.Name) && !detectedNames.Contains(c.Name.Trim()))
+                {
+                    newContacts.Add(c);
+                }
+            }
+
+            CurrentContacts = new ObservableCollection<RecipientContact>(newContacts.OrderBy(c => c.Name).ToList());
+            // SyncContacts now also updates MissingEmailContacts and HasMissingEmails
+            SyncContacts();
         }
 
         private void ImportContacts()
@@ -459,7 +615,7 @@ namespace PautaDinamicaApp.ViewModels
                 string exportFolder = Settings.ExcelExportPath;
                 string pautaName = SelectedPauta?.Name ?? "Pauta";
                 string cleanName = string.Join("_", pautaName.Split(System.IO.Path.GetInvalidFileNameChars()));
-                string fileName = $"Contactos_{cleanName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                string fileName = $"Contactos_{cleanName}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
 
                 if (System.IO.Directory.Exists(exportFolder))
                 {
@@ -522,13 +678,58 @@ namespace PautaDinamicaApp.ViewModels
         private void PickColor()
         {
             if (SelectedPauta == null) return;
-
             using (var dialog = new ColorDialog())
             {
                 if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
                     var c = dialog.Color;
                     SelectedPauta.ColoringColor = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+                }
+            }
+        }
+
+        private void PickAccentColor()
+        {
+            using (var dialog = new ColorDialog())
+            {
+                // Set initial color from current Settings.AccentColor
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(Settings.AccentColor))
+                    {
+                        var wpfColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(Settings.AccentColor);
+                        dialog.Color = System.Drawing.Color.FromArgb(wpfColor.A, wpfColor.R, wpfColor.G, wpfColor.B);
+                    }
+                }
+                catch { /* Use default color in dialog */ }
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    var c = dialog.Color;
+                    string hex = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+                    CustomAccentColor = hex;
+                }
+            }
+        }
+
+        private void InitializeAccentColor()
+        {
+            // Determine if the saved accent color matches a preset or is custom
+            if (!string.IsNullOrWhiteSpace(Settings.AccentColor))
+            {
+                var match = AccentColors.FirstOrDefault(kvp =>
+                    kvp.Value.Equals(Settings.AccentColor, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(match.Key))
+                {
+                    _selectedAccentColorName = match.Key;
+                    OnPropertyChanged(nameof(SelectedAccentColorName));
+                    _customAccentColor = "";
+                }
+                else
+                {
+                    _customAccentColor = Settings.AccentColor;
+                    _selectedAccentColorName = "";
+                    OnPropertyChanged(nameof(CustomAccentColor));
+                    OnPropertyChanged(nameof(SelectedAccentColorName));
                 }
             }
         }
@@ -576,6 +777,22 @@ namespace PautaDinamicaApp.ViewModels
 
             _storageService.SaveSettings(Settings);
             _storageService.SavePautas(Pautas.ToList());
+
+            // Apply accent color and theme immediately
+            var ts = new ThemeService();
+            ts.SetTheme(Settings.Theme);
+            ts.ApplyAccentColor(Settings.AccentColor);
+
+            // Sync accent color to the default (login) profile so it persists across sessions
+            try
+            {
+                var defaultStorage = new StorageService("default");
+                var defaultSettings = defaultStorage.LoadSettings();
+                defaultSettings.AccentColor = Settings.AccentColor;
+                defaultSettings.Theme = Settings.Theme;
+                defaultStorage.SaveSettings(defaultSettings);
+            }
+            catch { /* Ignorar error al guardar default */ }
 
             if (close)
             {

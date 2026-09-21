@@ -590,6 +590,29 @@ namespace PautaDinamicaApp.ViewModels
             RecalculatePdfOrder();
         }
 
+        /// <summary>
+        /// Card 40: Synchronizes DashboardFieldOrder with the current Fields collection order.
+        /// This ensures that when fields are reordered via drag-drop in ConfigWindow, the
+        /// dashboard display order is kept in sync. Only non-separator fields are included.
+        /// </summary>
+        public void SyncDashboardFieldOrderFromFields()
+        {
+            if (EditingPauta == null) return;
+
+            // Build the new dashboard order from the current Fields collection order,
+            // excluding separators (which are not displayed as individual dashboard items).
+            var newOrder = Fields
+                .Where(f => f.Type != FieldType.Separator)
+                .Select(f => f.Id)
+                .ToList();
+
+            // Only update if there's at least one field
+            if (newOrder.Any())
+            {
+                EditingPauta.DashboardFieldOrder = newOrder;
+            }
+        }
+
         private void RecalculatePdfOrder()
         {
             for (int i = 0; i < PdfColumns.Count; i++)
@@ -879,6 +902,7 @@ namespace PautaDinamicaApp.ViewModels
                                 ep.ColoringColor = m.ColoringColor;
                                 ep.EmailReplacementRules = m.EmailReplacementRules ?? new System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule>();
                                 ep.PdfReplacementRules = m.PdfReplacementRules ?? new System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule>();
+                                ep.DashboardFieldOrder = m.DashboardFieldOrder ?? new List<string>();
 
                                 LoadExportColumns();
                                 LoadPdfColumns();
@@ -962,9 +986,35 @@ namespace PautaDinamicaApp.ViewModels
 
         private void AddPauta()
         {
-            var newPauta = new PautaSchema { Name = "Nueva Pauta " + (Pautas.Count + 1) };
-            Pautas.Add(newPauta);
-            EditingPauta = newPauta;
+            // Card 39: Launch the pauta creation wizard instead of creating an empty pauta
+            var wizardVm = new CreatePautaWizardViewModel();
+            var wizardWin = new Views.CreatePautaWizardWindow { DataContext = wizardVm, Owner = System.Windows.Application.Current.MainWindow };
+            
+            wizardVm.OnWizardCompleted += (s, e) =>
+            {
+                if (wizardVm.CreatedPauta != null)
+                {
+                    // The pauta was already saved to disk by the wizard; just add to in-memory list
+                    Pautas.Insert(0, wizardVm.CreatedPauta);
+                    EditingPauta = wizardVm.CreatedPauta;
+                    WasDatabaseModified = true;
+
+                    // Load the configuration into memory for the new pauta
+                    var config = _storageService.LoadConfiguration(wizardVm.CreatedPauta.Id).OrderBy(f => f.Order).ToList();
+                    _unsavedConfigs.Remove(wizardVm.CreatedPauta.Id);
+                    _unsavedConfigs[wizardVm.CreatedPauta.Id] = config;
+
+                    wizardWin.DialogResult = true;
+                    wizardWin.Close();
+                }
+            };
+            wizardVm.OnWizardCanceled += (s, e) =>
+            {
+                wizardWin.DialogResult = false;
+                wizardWin.Close();
+            };
+
+            wizardWin.ShowDialog();
         }
 
         private void RenamePauta(PautaSchema? pauta)
@@ -1063,6 +1113,9 @@ namespace PautaDinamicaApp.ViewModels
                 ColoringField = source.ColoringField,
                 ColoringValue = source.ColoringValue,
                 ColoringColor = source.ColoringColor,
+
+                // Card 39: Copy DashboardFieldOrder
+                DashboardFieldOrder = source.DashboardFieldOrder?.Select(id => id).ToList() ?? new List<string>(),
 
                 EmailReplacementRules = new System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule>(
                     source.EmailReplacementRules?.Select(r => new EmailReplacementRule
@@ -1275,7 +1328,7 @@ namespace PautaDinamicaApp.ViewModels
                             string exportDir = settings.ExcelExportPath;
                             if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
 
-                            string fileName = $"Resp_{EditingPauta.Name}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                            string fileName = $"Resp_{EditingPauta.Name}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
                             string filePath = Path.Combine(exportDir, fileName);
 
                             try
@@ -1331,7 +1384,7 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     string exportDir = settings.ExcelExportPath;
                     if (!Directory.Exists(exportDir)) Directory.CreateDirectory(exportDir);
-                    string filePath = Path.Combine(exportDir, $"Final_{p.Name}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+                    string filePath = Path.Combine(exportDir, $"Final_{p.Name}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
                     try
                     {

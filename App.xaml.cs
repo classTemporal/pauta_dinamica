@@ -15,6 +15,7 @@ namespace PautaDinamicaApp
             var themeService = new ThemeService();
 
             themeService.SetTheme(settings.Theme);
+            themeService.ApplyAccentColor(settings.AccentColor);
 
             // Ensure all future windows apply the correct title bar theme when loaded
             EventManager.RegisterClassHandler(typeof(Window), Window.LoadedEvent, new RoutedEventHandler((s, args) =>

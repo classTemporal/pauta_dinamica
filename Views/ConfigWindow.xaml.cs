@@ -16,6 +16,7 @@ using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Windows.Threading;
 
 
 namespace PautaDinamicaApp
@@ -25,6 +26,8 @@ namespace PautaDinamicaApp
         private System.Windows.Point _startPoint;
         private ListBoxItem? _draggedItem;
         private bool _isDraggingNow;
+        private ScrollViewer? _currentDragScrollViewer;
+        private DispatcherTimer? _autoScrollTimer;
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -223,6 +226,7 @@ namespace PautaDinamicaApp
                         _draggedItem.GiveFeedback -= feedbackHandler;
                         dragWindow.Close();
                         _isDraggingNow = false;
+                        StopAutoScroll();
                     }
                 }
             }
@@ -255,6 +259,11 @@ namespace PautaDinamicaApp
                     if (newIndex != -1 && oldIndex != newIndex)
                     {
                         vm.Fields.Move(oldIndex, newIndex);
+                        // Card 40: Keep DashboardFieldOrder in sync with the new Fields order.
+                        // The dashboard displays fields following DashboardFieldOrder; if we
+                        // don't update it here, reordering in ConfigWindow would persist a
+                        // stale dashboard order that doesn't match the user's intent.
+                        vm.SyncDashboardFieldOrderFromFields();
                     }
                 }
             }
@@ -495,7 +504,7 @@ namespace PautaDinamicaApp
                         _draggedItem.GiveFeedback += feedbackHandler;
 
                         try { DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move); }
-                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; StopAutoScroll(); }
                     }
                 }
             }
@@ -562,7 +571,7 @@ namespace PautaDinamicaApp
                         _draggedItem.GiveFeedback += feedbackHandler;
 
                         try { DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move); }
-                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; StopAutoScroll(); }
                     }
                 }
             }
@@ -629,7 +638,7 @@ namespace PautaDinamicaApp
                         _draggedItem.GiveFeedback += feedbackHandler;
 
                         try { DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move); }
-                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; StopAutoScroll(); }
                     }
                 }
             }
@@ -714,6 +723,84 @@ namespace PautaDinamicaApp
             if (this.DataContext is ViewModels.EditorViewModel vm && vm.EditingPauta != null)
             {
                 vm.EditingPauta.PdfFileNameFieldId2 = "";
+            }
+        }
+
+        // --- Auto-Scroll Helpers for Drag-Drop ---
+
+        /// <summary>
+        /// Finds a child of a given type in the visual tree.
+        /// </summary>
+        private static T? FindVisualChild<T>(DependencyObject? parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T t) return t;
+                var result = FindVisualChild<T>(child);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Starts a timer that performs auto-scrolling when the cursor is near the
+        /// top or bottom edge of a ListBox during a drag operation.
+        /// </summary>
+        private void StartAutoScroll(System.Windows.Controls.ListBox listBox)
+        {
+            _currentDragScrollViewer = FindVisualChild<ScrollViewer>(listBox);
+            if (_currentDragScrollViewer == null) return;
+
+            _autoScrollTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(15) };
+            _autoScrollTimer.Tick -= AutoScrollTimer_Tick; // avoid duplicate subscriptions
+            _autoScrollTimer.Tick += AutoScrollTimer_Tick;
+            _autoScrollTimer.Start();
+        }
+
+        private void StopAutoScroll()
+        {
+            if (_autoScrollTimer != null)
+            {
+                _autoScrollTimer.Stop();
+                _autoScrollTimer.Tick -= AutoScrollTimer_Tick;
+                _autoScrollTimer = null;
+            }
+            _currentDragScrollViewer = null;
+        }
+
+        private void AutoScrollTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_currentDragScrollViewer == null) return;
+            var scrollViewer = _currentDragScrollViewer;
+
+            // Get cursor position relative to the ScrollViewer
+            System.Windows.Point cursor = Mouse.GetPosition(scrollViewer);
+            double height = scrollViewer.ActualHeight;
+
+            // If the cursor is near the top, scroll up; near the bottom, scroll down
+            const double edgeThreshold = 40.0; // pixels from edge to trigger scroll
+
+            if (cursor.Y < edgeThreshold)
+            {
+                scrollViewer.LineUp();
+            }
+            else if (cursor.Y > height - edgeThreshold)
+            {
+                scrollViewer.LineDown();
+            }
+        }
+
+        /// <summary>
+        /// Handles DragOver for all ListBoxes to enable auto-scroll during drag-drop.
+        /// </summary>
+        private void ListBox_DragOver(object sender, DragEventArgs e)
+        {
+            if (!_isDraggingNow) return;
+            if (sender is System.Windows.Controls.ListBox listBox)
+            {
+                StartAutoScroll(listBox);
             }
         }
     }

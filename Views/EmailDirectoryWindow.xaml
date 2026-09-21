@@ -8,10 +8,13 @@
     <Window.Resources>
         <conv:BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
+        <conv:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
+        <conv:BooleanToFontStyleConverter x:Key="BooleanToFontStyleConverter"/>
     </Window.Resources>
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -33,13 +36,37 @@
                           SelectedValuePath="Id"
                           DisplayMemberPath="Label"
                           Height="36"/>
+                <Button Content="🔍 Auto-detectar Agentes"
+                        Command="{Binding AutoDetectAgentesCommand}"
+                        Style="{StaticResource GhostButton}" Height="30" Margin="0,8,0,0" HorizontalAlignment="Left" FontSize="11"/>
                 <TextBlock Text="* El sistema buscará el valor de este campo en el registro para encontrar el correo en el directorio." 
                            FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,0" FontStyle="Italic"/>
             </StackPanel>
         </Border>
 
+        <!-- Alerta de correos faltantes -->
+        <Border Grid.Row="2" x:Name="MissingEmailAlert" Visibility="{Binding HasMissingEmails, Converter={StaticResource BoolToVis}}" 
+                Background="#20EF4444" BorderBrush="#EF4444" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="⚠️" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12">
+                    <Run FontWeight="Bold" Foreground="#EF4444">¡Atención!</Run>
+                    <LineBreak/>
+                    <Run Foreground="{DynamicResource TextBrush}">Hay agentes sin correo electrónico asociado. Complete los correos para poder enviarlos correctamente.</Run>
+                </TextBlock>
+                <Button Grid.Column="2" Content="🗂️ Directorio"
+                        Command="{Binding OpenEmailDirectoryFromWarningCommand}"
+                        Style="{StaticResource GhostButton}" Height="30" Padding="10,0" Margin="10,0,0,0" FontSize="11"/>
+            </Grid>
+        </Border>
+
         <!-- Directorio -->
-        <DockPanel Grid.Row="2">
+        <DockPanel Grid.Row="3">
             <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" Padding="10" CornerRadius="8,8,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
                 <Grid>
                     <!-- Vista Normal -->
@@ -114,9 +141,9 @@
                       Background="Transparent" 
                       BorderBrush="{DynamicResource BorderBrush}" 
                       BorderThickness="1,0,1,1"
-                      CanUserAddRows="False"
-                      RowHeight="42"
-                      HeadersVisibility="Column"
+                      CanUserAddRows="False" 
+                      RowHeight="42" 
+                      HeadersVisibility="Column" 
                       GridLinesVisibility="Horizontal"
                       HorizontalGridLinesBrush="{DynamicResource BorderBrush}">
                 <DataGrid.Resources>
@@ -135,6 +162,13 @@
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Style.Triggers>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsMissingEmail}" Value="True"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Background" Value="#30EF4444"/>
+                                <Setter Property="Foreground" Value="#EF4444"/>
+                            </MultiDataTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
                             </Trigger>
@@ -161,7 +195,8 @@
                                 <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
                                          Background="Transparent" BorderThickness="0" 
                                          VerticalContentAlignment="Center" HorizontalContentAlignment="Left"
-                                         Padding="10,0"/>
+                                         Padding="10,0"
+                                         Foreground="{Binding IsMissingEmail, Converter={StaticResource BooleanToColorConverter}}"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -172,7 +207,9 @@
                                 <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" 
                                          Background="Transparent" BorderThickness="0" 
                                          VerticalContentAlignment="Center" HorizontalContentAlignment="Left"
-                                         Padding="10,0" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
+                                         Padding="10,0" 
+                                         Foreground="{Binding IsMissingEmail, Converter={StaticResource BooleanToColorConverter}}"
+                                         FontStyle="{Binding IsMissingEmail, Converter={StaticResource BooleanToFontStyleConverter}}"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -192,7 +229,7 @@
         </DockPanel>
 
         <!-- Pie -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button Content="CANCELAR" Click="CancelButton_Click" 
                     Style="{StaticResource GhostButton}" Width="150" Height="45" Margin="0,0,10,0"/>
             
@@ -204,4 +241,3 @@
         </StackPanel>
     </Grid>
 </Window>
-

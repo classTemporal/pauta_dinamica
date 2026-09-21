@@ -71,6 +71,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ToggleThemeCommand { get; }
         public ICommand ClearFiltersCommand { get; }
         public ICommand OpenAttachmentsFolderCommand { get; }
+        public ICommand ToggleHeaderCommand { get; }
 
         public UserModel? CurrentUser => SessionService.CurrentUser;
         private DateTime _currentAuditStartTime = DateTime.Now;
@@ -214,6 +215,7 @@ namespace PautaDinamicaApp.ViewModels
                 DashboardLayout.Right => "Derecha",
                 DashboardLayout.Top => "Arriba",
                 DashboardLayout.Bottom => "Abajo",
+                DashboardLayout.BottomNoSticky => "Abajo (sin pegamento)",
                 _ => "Izquierda"
             };
             set
@@ -224,12 +226,13 @@ namespace PautaDinamicaApp.ViewModels
                     "Derecha" => DashboardLayout.Right,
                     "Arriba" => DashboardLayout.Top,
                     "Abajo" => DashboardLayout.Bottom,
+                    "Abajo (sin pegamento)" => DashboardLayout.BottomNoSticky,
                     _ => DashboardLayout.Left
                 };
             }
         }
 
-        public List<string> DashboardLayoutOptions => new List<string> { "Izquierda", "Derecha", "Arriba", "Abajo" };
+        public List<string> DashboardLayoutOptions => new List<string> { "Izquierda", "Derecha", "Arriba", "Abajo", "Abajo (sin pegamento)" };
 
         public ICommand ToggleFiltersCommand { get; }
         public ICommand ChangeLayoutCommand { get; }
@@ -242,7 +245,9 @@ namespace PautaDinamicaApp.ViewModels
 
             // Aplicar tema guardado del usuario al iniciar
             _settings = _storageService.LoadSettings();
-            new ThemeService().SetTheme(_settings.Theme);
+            var ts = new ThemeService();
+            ts.SetTheme(_settings.Theme);
+            ts.ApplyAccentColor(_settings.AccentColor);
 
             _recordsView = CollectionViewSource.GetDefaultView(_records);
             _recordsView.Filter = FilterRecords;
@@ -278,6 +283,7 @@ namespace PautaDinamicaApp.ViewModels
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
             ToggleFiltersCommand = new RelayCommand(_ => IsFiltersPanelExpanded = !IsFiltersPanelExpanded);
             ChangeLayoutCommand = new RelayCommand(_ => RotateLayout());
+            ToggleHeaderCommand = new RelayCommand(_ => IsHeaderVisible = !IsHeaderVisible);
             
             // Comandos para Pick Date/Time (mismo comportamiento que en Config)
             PickDateFromCommand = new RelayCommand(p => PickDate(true));
@@ -296,6 +302,7 @@ namespace PautaDinamicaApp.ViewModels
                 DashboardLayout.Top => DashboardLayout.Right,
                 DashboardLayout.Right => DashboardLayout.Bottom,
                 DashboardLayout.Bottom => DashboardLayout.Left,
+                DashboardLayout.BottomNoSticky => DashboardLayout.Left,
                 _ => DashboardLayout.Left
             };
         }
@@ -560,7 +567,19 @@ namespace PautaDinamicaApp.ViewModels
             }
             catch { /* Ignorar error al guardar default */ }
 
-            new ThemeService().SetTheme(newTheme);
+            // Also ensure accent color persists on the default profile
+            var ts = new ThemeService();
+            ts.SetTheme(newTheme);
+            ts.ApplyAccentColor(settings.AccentColor);
+            try
+            {
+                var defaultStorage = new StorageService("default");
+                var defaultSettings = defaultStorage.LoadSettings();
+                defaultSettings.Theme = newTheme;
+                defaultSettings.AccentColor = settings.AccentColor;
+                defaultStorage.SaveSettings(defaultSettings);
+            }
+            catch { /* Ignorar error al guardar default */ }
         }
 
         private void OpenAttachmentsFolder()
@@ -848,7 +867,7 @@ namespace PautaDinamicaApp.ViewModels
                 }
 
                 string presetPart = !string.IsNullOrEmpty(selectedPresetName) ? $"_{selectedPresetName}" : "";
-                string fileName = $"{baseName}{presetPart}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                string fileName = $"{baseName}{presetPart}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
                 filePath = Path.Combine(exportDir, fileName);
             }
 
@@ -1401,6 +1420,13 @@ namespace PautaDinamicaApp.ViewModels
         private bool _isMultiSelectMode;
         public bool IsMultiSelectMode { get => _isMultiSelectMode; set => SetProperty(ref _isMultiSelectMode, value); }
 
+        private bool _isHeaderVisible = true;
+        public bool IsHeaderVisible
+        {
+            get => _isHeaderVisible;
+            set { if (SetProperty(ref _isHeaderVisible, value)) { /* visibility change triggers via binding */ } }
+        }
+
         private void LoadPautas()
         {
             var pautas = _storageService.LoadPautas();
@@ -1463,6 +1489,33 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (CurrentPauta == null) return;
             var config = _storageService.LoadConfiguration(CurrentPauta.Id).OrderBy(f => f.Order).ToList();
+            
+            // Card 39: Apply DashboardFieldOrder from PautaSchema if available
+            // This allows the dashboard to display fields in a different order than the main config list
+            if (CurrentPauta.DashboardFieldOrder != null && CurrentPauta.DashboardFieldOrder.Any())
+            {
+                var orderedConfig = new List<FieldDefinition>();
+                var orderedIds = new HashSet<string>(CurrentPauta.DashboardFieldOrder);
+                
+                // First, add fields in the dashboard-specified order
+                foreach (var fieldId in CurrentPauta.DashboardFieldOrder)
+                {
+                    var field = config.FirstOrDefault(f => f.Id == fieldId);
+                    if (field != null) orderedConfig.Add(field);
+                }
+                
+                // Then, add any remaining fields that weren't in the dashboard order
+                foreach (var field in config)
+                {
+                    if (!orderedIds.Contains(field.Id))
+                    {
+                        orderedConfig.Add(field);
+                    }
+                }
+                
+                config = orderedConfig;
+            }
+            
             var fields = config.Where(c => c.Type != FieldType.Separator).Select(c => new DynamicFieldVM(c)).ToList();
 
             foreach (var f in fields)
@@ -1472,6 +1525,7 @@ namespace PautaDinamicaApp.ViewModels
                     if (e.PropertyName == nameof(DynamicFieldVM.Value) && !_isCalculating)
                     {
                         RefreshCalculations();
+                        CheckDuplicateWarning(f);
                     }
                 };
             }
@@ -1814,6 +1868,41 @@ namespace PautaDinamicaApp.ViewModels
 
         private bool CanSaveRecord() => true;
 
+        /// <summary>
+        /// Checks the current value of a field against all existing records in real-time
+        /// and sets a visible warning on the field if a duplicate is detected.
+        /// </summary>
+        private void CheckDuplicateWarning(DynamicFieldVM field)
+        {
+            // Clear any previous warning first
+            field.DuplicateWarning = "";
+
+            var def = field.Definition;
+            bool checkType = def.Type == FieldType.Text || def.Type == FieldType.Numeric || def.Type == FieldType.TextArea;
+
+            // Only check if the feature is enabled on this field and there is a value
+            if (!checkType || !def.WarnOnDuplicate)
+                return;
+
+            string strValue = field.Value?.ToString() ?? "";
+            if (string.IsNullOrWhiteSpace(strValue))
+                return;
+
+            string currentValue = strValue.Trim();
+
+            // Search for the same value in other existing records (exclude the one being edited)
+            bool isDuplicate = Records.Any(r =>
+                r != SelectedRecord &&
+                r.Values.TryGetValue(field.Definition.Id, out var val) &&
+                val != null &&
+                string.Equals(val.ToString()!.Trim(), currentValue, StringComparison.OrdinalIgnoreCase));
+
+            if (isDuplicate)
+            {
+                field.DuplicateWarning = $"⚠️ Valor duplicado: '{currentValue}' ya existe en otro registro.";
+            }
+        }
+
         private void SaveCurrentRecord()
         {
             foreach (var field in CurrentFields) field.Validate();
@@ -1959,8 +2048,9 @@ namespace PautaDinamicaApp.ViewModels
                 return;
             }
 
-            // Aplicar lógica de exclusión si estamos enviando múltiples
-            if (toProcess.Count > 1 && !string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldId))
+            // Aplicar lógica de exclusión por calificación/campo valor
+            // Funciona tanto para envío individual como múltiple.
+            if (!string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldId) && !string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldValue))
             {
                 int totalBefore = toProcess.Count;
                 toProcess = toProcess.Where(entry =>
@@ -1978,6 +2068,48 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     var res = MessageBox.Show($"Se han excluido {excluded} registros según la regla de la pauta.\n\n¿Desea continuar con los {toProcess.Count} restantes?", "Filtro de Exclusión", MessageBoxButton.YesNo);
                     if (res == MessageBoxResult.No) return;
+                }
+            }
+
+            // --- VALIDACIÓN DE CORREOS FALTANTES (Card 31) ---
+            // Si el envío es automático (UseAutomatedRecipient) y hay agentes sin correo asociado,
+            // bloquear el envío y mostrar un mensaje con opción de ir al directorio de contactos.
+            if (CurrentPauta.UseAutomatedRecipient && !string.IsNullOrEmpty(CurrentPauta.EmailNameFieldId))
+            {
+                var contacts = CurrentPauta.RecipientContacts ?? new List<RecipientContact>();
+                var missingEmailAgents = new List<string>();
+
+                foreach (var entry in toProcess)
+                {
+                    if (entry.Values.TryGetValue(CurrentPauta.EmailNameFieldId, out var nameVal) && nameVal != null)
+                    {
+                        string nameText = nameVal.ToString()?.Trim() ?? "";
+                        if (string.IsNullOrWhiteSpace(nameText)) continue;
+
+                        var contact = contacts.FirstOrDefault(c => string.Equals(c.Name?.Trim(), nameText, StringComparison.OrdinalIgnoreCase));
+                        if (contact == null || string.IsNullOrWhiteSpace(contact.Email))
+                        {
+                            missingEmailAgents.Add(nameText);
+                        }
+                    }
+                }
+
+                if (missingEmailAgents.Any())
+                {
+                    string agentList = string.Join("\n", missingEmailAgents.Distinct().Select(a => $"• {a}"));
+                    string msg = $"No se puede enviar el correo porque los siguientes agentes no tienen correo electrónico asociado:\n\n{agentList}\n\n" +
+                                 "Diríjase al Directorio de Contactos para completar los correos.\n\n¿Abrir Directorio de Contactos ahora?";
+
+                    var result = MessageBox.Show(msg, "Correos Faltantes", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // Abrir la ventana de Configuración > pestaña Correo > Directorio de Contactos
+                        var settingsVm = new ViewModels.SettingsViewModel(CurrentPauta.Id);
+                        var settingsWin = new Views.SettingsWindow { DataContext = settingsVm, Owner = System.Windows.Application.Current.MainWindow };
+                        settingsVm.RequestClose += () => settingsWin.Close();
+                        settingsWin.ShowDialog();
+                    }
+                    return; // Bloquear el envío
                 }
             }
 
