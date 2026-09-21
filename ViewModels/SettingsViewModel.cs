@@ -107,14 +107,14 @@ namespace PautaDinamicaApp.ViewModels
             get => _selectedAccentColorName;
             set
             {
-                if (SetProperty(ref _selectedAccentColorName, value))
+                if (_selectedAccentColorName == value) return;
+                _selectedAccentColorName = value;
+                if (AccentColors.TryGetValue(value, out var hex))
                 {
-                    if (AccentColors.TryGetValue(value, out var hex))
-                    {
-                        Settings.AccentColor = hex;
-                        CustomAccentColor = "";
-                        new ThemeService().ApplyAccentColor(hex);
-                    }
+                    Settings.AccentColor = hex;
+                    _customAccentColor = "";
+                    new ThemeService().ApplyAccentColor(hex);
+                    OnPropertyChanged(nameof(SelectedAccentColorName));
                 }
             }
         }
@@ -275,6 +275,7 @@ namespace PautaDinamicaApp.ViewModels
 
             // Initialize accent color selection from saved settings
             InitializeAccentColor();
+            ApplyAccentColorToUI(Settings.AccentColor);
 
             AddContactCommand = new RelayCommand(_ => AddContact());
             DeleteContactCommand = new RelayCommand(p => DeleteContact(p as RecipientContact));
@@ -739,6 +740,11 @@ namespace PautaDinamicaApp.ViewModels
                     OnPropertyChanged(nameof(SelectedAccentColorName));
                 }
             }
+        }
+
+        private void ApplyAccentColorToUI(string colorHex)
+        {
+            new ThemeService().ApplyAccentColor(colorHex);
         }
 
         private void BrowseFolder(Action<string> updateAction)

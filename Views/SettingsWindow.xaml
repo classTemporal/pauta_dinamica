@@ -64,7 +64,8 @@
                                     <TextBlock Text="Personalice el color principal de la interfaz (botones, enlaces, resaltados)." 
                                                FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,10"/>
                                     <ComboBox ItemsSource="{Binding AccentColors}" 
-                                              SelectedItem="{Binding SelectedAccentColorName, Mode=TwoWay}"
+                                              SelectedValuePath="Key"
+                                              SelectedValue="{Binding SelectedAccentColorName, Mode=TwoWay}"
                                               DisplayMemberPath="Key"
                                               Height="35" Width="150" HorizontalAlignment="Left"/>
                                     <TextBlock Text="Color personalizado:" Style="{StaticResource LabelStyle}" Margin="0,15,0,0"/>
