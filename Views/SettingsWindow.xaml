@@ -37,7 +37,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <TabControl Background="Transparent" BorderThickness="0" Margin="10">
+        <TabControl x:Name="MainTabControl" Background="Transparent" BorderThickness="0" Margin="10">
             <!-- TAB GENERAL: Interfaz y Ortografía -->
             <TabItem Header="✨ General">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">

@@ -236,6 +236,7 @@ namespace PautaDinamicaApp.ViewModels
 
         public ICommand ToggleFiltersCommand { get; }
         public ICommand ChangeLayoutCommand { get; }
+        public ICommand OpenEmailConfigCommand { get; }
 
         public MainViewModel()
         {
@@ -283,6 +284,7 @@ namespace PautaDinamicaApp.ViewModels
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
             ToggleFiltersCommand = new RelayCommand(_ => IsFiltersPanelExpanded = !IsFiltersPanelExpanded);
             ChangeLayoutCommand = new RelayCommand(_ => RotateLayout());
+            OpenEmailConfigCommand = new RelayCommand(_ => OpenEmailConfig());
             ToggleHeaderCommand = new RelayCommand(_ => IsHeaderVisible = !IsHeaderVisible);
             
             // Comandos para Pick Date/Time (mismo comportamiento que en Config)
@@ -692,6 +694,25 @@ namespace PautaDinamicaApp.ViewModels
         {
             var vm = new SettingsViewModel(CurrentPauta?.Id ?? "");
             var settingsWin = new Views.SettingsWindow { DataContext = vm };
+            var owner = GetBestOwner();
+            if (owner != null && owner != settingsWin) settingsWin.Owner = owner;
+
+            vm.RequestClose += () => settingsWin.Close();
+            settingsWin.ShowDialog();
+
+            if (vm.IsSaved)
+            {
+                Settings = vm.Settings;
+                LoadPautas();
+                ApplyRowColoring();
+                UpdateAuditStats();
+            }
+        }
+
+        private void OpenEmailConfig()
+        {
+            var vm = new SettingsViewModel(CurrentPauta?.Id ?? "");
+            var settingsWin = new Views.SettingsWindow { DataContext = vm, InitialTabIndex = 4 };
             var owner = GetBestOwner();
             if (owner != null && owner != settingsWin) settingsWin.Owner = owner;
 

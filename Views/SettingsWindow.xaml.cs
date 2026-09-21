@@ -10,6 +10,13 @@ namespace PautaDinamicaApp.Views
         private System.Windows.Point _startPoint;
         private System.Windows.Controls.ListBoxItem? _draggedItem;
         private bool _isDraggingNow;
+        private int _initialTabIndex = 0;
+
+        public int InitialTabIndex
+        {
+            get => _initialTabIndex;
+            set => _initialTabIndex = value;
+        }
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -20,6 +27,9 @@ namespace PautaDinamicaApp.Views
         public SettingsWindow()
         {
             InitializeComponent();
+            if (InitialTabIndex > 0 && InitialTabIndex < MainTabControl.Items.Count)
+                MainTabControl.SelectedIndex = InitialTabIndex;
+
             AdminPassBox.PasswordChanged += (s, e) =>
             {
                 if (DataContext is ViewModels.SettingsViewModel vm)
