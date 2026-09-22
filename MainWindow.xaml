@@ -168,10 +168,7 @@
                                 <Setter Property="Height" Value="*"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
-                                        <Setter Property="Height" Value="*"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
-                                        <Setter Property="Height" Value="*"/>
+                                        <Setter Property="Height" Value="Auto"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -187,10 +184,7 @@
                                         <Setter Property="Height" Value="{Binding DashboardFormHeight, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
-                                        <Setter Property="Height" Value="Auto"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
-                                        <Setter Property="Height" Value="Auto"/>
+                                        <Setter Property="Height" Value="*"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -286,16 +280,10 @@
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
                                 <Setter Property="Grid.Column" Value="0"/>
-                                <Setter Property="Grid.Row" Value="2"/>
-                                <Setter Property="Grid.ColumnSpan" Value="3"/>
-                                <Setter Property="Margin" Value="0,10,0,0"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
-                                <Setter Property="Grid.Column" Value="0"/>
                                 <Setter Property="Grid.Row" Value="0"/>
                                 <Setter Property="Grid.RowSpan" Value="1"/>
-                                <Setter Property="Grid.ColumnSpan" Value="1"/>
-                                <Setter Property="Margin" Value="0,0,0,10"/>
+                                <Setter Property="Grid.ColumnSpan" Value="3"/>
+                                <Setter Property="Margin" Value="0,10,0,0"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -385,19 +373,12 @@
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
                                 <Setter Property="Grid.Column" Value="0"/>
-                                <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.Row" Value="2"/>
                                 <Setter Property="Grid.RowSpan" Value="1"/>
                                 <Setter Property="Margin" Value="0,0,0,10"/>
                                 <Setter Property="Background" Value="Transparent"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
-                                <Setter Property="Grid.Column" Value="0"/>
-                                <Setter Property="Grid.Row" Value="2"/>
-                                <Setter Property="Grid.RowSpan" Value="1"/>
-                                <Setter Property="Grid.ColumnSpan" Value="1"/>
-                                <Setter Property="Margin" Value="0,10,0,0"/>
-                            </DataTrigger>
-                                                    </Style.Triggers>
+                        </Style.Triggers>
                                                 </Style>
                                             </DockPanel.Style>
                                                 <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
@@ -534,7 +515,7 @@
                         </Border>
                     </StackPanel>
                     
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <DataGrid x:Name="RecordsGrid" ItemsSource="{Binding RecordsView}" 
                                    AutoGenerateColumns="False"
                                    IsReadOnly="True"

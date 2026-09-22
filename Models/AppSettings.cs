@@ -13,8 +13,7 @@ namespace PautaDinamicaApp.Models
         Left,
         Right,
         Top,
-        Bottom,
-        BottomNoSticky
+        Bottom
     }
 
     public class AppSettings
