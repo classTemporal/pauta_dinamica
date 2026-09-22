@@ -391,13 +391,22 @@
                             <TextBlock Text="{Binding AuditStatsText}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,5"/>
                         </WrapPanel>
 
-                        <Button Grid.Column="1" Command="{Binding ToggleFiltersCommand}" 
-                                Style="{StaticResource GhostButton}" Padding="10,0" Height="28" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🔍" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding IsFiltersPanelExpanded, ConverterParameter='Ocultar Filtros|Mostrar Filtros', Converter={StaticResource StringSwitchConverter}}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
+                        <WrapPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Command="{Binding ToggleFiltersCommand}"
+                                    Style="{StaticResource GhostButton}" Padding="10,0" Height="28" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🔍" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding IsFiltersPanelExpanded, ConverterParameter='Ocultar Filtros|Mostrar Filtros', Converter={StaticResource StringSwitchConverter}}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding OpenEmailConfigCommand}"
+                                    Style="{StaticResource GhostButton}" Padding="10,0" Height="28" VerticalAlignment="Center"
+                                    ToolTip="Configuración de correos" Margin="5,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="📧" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
                     </Grid>
 
                     <!-- Filter and Sort Bar -->
