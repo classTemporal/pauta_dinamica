@@ -168,7 +168,7 @@
                                 <Setter Property="Height" Value="*"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
-                                        <Setter Property="Height" Value="Auto"/>
+                                        <Setter Property="Height" Value="{Binding DashboardFormHeight, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
