@@ -98,6 +98,8 @@ namespace PautaDinamicaApp.Views
             set { _displayedTemplates = value; OnPropertyChanged(); }
         }
 
+        public string NewCategoryText { get; set; } = string.Empty;
+
         public string SearchText
         {
             get => _searchText;
@@ -158,7 +160,6 @@ namespace PautaDinamicaApp.Views
             // Initially select first category
             SelectedCategory = Categories.FirstOrDefault();
 
-            TemplatesList.ItemsSource = _displayedTemplates;
             DataContext = this;
         }
 
@@ -173,10 +174,11 @@ namespace PautaDinamicaApp.Views
                 pautaTemplates = _storageService.LoadTemplates().Where(t => string.IsNullOrEmpty(t.PautaId)).ToList();
             }
 
+            _allTemplates.Clear();
             foreach (var t in pautaTemplates) _allTemplates.Add(t);
 
             // Initial display: all templates (filtered by search if any)
-            DisplayedTemplates = new ObservableCollection<MessageTemplate>(_allTemplates);
+            ApplySearchAndCategoryFilter();
         }
 
         private void BuildCategoryList()
@@ -217,7 +219,6 @@ namespace PautaDinamicaApp.Views
             {
                 if (SelectedCategory?.Name == "Sin Categorizar" || SelectedCategory?.Name == "Todas las Plantillas")
                 {
-                    // Show uncategorized templates (empty category)
                     filtered = _allTemplates.Where(t => string.IsNullOrWhiteSpace(t.Category));
                 }
                 else if (SelectedCategory != null)
@@ -231,7 +232,6 @@ namespace PautaDinamicaApp.Views
             }
             else
             {
-                // Flat mode: show all
                 filtered = _allTemplates;
             }
 
@@ -241,7 +241,11 @@ namespace PautaDinamicaApp.Views
                 filtered = filtered.Where(t => t.Content?.ToLower().Contains(search) == true);
             }
 
-            DisplayedTemplates = new ObservableCollection<MessageTemplate>(filtered.ToList());
+            var filteredList = filtered.ToList();
+
+            // Update DisplayedTemplates in-place to keep the ListBox bound to the same ObservableCollection
+            _displayedTemplates.Clear();
+            foreach (var t in filteredList) _displayedTemplates.Add(t);
         }
 
         private void Select_Click(object sender, RoutedEventArgs e)
@@ -465,6 +469,34 @@ namespace PautaDinamicaApp.Views
                 BuildFlatCategoryList();
 
             ApplySearchAndCategoryFilter();
+        }
+
+        private void CreateCategory_Click(object sender, RoutedEventArgs e)
+        {
+            string name = NewCategoryText?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                MessageBoxHelper.Show("El nombre de la categoría no puede estar vacío.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Switch to categorized mode
+            IsCategorizedMode = true;
+            BuildCategoryList();
+
+            // Check for duplicate (after rebuild)
+            if (Categories.Any(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBoxHelper.Show($"La categoría \"{name}\" ya existe.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Add the new category and select it
+            Categories.Add(new CategoryItem { Name = name, Count = 0, IsSelected = true });
+            SelectedCategory = Categories.First(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+            NewCategoryText = string.Empty;
+            OnPropertyChanged(nameof(NewCategoryText));
         }
 
         // --- Drag & Drop Implementation ---
