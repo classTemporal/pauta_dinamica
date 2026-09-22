@@ -2171,18 +2171,24 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     string agentList = string.Join("\n", missingEmailAgents.Distinct().Select(a => $"• {a}"));
                     string msg = $"No se puede enviar el correo porque los siguientes agentes no tienen correo electrónico asociado:\n\n{agentList}\n\n" +
-                                 "Diríjase al Directorio de Contactos para completar los correos.\n\n¿Abrir Directorio de Contactos ahora?";
+                                 "Diríjase al Directorio de Contactos para completar los correos.";
 
-                    var result = MessageBoxHelper.Show(msg, "Correos Faltantes", MessageBoxButton.YesNo, MessageBoxImage.Warning, true);
+                    var result = MessageBoxHelper.Show(msg, "Correos Faltantes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, true);
                     if (result == MessageBoxResult.Yes)
                     {
-                        // Abrir la ventana de Configuración > pestaña Correo > Directorio de Contactos
-                        var settingsVm = new ViewModels.SettingsViewModel(CurrentPauta.Id);
-                        var settingsWin = new Views.SettingsWindow { DataContext = settingsVm, Owner = System.Windows.Application.Current.MainWindow };
-                        settingsVm.RequestClose += () => settingsWin.Close();
-                        settingsWin.ShowDialog();
+                        // Enviar de todas formas: continuar con el envío (sin abrir nada)
                     }
-                    return; // Bloquear el envío
+                    else if (result == MessageBoxResult.No)
+                    {
+                        // Agregar correos faltantes: abrir EmailDirectoryWindow directamente
+                        var win = new Views.EmailDirectoryWindow { DataContext = new ViewModels.SettingsViewModel(CurrentPauta.Id), Owner = System.Windows.Application.Current.MainWindow };
+                        win.ShowDialog();
+                    }
+                    else
+                    {
+                        // Cancelar: bloquear envío
+                        return;
+                    }
                 }
             }
 
