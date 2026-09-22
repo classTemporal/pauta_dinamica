@@ -1558,6 +1558,17 @@ namespace PautaDinamicaApp.ViewModels
             FieldsRefreshed?.Invoke();
         }
 
+        /// <summary>
+        /// Persists the current dashboard field order into CurrentPauta.DashboardFieldOrder
+        /// and saves via StorageService.
+        /// </summary>
+        public void SaveDashboardFieldOrder()
+        {
+            if (CurrentPauta == null) return;
+            CurrentPauta.DashboardFieldOrder = CurrentFields.Select(f => f.Id).ToList();
+            _storageService.SavePautas(Pautas.ToList());
+        }
+
         private bool _isCalculating;
         private void RefreshCalculations()
         {

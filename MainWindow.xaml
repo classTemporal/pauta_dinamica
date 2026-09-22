@@ -311,8 +311,16 @@
                             Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 </StackPanel>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding GroupedFields}">
+                <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto"
+                              AllowDrop="True"
+                              DragEnter="DashboardScrollViewer_DragEnter"
+                              DragOver="DashboardScrollViewer_DragOver"
+                              Drop="DashboardScrollViewer_Drop">
+                    <ItemsControl x:Name="DashboardItemsControl" ItemsSource="{Binding GroupedFields}"
+                                  AllowDrop="True"
+                                  PreviewMouseMove="DashboardItemsControl_PreviewMouseMove"
+                                  PreviewMouseLeftButtonDown="DashboardItemsControl_PreviewMouseLeftButtonDown"
+                                  PreviewMouseLeftButtonUp="DashboardItemsControl_PreviewMouseLeftButtonUp">
                         <ItemsControl.GroupStyle>
                             <GroupStyle ContainerStyle="{StaticResource GroupHeaderStyle}"/>
                         </ItemsControl.GroupStyle>
