@@ -289,10 +289,10 @@
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
                                 <Setter Property="Grid.Column" Value="0"/>
-                                <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.Row" Value="2"/>
                                 <Setter Property="Grid.RowSpan" Value="1"/>
                                 <Setter Property="Grid.ColumnSpan" Value="1"/>
-                                <Setter Property="Margin" Value="0,0,0,10"/>
+                                <Setter Property="Margin" Value="0,10,0,0"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -382,14 +382,13 @@
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
                                 <Setter Property="Grid.Column" Value="0"/>
-                                <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.Row" Value="2"/>
                                 <Setter Property="Grid.RowSpan" Value="1"/>
                                 <Setter Property="Margin" Value="0,0,0,10"/>
-                                <Setter Property="Background" Value="Transparent"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="BottomNoSticky">
                                 <Setter Property="Grid.Column" Value="0"/>
-                                <Setter Property="Grid.Row" Value="1"/>
+                                <Setter Property="Grid.Row" Value="2"/>
                                 <Setter Property="Grid.RowSpan" Value="1"/>
                                 <Setter Property="Grid.ColumnSpan" Value="1"/>
                                 <Setter Property="Margin" Value="0,10,0,0"/>

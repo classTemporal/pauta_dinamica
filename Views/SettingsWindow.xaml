@@ -39,7 +39,7 @@
         </Grid.RowDefinitions>
         <TabControl x:Name="MainTabControl" Background="Transparent" BorderThickness="0" Margin="10">
             <!-- TAB GENERAL: Interfaz y Ortografía -->
-            <TabItem Header="🔧 Sistema">
+            <TabItem Header="⚙️ General">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <Border Padding="20">
                         <StackPanel>
