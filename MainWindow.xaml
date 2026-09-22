@@ -513,6 +513,7 @@
                                     Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                             <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
                             <Button Content="📧 Enviar todos los correos" Command="{Binding SendEmailsCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                            <TextBlock Text="🔴" Visibility="{Binding HasMissingEmails, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center" Margin="0,5,10,5" ToolTip="Hay agentes sin correo electrónico asociado"/>
                             <Button Content="📥 Importar Excel" Command="{Binding ImportFromExcelCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5" Background="#6f42c1"/>
                             <Button Content="📊 Exportar a Excel" Command="{Binding ExportToExcelCommand}" Padding="10,8" Style="{StaticResource ExcelButton}" Margin="0,5,0,5"/>
                         </WrapPanel>

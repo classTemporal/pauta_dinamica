@@ -1434,6 +1434,13 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        private bool _hasMissingEmails;
+        public bool HasMissingEmails
+        {
+            get => _hasMissingEmails;
+            set => SetProperty(ref _hasMissingEmails, value);
+        }
+
         // Duplicate command properties removed.
 
         private bool _isMultiSelectMode;
@@ -1455,6 +1462,41 @@ namespace PautaDinamicaApp.ViewModels
             CurrentPauta = Pautas.FirstOrDefault(p => p.Id == lastId) ?? Pautas.FirstOrDefault();
         }
 
+        private void CheckMissingEmails()
+        {
+            if (CurrentPauta == null || Records == null || string.IsNullOrEmpty(CurrentPauta.EmailNameFieldId))
+            {
+                HasMissingEmails = false;
+                return;
+            }
+
+            var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var record in Records)
+            {
+                if (record.Values.TryGetValue(CurrentPauta.EmailNameFieldId, out var val) && val != null)
+                {
+                    string nameText = val.ToString()?.Trim() ?? "";
+                    if (!string.IsNullOrWhiteSpace(nameText))
+                    {
+                        uniqueNames.Add(nameText);
+                    }
+                }
+            }
+
+            var contacts = CurrentPauta.RecipientContacts ?? new List<RecipientContact>();
+            bool hasMissing = false;
+            foreach (var name in uniqueNames)
+            {
+                var contact = contacts.FirstOrDefault(c => string.Equals(c.Name?.Trim(), name, StringComparison.OrdinalIgnoreCase));
+                if (contact == null || string.IsNullOrWhiteSpace(contact.Email))
+                {
+                    hasMissing = true;
+                    break;
+                }
+            }
+            HasMissingEmails = hasMissing;
+        }
+
         private void LoadData()
         {
             if (CurrentPauta == null) return;
@@ -1464,8 +1506,9 @@ namespace PautaDinamicaApp.ViewModels
             // Reutilizar la colección si es posible o disparar el setter
             Records = new ObservableCollection<AuditEntry>(savedRecords);
             
-            Records.CollectionChanged += (s, e) => UpdateAuditStats();
+            Records.CollectionChanged += (s, e) => { UpdateAuditStats(); CheckMissingEmails(); };
             UpdateAuditStats();
+            CheckMissingEmails();
 
             ApplyRowColoring();
             ValidateAllRecordAttachments();
