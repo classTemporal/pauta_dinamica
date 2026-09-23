@@ -311,8 +311,16 @@
                             Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 </StackPanel>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding GroupedFields}">
+                <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto"
+                              AllowDrop="True"
+                              DragEnter="DashboardScrollViewer_DragEnter"
+                              DragOver="DashboardScrollViewer_DragOver"
+                              Drop="DashboardScrollViewer_Drop">
+                    <ItemsControl x:Name="DashboardItemsControl" ItemsSource="{Binding GroupedFields}"
+                                  AllowDrop="True"
+                                  PreviewMouseMove="DashboardItemsControl_PreviewMouseMove"
+                                  PreviewMouseLeftButtonDown="DashboardItemsControl_PreviewMouseLeftButtonDown"
+                                  PreviewMouseLeftButtonUp="DashboardItemsControl_PreviewMouseLeftButtonUp">
                         <ItemsControl.GroupStyle>
                             <GroupStyle ContainerStyle="{StaticResource GroupHeaderStyle}"/>
                         </ItemsControl.GroupStyle>
@@ -391,13 +399,22 @@
                             <TextBlock Text="{Binding AuditStatsText}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,5"/>
                         </WrapPanel>
 
-                        <Button Grid.Column="1" Command="{Binding ToggleFiltersCommand}" 
-                                Style="{StaticResource GhostButton}" Padding="10,0" Height="28" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🔍" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding IsFiltersPanelExpanded, ConverterParameter='Ocultar Filtros|Mostrar Filtros', Converter={StaticResource StringSwitchConverter}}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
+                        <WrapPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Command="{Binding ToggleFiltersCommand}"
+                                    Style="{StaticResource GhostButton}" Padding="10,0" Height="28" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🔍" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding IsFiltersPanelExpanded, ConverterParameter='Ocultar Filtros|Mostrar Filtros', Converter={StaticResource StringSwitchConverter}}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding OpenEmailConfigCommand}"
+                                    Style="{StaticResource GhostButton}" Padding="10,0" Height="28" VerticalAlignment="Center"
+                                    ToolTip="Configuración de correos" Margin="5,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="📧" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
                     </Grid>
 
                     <!-- Filter and Sort Bar -->
@@ -496,6 +513,7 @@
                                     Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                             <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
                             <Button Content="📧 Enviar todos los correos" Command="{Binding SendEmailsCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                            <TextBlock Text="🔴" Visibility="{Binding HasMissingEmails, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center" Margin="0,5,10,5" ToolTip="Hay agentes sin correo electrónico asociado"/>
                             <Button Content="📥 Importar Excel" Command="{Binding ImportFromExcelCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5" Background="#6f42c1"/>
                             <Button Content="📊 Exportar a Excel" Command="{Binding ExportToExcelCommand}" Padding="10,8" Style="{StaticResource ExcelButton}" Margin="0,5,0,5"/>
                         </WrapPanel>

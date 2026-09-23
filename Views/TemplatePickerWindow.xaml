@@ -97,6 +97,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="Categorías" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
                 <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
@@ -128,6 +129,15 @@
                         </ItemsControl>
                     </UniformGrid>
                 </ScrollViewer>
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBox x:Name="NewCategoryTextBox" Height="32" Width="180"
+                             Text="{Binding NewCategoryText, UpdateSourceTrigger=PropertyChanged}"
+                             Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
+                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                             Padding="8,0" VerticalContentAlignment="Center"/>
+                    <Button Content="+ Crear" Click="CreateCategory_Click" Style="{StaticResource SuccessButton}"
+                            Height="32" Margin="8,0,0,0" Padding="12,0"/>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -154,6 +164,7 @@
 
         <!-- Templates List -->
         <ListBox x:Name="TemplatesList" Grid.Row="4"
+                  ItemsSource="{Binding DisplayedTemplates}"
                   Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   AllowDrop="True"

@@ -36,11 +36,7 @@
                           SelectedValuePath="Id"
                           DisplayMemberPath="Label"
                           Height="36"/>
-                <Button Content="🔍 Auto-detectar Agentes"
-                        Command="{Binding AutoDetectAgentesCommand}"
-                        Style="{StaticResource GhostButton}" Height="30" Margin="0,8,0,0" HorizontalAlignment="Left" FontSize="11"/>
-                <TextBlock Text="* El sistema buscará el valor de este campo en el registro para encontrar el correo en el directorio." 
-                           FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,0" FontStyle="Italic"/>
+
             </StackPanel>
         </Border>
 

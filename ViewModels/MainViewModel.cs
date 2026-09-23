@@ -1434,6 +1434,13 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        private bool _hasMissingEmails;
+        public bool HasMissingEmails
+        {
+            get => _hasMissingEmails;
+            set => SetProperty(ref _hasMissingEmails, value);
+        }
+
         // Duplicate command properties removed.
 
         private bool _isMultiSelectMode;
@@ -1455,6 +1462,41 @@ namespace PautaDinamicaApp.ViewModels
             CurrentPauta = Pautas.FirstOrDefault(p => p.Id == lastId) ?? Pautas.FirstOrDefault();
         }
 
+        private void CheckMissingEmails()
+        {
+            if (CurrentPauta == null || Records == null || string.IsNullOrEmpty(CurrentPauta.EmailNameFieldId))
+            {
+                HasMissingEmails = false;
+                return;
+            }
+
+            var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var record in Records)
+            {
+                if (record.Values.TryGetValue(CurrentPauta.EmailNameFieldId, out var val) && val != null)
+                {
+                    string nameText = val.ToString()?.Trim() ?? "";
+                    if (!string.IsNullOrWhiteSpace(nameText))
+                    {
+                        uniqueNames.Add(nameText);
+                    }
+                }
+            }
+
+            var contacts = CurrentPauta.RecipientContacts ?? new List<RecipientContact>();
+            bool hasMissing = false;
+            foreach (var name in uniqueNames)
+            {
+                var contact = contacts.FirstOrDefault(c => string.Equals(c.Name?.Trim(), name, StringComparison.OrdinalIgnoreCase));
+                if (contact == null || string.IsNullOrWhiteSpace(contact.Email))
+                {
+                    hasMissing = true;
+                    break;
+                }
+            }
+            HasMissingEmails = hasMissing;
+        }
+
         private void LoadData()
         {
             if (CurrentPauta == null) return;
@@ -1464,8 +1506,9 @@ namespace PautaDinamicaApp.ViewModels
             // Reutilizar la colección si es posible o disparar el setter
             Records = new ObservableCollection<AuditEntry>(savedRecords);
             
-            Records.CollectionChanged += (s, e) => UpdateAuditStats();
+            Records.CollectionChanged += (s, e) => { UpdateAuditStats(); CheckMissingEmails(); };
             UpdateAuditStats();
+            CheckMissingEmails();
 
             ApplyRowColoring();
             ValidateAllRecordAttachments();
@@ -1556,6 +1599,17 @@ namespace PautaDinamicaApp.ViewModels
 
             RefreshCalculations();
             FieldsRefreshed?.Invoke();
+        }
+
+        /// <summary>
+        /// Persists the current dashboard field order into CurrentPauta.DashboardFieldOrder
+        /// and saves via StorageService.
+        /// </summary>
+        public void SaveDashboardFieldOrder()
+        {
+            if (CurrentPauta == null) return;
+            CurrentPauta.DashboardFieldOrder = CurrentFields.Select(f => f.Id).ToList();
+            _storageService.SavePautas(Pautas.ToList());
         }
 
         private bool _isCalculating;
@@ -2117,18 +2171,24 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     string agentList = string.Join("\n", missingEmailAgents.Distinct().Select(a => $"• {a}"));
                     string msg = $"No se puede enviar el correo porque los siguientes agentes no tienen correo electrónico asociado:\n\n{agentList}\n\n" +
-                                 "Diríjase al Directorio de Contactos para completar los correos.\n\n¿Abrir Directorio de Contactos ahora?";
+                                 "Diríjase al Directorio de Contactos para completar los correos.";
 
-                    var result = MessageBoxHelper.Show(msg, "Correos Faltantes", MessageBoxButton.YesNo, MessageBoxImage.Warning, true);
+                    var result = MessageBoxHelper.Show(msg, "Correos Faltantes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, true);
                     if (result == MessageBoxResult.Yes)
                     {
-                        // Abrir la ventana de Configuración > pestaña Correo > Directorio de Contactos
-                        var settingsVm = new ViewModels.SettingsViewModel(CurrentPauta.Id);
-                        var settingsWin = new Views.SettingsWindow { DataContext = settingsVm, Owner = System.Windows.Application.Current.MainWindow };
-                        settingsVm.RequestClose += () => settingsWin.Close();
-                        settingsWin.ShowDialog();
+                        // Enviar de todas formas: continuar con el envío (sin abrir nada)
                     }
-                    return; // Bloquear el envío
+                    else if (result == MessageBoxResult.No)
+                    {
+                        // Agregar correos faltantes: abrir EmailDirectoryWindow directamente
+                        var win = new Views.EmailDirectoryWindow { DataContext = new ViewModels.SettingsViewModel(CurrentPauta.Id), Owner = System.Windows.Application.Current.MainWindow };
+                        win.ShowDialog();
+                    }
+                    else
+                    {
+                        // Cancelar: bloquear envío
+                        return;
+                    }
                 }
             }
 

@@ -182,10 +182,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void OnSelectedPautaPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(PautaSchema.EmailNameFieldId) && sender is PautaSchema)
-            {
-                AutoDetectAgentes();
-            }
+            // Detección automática al cargar datos (ya ocurre en LoadPautaData)
         }
 
         private ObservableCollection<RecipientContact> _currentContacts = new();
@@ -244,7 +241,6 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand OpenEmailDirectoryCommand { get; }
         public ICommand ToggleContactMultiSelectCommand { get; }
         public ICommand PickColorCommand { get; }
-        public ICommand AutoDetectAgentesCommand { get; }
         public ICommand OpenEmailDirectoryFromWarningCommand { get; }
         public ICommand AddEmailReplacementRuleCommand { get; }
         public ICommand RemoveEmailReplacementRuleCommand { get; }
@@ -299,7 +295,7 @@ namespace PautaDinamicaApp.ViewModels
             SelectAllContactsCommand = new RelayCommand(p => { AllContactsSelected = (bool)(p ?? false); });
             OpenEmailDirectoryCommand = new RelayCommand(_ => OpenEmailDirectory());
             ToggleContactMultiSelectCommand = new RelayCommand(_ => IsContactMultiSelectMode = !IsContactMultiSelectMode);
-            AutoDetectAgentesCommand = new RelayCommand(_ => AutoDetectAgentes());
+
             OpenEmailDirectoryFromWarningCommand = new RelayCommand(_ => OpenEmailDirectory());
             OpenTemplateManagementCommand = new RelayCommand(_ => OpenTemplateManagement());
             OpenHelpCommand = new RelayCommand(_ => OpenHelp());
@@ -369,7 +365,41 @@ namespace PautaDinamicaApp.ViewModels
         {
             CurrentContacts = new ObservableCollection<RecipientContact>(pauta.RecipientContacts ?? new());
             CurrentPautaFields = new ObservableCollection<FieldDefinition>(_storageService.LoadConfiguration(pauta.Id).Where(f => f.Type != FieldType.Separator));
-            AutoDetectAgentes();
+
+            // Auto-detect agentes: solo si hay campo de origen seleccionado
+            if (!string.IsNullOrEmpty(SelectedPauta.EmailNameFieldId))
+            {
+                var records = _storageService.LoadRecords(SelectedPauta.Id);
+                var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var record in records)
+                {
+                    if (record.Values.TryGetValue(SelectedPauta.EmailNameFieldId, out var val) && val != null)
+                    {
+                        string nameText = val.ToString()?.Trim() ?? "";
+                        if (!string.IsNullOrWhiteSpace(nameText)) uniqueNames.Add(nameText);
+                    }
+                }
+
+                var existingMap = CurrentContacts
+                    .Where(c => !string.IsNullOrWhiteSpace(c.Name))
+                    .ToDictionary(c => c.Name.Trim(), c => c, StringComparer.OrdinalIgnoreCase);
+
+                var newContacts = new List<RecipientContact>();
+                foreach (var name in uniqueNames)
+                {
+                    if (existingMap.TryGetValue(name, out var existing)) newContacts.Add(existing);
+                    else newContacts.Add(new RecipientContact { Name = name, Email = "" });
+                }
+
+                var detectedNames = new HashSet<string>(uniqueNames, StringComparer.OrdinalIgnoreCase);
+                foreach (var c in CurrentContacts)
+                {
+                    if (!string.IsNullOrWhiteSpace(c.Name) && !detectedNames.Contains(c.Name.Trim())) newContacts.Add(c);
+                }
+
+                CurrentContacts = new ObservableCollection<RecipientContact>(newContacts.OrderBy(c => c.Name).ToList());
+                SyncContacts();
+            }
         }
 
         private void AddContact()
@@ -505,66 +535,7 @@ namespace PautaDinamicaApp.ViewModels
             HasMissingEmails = missing.Any();
         }
 
-        private void AutoDetectAgentes()
-        {
-            if (SelectedPauta == null) return;
 
-            // Only detect if a source field (Name/Agent) is selected
-            if (string.IsNullOrEmpty(SelectedPauta.EmailNameFieldId))
-            {
-                MissingEmailContacts.Clear();
-                HasMissingEmails = false;
-                return;
-            }
-
-            // Load records to extract unique agent names from the source field
-            var records = _storageService.LoadRecords(SelectedPauta.Id);
-            var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var record in records)
-            {
-                if (record.Values.TryGetValue(SelectedPauta.EmailNameFieldId, out var val) && val != null)
-                {
-                    string nameText = val.ToString()?.Trim() ?? "";
-                    if (!string.IsNullOrWhiteSpace(nameText))
-                    {
-                        uniqueNames.Add(nameText);
-                    }
-                }
-            }
-
-            // Merge: for each detected unique name, check if a contact already exists
-            var existingMap = CurrentContacts
-                .Where(c => !string.IsNullOrWhiteSpace(c.Name))
-                .ToDictionary(c => c.Name.Trim(), c => c, StringComparer.OrdinalIgnoreCase);
-
-            var newContacts = new List<RecipientContact>();
-            foreach (var name in uniqueNames)
-            {
-                if (existingMap.TryGetValue(name, out var existing))
-                {
-                    newContacts.Add(existing);
-                }
-                else
-                {
-                    // Auto-create a contact without email to trigger the red alert
-                    newContacts.Add(new RecipientContact { Name = name, Email = "" });
-                }
-            }
-
-            // Preserve any contacts that don't match any detected name
-            var detectedNames = new HashSet<string>(uniqueNames, StringComparer.OrdinalIgnoreCase);
-            foreach (var c in CurrentContacts)
-            {
-                if (!string.IsNullOrWhiteSpace(c.Name) && !detectedNames.Contains(c.Name.Trim()))
-                {
-                    newContacts.Add(c);
-                }
-            }
-
-            CurrentContacts = new ObservableCollection<RecipientContact>(newContacts.OrderBy(c => c.Name).ToList());
-            // SyncContacts now also updates MissingEmailContacts and HasMissingEmails
-            SyncContacts();
-        }
 
         private void ImportContacts()
         {
