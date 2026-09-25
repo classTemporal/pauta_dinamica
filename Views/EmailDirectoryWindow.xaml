@@ -31,7 +31,7 @@
             <StackPanel>
                 <TextBlock Text="Campo de Origen (Nombre/Agente):" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"/>
                 <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
-                          SelectedValue="{Binding SelectedPauta.EmailNameFieldId}"
+                          SelectedValue="{Binding SelectedPauta.EmailNameFieldId, UpdateSourceTrigger=PropertyChanged}"
                           SelectedValuePath="Id"
                           DisplayMemberPath="Label"
                           Height="36"/>
