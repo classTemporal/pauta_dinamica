@@ -6,8 +6,6 @@
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
     
     <Window.Resources>
-        <conv:BooleanToVisibilityConverter x:Key="BoolToVis"/>
-        <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
         <conv:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
         <conv:BooleanToFontStyleConverter x:Key="BooleanToFontStyleConverter"/>
     </Window.Resources>
@@ -63,74 +61,6 @@
 
         <!-- Directorio -->
         <DockPanel Grid.Row="3">
-            <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" Padding="10" CornerRadius="8,8,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
-                <Grid>
-                    <!-- Vista Normal -->
-                    <WrapPanel Orientation="Horizontal" Visibility="{Binding IsContactMultiSelectMode, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
-                        <Button Content="➕ Nuevo" Command="{Binding AddContactCommand}" 
-                                Style="{StaticResource PrimaryButton}" Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
-
-                        <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleContactMultiSelectCommand}" 
-                                Style="{StaticResource GhostButton}"
-                                Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
-                        
-                        <Button Content="📥 Importar" Command="{Binding ImportContactsCommand}" 
-                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
-                        
-                        <Button Content="📤 Exportar" Command="{Binding ExportContactsCommand}" 
-                                Style="{StaticResource SecondaryButton}"
-                                Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
-                    </WrapPanel>
-
-                    <!-- Vista Selección Múltiple -->
-                    <WrapPanel Orientation="Horizontal" Visibility="{Binding IsContactMultiSelectMode, Converter={StaticResource BoolToVis}}">
-                        <CheckBox IsChecked="{Binding AllContactsSelected}" Content="Seleccionar Todo" 
-                                  VerticalAlignment="Center" Margin="0,0,8,8">
-                            <CheckBox.Template>
-                                <ControlTemplate TargetType="CheckBox">
-                                    <Border x:Name="border" Background="Transparent" CornerRadius="6" Padding="15,8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" SnapsToDevicePixels="True" Height="34">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <TextBlock x:Name="icon" Text="▢" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" FontWeight="Bold" FontSize="14"/>
-                                            <ContentPresenter VerticalAlignment="Center" TextElement.Foreground="{DynamicResource TextBrush}"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsChecked" Value="True">
-                                            <Setter TargetName="border" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter TargetName="icon" Property="Text" Value="✅"/>
-                                            <Setter TargetName="icon" Property="Foreground" Value="White"/>
-                                            <Setter Property="TextElement.Foreground" Value="White" TargetName="border"/>
-                                        </Trigger>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="border" Property="Background" Value="{DynamicResource BorderBrush}"/>
-                                        </Trigger>
-                                        <Trigger Property="IsChecked" Value="True">
-                                            <Trigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <ColorAnimation Storyboard.TargetName="border" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="#3b82f6" Duration="0:0:0.1"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </Trigger.EnterActions>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </CheckBox.Template>
-                        </CheckBox>
-
-                        <Button Content="📤 Exportar Seleccionados" Command="{Binding ExportContactsCommand}" 
-                                Style="{StaticResource SecondaryButton}"
-                                Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
-
-                        <Button Content="🗑️ Eliminar Seleccionados" Command="{Binding DeleteSelectedContactsCommand}" 
-                                Style="{StaticResource DangerButton}" Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
-                        
-                        <Button Content="❌ Cancelar Selección" Command="{Binding ToggleContactMultiSelectCommand}" 
-                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,8,8" FontSize="12"/>
-                    </WrapPanel>
-                </Grid>
-            </Border>
 
             <DataGrid ItemsSource="{Binding CurrentContacts}" 
                       AutoGenerateColumns="False" 
@@ -176,15 +106,6 @@
                     </Style>
                 </DataGrid.Resources>
                 <DataGrid.Columns>
-                    <!-- Columna de Checkbox (Solo en modo Selección Múltiple) -->
-                    <DataGridTemplateColumn Width="45" Visibility="{Binding Data.IsContactMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BoolToVis}}">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    
                     <DataGridTemplateColumn Header="Nombre / Agente" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -200,26 +121,29 @@
                     <DataGridTemplateColumn Header="Correo Electrónico" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" 
-                                         Background="Transparent" BorderThickness="0" 
-                                         VerticalContentAlignment="Center" HorizontalContentAlignment="Left"
-                                         Padding="10,0" 
-                                         Foreground="{Binding IsMissingEmail, Converter={StaticResource BooleanToColorConverter}}"
-                                         FontStyle="{Binding IsMissingEmail, Converter={StaticResource BooleanToFontStyleConverter}}"/>
+                                <Border BorderThickness="0" CornerRadius="2">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="BorderBrush" Value="#EF4444"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsMissingEmail}" Value="True">
+                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" 
+                                             Background="Transparent" BorderThickness="0" 
+                                             VerticalContentAlignment="Center" HorizontalContentAlignment="Left"
+                                             Padding="10,0" 
+                                             Foreground="{Binding IsMissingEmail, Converter={StaticResource BooleanToColorConverter}}"
+                                             FontStyle="{Binding IsMissingEmail, Converter={StaticResource BooleanToFontStyleConverter}}"/>
+                                </Border>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <!-- Botón Eliminar Individual (Solo si NO estamos en Selección Múltiple) -->
-                    <DataGridTemplateColumn Width="50" Visibility="{Binding Data.IsContactMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Content="×" Command="{Binding DataContext.DeleteContactCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                        CommandParameter="{Binding}" Foreground="{DynamicResource DangerBrush}" Background="Transparent" 
-                                        FontSize="20" BorderThickness="0" Padding="0" VerticalAlignment="Center" Cursor="Hand"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </DockPanel>
