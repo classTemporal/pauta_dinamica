@@ -421,7 +421,10 @@ namespace PautaDinamicaApp.ViewModels
             var detectedNames = new HashSet<string>(uniqueNames, StringComparer.OrdinalIgnoreCase);
             foreach (var c in CurrentContacts)
             {
-                if (!string.IsNullOrWhiteSpace(c.Name) && !detectedNames.Contains(c.Name.Trim())) newContacts.Add(c);
+                if (!string.IsNullOrWhiteSpace(c.Name) && !detectedNames.Contains(c.Name.Trim()))
+                {
+                    if (!string.IsNullOrWhiteSpace(c.Email)) newContacts.Add(c);
+                }
             }
 
             CurrentContacts = new ObservableCollection<RecipientContact>(newContacts.OrderBy(c => c.Name).ToList());
