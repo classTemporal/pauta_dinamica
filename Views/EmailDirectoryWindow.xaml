@@ -30,8 +30,8 @@
         <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" Padding="15" CornerRadius="8" Margin="0,0,0,15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
             <StackPanel>
                 <TextBlock Text="Campo de Origen (Nombre/Agente):" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"/>
-                <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
-                          SelectedValue="{Binding SelectedPauta.EmailNameFieldId, UpdateSourceTrigger=PropertyChanged}"
+                <ComboBox ItemsSource="{Binding CurrentPautaFields}"
+                          SelectedValue="{Binding SelectedPauta.EmailNameFieldId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                           SelectedValuePath="Id"
                           DisplayMemberPath="Label"
                           Height="36"/>
