@@ -32,12 +32,10 @@
                 <TextBlock Text="Campo de Origen (Nombre/Agente):" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"/>
                 <ComboBox x:Name="SourceFieldComboBox"
                           ItemsSource="{Binding CurrentPautaFields}"
-                          SelectedValue="{Binding SelectedPauta.EmailNameFieldId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                          SelectedValuePath="Id"
+                          SelectedItem="{Binding SelectedPautaField, Mode=TwoWay}"
                           DisplayMemberPath="Label"
                           IsEditable="False"
-                          Height="36"
-                          SelectionChanged="SourceFieldComboBox_SelectionChanged"/>
+                          Height="36"/>
 
             </StackPanel>
         </Border>
