@@ -8,6 +8,7 @@
     <Window.Resources>
         <conv:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
         <conv:BooleanToFontStyleConverter x:Key="BooleanToFontStyleConverter"/>
+        <conv:BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
 
     <Grid Margin="20">
