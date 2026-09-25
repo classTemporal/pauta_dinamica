@@ -373,13 +373,18 @@ namespace PautaDinamicaApp.ViewModels
 
         private void AutoDetectContactsFromRecords()
         {
+            System.Diagnostics.Debug.WriteLine($"[AutoDetect] SelectedPauta={SelectedPauta?.Name}, EmailNameFieldId='{SelectedPauta?.EmailNameFieldId}'");
+            System.Diagnostics.Debug.WriteLine($"[AutoDetect] CurrentPautaFields count={CurrentPautaFields?.Count}");
+
             if (SelectedPauta == null || string.IsNullOrEmpty(SelectedPauta.EmailNameFieldId))
             {
+                System.Diagnostics.Debug.WriteLine($"[AutoDetect] No pauta or no field selected, calling SyncContacts");
                 SyncContacts();
                 return;
             }
 
             var selectedField = CurrentPautaFields.FirstOrDefault(f => f.Id == SelectedPauta.EmailNameFieldId);
+            System.Diagnostics.Debug.WriteLine($"[AutoDetect] selectedField={selectedField?.Label} (Id={selectedField?.Id}), Options count={selectedField?.Options?.Count ?? 0}");
             var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             // Priorizar Options del campo (lista de elementos definida por usuario)

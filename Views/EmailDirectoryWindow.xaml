@@ -35,7 +35,8 @@
                           SelectedItem="{Binding SelectedPautaField, Mode=TwoWay}"
                           DisplayMemberPath="Label"
                           IsEditable="False"
-                          Height="36"/>
+                          Height="36"
+                          SelectionChanged="SourceFieldComboBox_SelectionChanged"/>
 
             </StackPanel>
         </Border>
