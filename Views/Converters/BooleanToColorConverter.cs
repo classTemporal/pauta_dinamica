@@ -12,7 +12,22 @@ namespace PautaDinamicaApp.Views.Converters
             bool isMissing = (value is bool b) ? b : false;
             bool isInverse = parameter?.ToString() == "Inverse";
             if (isInverse) isMissing = !isMissing;
-            return isMissing ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xEF, 0x44, 0x44)) : new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0x00, 0x00));
+
+            if (isMissing)
+            {
+                return new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xEF, 0x44, 0x44));
+            }
+
+            // When not missing, use the theme-aware TextBrush so the text is legible
+            // in both light and dark themes (previously returned pure black #000000,
+            // which was invisible in dark mode).
+            if (System.Windows.Application.Current?.Resources["TextBrush"] is SolidColorBrush textBrush)
+            {
+                return textBrush;
+            }
+
+            // Fallback: light gray that is readable on dark backgrounds
+            return new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE1, 0xE1, 0xE1));
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
