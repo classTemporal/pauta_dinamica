@@ -46,7 +46,6 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="⚠️" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/>
                 <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12">
@@ -54,9 +53,6 @@
                     <LineBreak/>
                     <Run Foreground="{DynamicResource TextBrush}">Hay agentes sin correo electrónico asociado. Complete los correos para poder enviarlos correctamente.</Run>
                 </TextBlock>
-                <Button Grid.Column="2" Content="🗂️ Directorio"
-                        Command="{Binding OpenEmailDirectoryFromWarningCommand}"
-                        Style="{StaticResource GhostButton}" Height="30" Padding="10,0" Margin="10,0,0,0" FontSize="11"/>
             </Grid>
         </Border>
 
@@ -89,13 +85,6 @@
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Style.Triggers>
-                            <MultiDataTrigger>
-                                <MultiDataTrigger.Conditions>
-                                    <Condition Binding="{Binding IsMissingEmail}" Value="True"/>
-                                </MultiDataTrigger.Conditions>
-                                <Setter Property="Background" Value="#30EF4444"/>
-                                <Setter Property="Foreground" Value="#EF4444"/>
-                            </MultiDataTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
                             </Trigger>
@@ -113,8 +102,7 @@
                                 <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
                                          Background="Transparent" BorderThickness="0" 
                                          VerticalContentAlignment="Center" HorizontalContentAlignment="Left"
-                                         Padding="10,0"
-                                         Foreground="{Binding IsMissingEmail, Converter={StaticResource BooleanToColorConverter}}"/>
+                                         Padding="10,0"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
