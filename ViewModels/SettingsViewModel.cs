@@ -341,8 +341,20 @@ namespace PautaDinamicaApp.ViewModels
                 return;
             }
 
-            var records = _storageService.LoadRecords(SelectedPauta.Id);
+            var selectedField = CurrentPautaFields.FirstOrDefault(f => f.Id == SelectedPauta.EmailNameFieldId);
             var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Priorizar Options del campo (lista de elementos definida por usuario)
+            if (selectedField != null && selectedField.Options != null && selectedField.Options.Any())
+            {
+                foreach (var opt in selectedField.Options)
+                {
+                    if (!string.IsNullOrWhiteSpace(opt)) uniqueNames.Add(opt.Trim());
+                }
+            }
+
+            // Fallback: buscar en records guardados
+            var records = _storageService.LoadRecords(SelectedPauta.Id);
             foreach (var record in records)
             {
                 if (record.Values.TryGetValue(SelectedPauta.EmailNameFieldId, out var val) && val != null)
