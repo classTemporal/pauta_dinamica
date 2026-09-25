@@ -19,7 +19,7 @@ namespace PautaDinamicaApp.Models
         public string Email
         {
             get => _email;
-            set { _email = value; OnPropertyChanged(); }
+            set { _email = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsMissingEmail)); }
         }
 
         [System.Text.Json.Serialization.JsonIgnore]

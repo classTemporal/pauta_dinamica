@@ -99,7 +99,8 @@
                     <DataGridTemplateColumn Header="Nombre / Agente" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
+                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" 
+                                         IsReadOnly="True"
                                          Background="Transparent" BorderThickness="0" 
                                          VerticalContentAlignment="Center" HorizontalContentAlignment="Left"
                                          Padding="10,0"/>
@@ -122,7 +123,7 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
-                                    <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" 
+                                    <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
                                              Background="Transparent" BorderThickness="0" 
                                              VerticalContentAlignment="Center" HorizontalContentAlignment="Left"
                                              Padding="10,0" 
