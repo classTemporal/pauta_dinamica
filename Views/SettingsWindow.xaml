@@ -309,7 +309,7 @@
                                                 <TextBlock Text="Detección Automática" VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                                             </StackPanel>
                                             <Button Content="⚙️ DIRECTORIO DE CORREOS" 
-                                                    Command="{Binding OpenEmailDirectoryCommand}"
+                                                    Command="{Binding OpenEmailDirectoryFromWarningCommand}"
                                                     Style="{StaticResource GhostButton}" Height="35" FontSize="11"
                                                     IsEnabled="{Binding ElementName=AutoRecipientCheck, Path=IsChecked}"/>
                                             <TextBlock Text="Asocia nombres con correos automáticamente." 
