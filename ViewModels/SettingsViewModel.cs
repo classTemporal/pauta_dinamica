@@ -184,6 +184,16 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (e.PropertyName == nameof(SelectedPauta.EmailNameFieldId))
             {
+                // Sync SelectedPautaField so the ComboBox reflects external changes to EmailNameFieldId
+                if (!string.IsNullOrEmpty(SelectedPauta?.EmailNameFieldId))
+                {
+                    SelectedPautaField = CurrentPautaFields.FirstOrDefault(f => f.Id == SelectedPauta.EmailNameFieldId);
+                }
+                else
+                {
+                    SelectedPautaField = null;
+                }
+
                 if (!string.IsNullOrEmpty(SelectedPauta?.EmailNameFieldId))
                 {
                     AutoDetectContactsFromRecords();
@@ -197,10 +207,27 @@ namespace PautaDinamicaApp.ViewModels
 
         private ObservableCollection<RecipientContact> _currentContacts = new();
         private ObservableCollection<FieldDefinition> _currentPautaFields = new();
-
+        private FieldDefinition? _selectedPautaField;
 
         public ObservableCollection<RecipientContact> CurrentContacts { get => _currentContacts; set => SetProperty(ref _currentContacts, value); }
         public ObservableCollection<FieldDefinition> CurrentPautaFields { get => _currentPautaFields; set => SetProperty(ref _currentPautaFields, value); }
+
+        public FieldDefinition? SelectedPautaField
+        {
+            get => _selectedPautaField;
+            set
+            {
+                if (_selectedPautaField == value) return;
+                _selectedPautaField = value;
+                OnPropertyChanged();
+                if (SelectedPauta != null)
+                {
+                    SelectedPauta.EmailNameFieldId = value?.Id ?? "";
+                    if (value != null) AutoDetectContactsFromRecords();
+                    else SyncContacts();
+                }
+            }
+        }
 
         // Agentes detectados automáticamente que NO tienen correo asociado
         private ObservableCollection<RecipientContact> _missingEmailContacts = new();
@@ -330,6 +357,17 @@ namespace PautaDinamicaApp.ViewModels
         {
             CurrentContacts = new ObservableCollection<RecipientContact>(pauta.RecipientContacts ?? new());
             CurrentPautaFields = new ObservableCollection<FieldDefinition>(_storageService.LoadConfiguration(pauta.Id).Where(f => f.Type != FieldType.Separator));
+
+            // Sync SelectedPautaField from EmailNameFieldId so the ComboBox SelectedItem binding reflects the current value
+            if (!string.IsNullOrEmpty(SelectedPauta?.EmailNameFieldId))
+            {
+                SelectedPautaField = CurrentPautaFields.FirstOrDefault(f => f.Id == SelectedPauta.EmailNameFieldId);
+            }
+            else
+            {
+                SelectedPautaField = null;
+            }
+
             AutoDetectContactsFromRecords();
         }
 
