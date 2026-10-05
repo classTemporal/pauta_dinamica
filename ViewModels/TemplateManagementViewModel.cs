@@ -163,6 +163,13 @@ namespace PautaDinamicaApp.ViewModels
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+            // Include explicitly-persisted categories (created via the template picker)
+            // that may exist with no backing template yet.
+            var explicitCats = _storageService.LoadTemplateCategories(_pautaId);
+            cats = cats.Concat(explicitCats)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                .ToList();
             AvailableCategories.Clear();
             foreach (var c in cats) AvailableCategories.Add(c);
         }
