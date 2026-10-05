@@ -136,12 +136,16 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ApplyCategoryFilter()
         {
+            // Preserve current selection
+            string preservedSelection = _selectedCategory;
+
             // Build available categories with "No categorizado" as default
             AvailableCategories.Clear();
             AvailableCategories.Add("No categorizado");
             var persistedCategories = _storageService.LoadTemplateCategories().OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "No categorizado" };
             foreach (var c in persistedCategories)
-                if (c != "No categorizado")
+                if (seen.Add(c))
                     AvailableCategories.Add(c);
             var templateCategories = _allTemplates
                 .Where(t => !string.IsNullOrWhiteSpace(t.Model.Category) && t.Model.Category != "No categorizado")
@@ -150,10 +154,17 @@ namespace PautaDinamicaApp.ViewModels
                 .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
                 .ToList();
             foreach (var c in templateCategories)
-            {
-                if (!AvailableCategories.Any(ac => ac.Equals(c, StringComparison.OrdinalIgnoreCase)))
+                if (seen.Add(c))
                     AvailableCategories.Add(c);
-            }
+
+            // Restore selection if still valid; otherwise default
+            if (string.IsNullOrWhiteSpace(preservedSelection) || !AvailableCategories.Contains(preservedSelection, StringComparer.OrdinalIgnoreCase))
+                _selectedCategory = "No categorizado";
+            else
+                _selectedCategory = preservedSelection;
+
+            // Notify UI if the selection was restored (needed when called internally without the setter)
+            OnPropertyChanged(nameof(SelectedCategory));
 
             if (string.IsNullOrWhiteSpace(_selectedCategory) || _selectedCategory == "No categorizado")
             {
