@@ -38,6 +38,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -102,8 +103,48 @@
             </Grid>
         </Border>
 
+        <!-- Category Management Bar -->
+        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}" Padding="12,8" CornerRadius="10" Margin="0,0,0,15"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                Visibility="{Binding IsCategorizedMode, Converter={StaticResource BoolToVis}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Categorías:" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ItemsControl ItemsSource="{Binding AvailableCategories}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,3" Margin="0,0,6,0">
+                                    <TextBlock Text="{Binding}" FontSize="11" Foreground="White" FontWeight="SemiBold"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBox x:Name="NewCategoryTextBox" Height="30" Width="140"
+                             Text="{Binding NewCategoryText, UpdateSourceTrigger=PropertyChanged}"
+                             Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
+                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                             Padding="6,0" VerticalContentAlignment="Center"/>
+                    <Button Content="+ Crear" Command="{Binding CreateCategoryCommand}" Style="{StaticResource SuccessButton}"
+                            Height="30" Margin="6,0,4,0" Padding="10,0"/>
+                    <Button Content="🗑️" Command="{Binding DeleteCategoryCommand}" Style="{StaticResource DangerButton}"
+                            Height="30" Padding="8,0" ToolTip="Eliminar categoría seleccionada"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
         <!-- Lista de Plantillas -->
-        <DockPanel Grid.Row="2">
+        <DockPanel Grid.Row="3">
             <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" Padding="10" CornerRadius="10,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
                 <Grid>
                     <!-- Vista Normal -->
@@ -216,7 +257,7 @@
         </DockPanel>
 
         <!-- Pie -->
-        <Border Grid.Row="3" Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+        <Border Grid.Row="4" Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="CANCELAR" Command="{Binding CancelCommand}"
                         Style="{StaticResource GhostButton}" Width="130" Height="45" Margin="0,0,10,0"/>

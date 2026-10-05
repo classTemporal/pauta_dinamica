@@ -144,9 +144,7 @@ namespace PautaDinamicaApp.Views
             LoadTemplates();
 
             // Determine if templates are categorized (any template has a non-empty category)
-            // or if they're all in "Sin Categorizar" mode (category empty for all)
-            bool hasAnyCategory = _allTemplates.Any(t => !string.IsNullOrWhiteSpace(t.Category))
-                               || _storageService.LoadTemplateCategories(_pautaId).Any();
+            bool hasAnyCategory = _allTemplates.Any(t => !string.IsNullOrWhiteSpace(t.Category));
             if (hasAnyCategory)
             {
                 IsCategorizedMode = true;
@@ -186,7 +184,9 @@ namespace PautaDinamicaApp.Views
         {
             var categories = new ObservableCollection<CategoryItem>();
 
-            // Group templates by category
+            // Derive categories from templates (GroupBy Category field).
+            // Placeholder templates (Content == "__CATEGORY_PLACEHOLDER__") are included
+            // so empty categories survive reloads.
             var grouped = _allTemplates
                 .GroupBy(t => string.IsNullOrWhiteSpace(t.Category) ? "Sin Categorizar" : t.Category)
                 .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
@@ -194,18 +194,6 @@ namespace PautaDinamicaApp.Views
             foreach (var group in grouped)
             {
                 categories.Add(new CategoryItem { Name = group.Key, Count = group.Count() });
-            }
-
-            // Merge explicitly-persisted categories that have no backing template (Count = 0).
-            // These are categories created via "Crear Categoría" that survived reloads via
-            // template_categories.json and must keep showing even when no template uses them.
-            var explicitCats = _storageService.LoadTemplateCategories(_pautaId);
-            foreach (var cat in explicitCats)
-            {
-                if (!categories.Any(c => c.Name.Equals(cat, StringComparison.OrdinalIgnoreCase)))
-                {
-                    categories.Add(new CategoryItem { Name = cat, Count = 0 });
-                }
             }
 
             Categories = categories;
@@ -230,7 +218,7 @@ namespace PautaDinamicaApp.Views
 
             if (IsCategorizedMode)
             {
-                if (SelectedCategory?.Name == "Sin Categorizar" || SelectedCategory?.Name == "Todas las Plantillas")
+                if (SelectedCategory?.Name == "Sin Categorizar")
                 {
                     filtered = _allTemplates.Where(t => string.IsNullOrWhiteSpace(t.Category));
                 }
@@ -247,6 +235,9 @@ namespace PautaDinamicaApp.Views
             {
                 filtered = _allTemplates;
             }
+
+            // Hide placeholder templates (categories-only entries)
+            filtered = filtered.Where(t => t.Content != "__CATEGORY_PLACEHOLDER__");
 
             // Apply search filter on top
             if (hasSearch)
@@ -460,8 +451,7 @@ namespace PautaDinamicaApp.Views
             foreach (var t in updated) _allTemplates.Add(t);
 
             // Rebuild categories and refresh
-            bool hasAnyCategory = _allTemplates.Any(t => !string.IsNullOrWhiteSpace(t.Category))
-                               || _storageService.LoadTemplateCategories(_pautaId).Any();
+            bool hasAnyCategory = _allTemplates.Any(t => !string.IsNullOrWhiteSpace(t.Category));
             IsCategorizedMode = hasAnyCategory;
             if (IsCategorizedMode)
                 BuildCategoryList();
@@ -496,30 +486,72 @@ namespace PautaDinamicaApp.Views
 
             // Switch to categorized mode
             IsCategorizedMode = true;
-            BuildCategoryList();
 
             // Check for duplicate (after rebuild)
+            BuildCategoryList();
             if (Categories.Any(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
             {
-                MessageBoxHelper.Show($"La categoría \"{name}\" ya existe.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxHelper.Show("La categoría \"" + name + "\" ya existe.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // Add the new category and select it
-            Categories.Add(new CategoryItem { Name = name, Count = 0, IsSelected = true });
+            // PERSIST: create a placeholder template so the category survives reloads
+            var placeholder = new MessageTemplate
+            {
+                Id = Guid.NewGuid().ToString(),
+                Content = "__CATEGORY_PLACEHOLDER__",
+                PautaId = _pautaId,
+                Category = name
+            };
+            _allTemplates.Add(placeholder);
+            _storageService.SaveTemplates(_allTemplates.ToList());
 
-            // PERSIST: save the category so it survives window reloads. Categories are stored
-            // separately from templates (a category may exist with no template assigned yet),
-            // in template_categories.json keyed by pautaId.
-            var persisted = _storageService.LoadTemplateCategories(_pautaId);
-            if (!persisted.Any(c => c.Equals(name, StringComparison.OrdinalIgnoreCase)))
-                persisted.Add(name);
-            _storageService.SaveTemplateCategories(_pautaId, persisted);
-
+            // Rebuild categories and select the new one
+            BuildCategoryList();
             SelectedCategory = Categories.First(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
             NewCategoryText = string.Empty;
             OnPropertyChanged(nameof(NewCategoryText));
+        }
+
+        private void DeleteCategory_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedCategory == null)
+            {
+                MessageBoxHelper.Show("Selecciona una categoría para eliminar.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string catName = SelectedCategory.Name;
+
+            // Cannot delete "Sin Categorizar"
+            if (catName == "Sin Categorizar")
+            {
+                MessageBoxHelper.Show("No se puede eliminar la categoría 'Sin Categorizar'.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (MessageBoxHelper.ShowNonCritical("¿Eliminar la categoría \"" + catName + "\" y todas sus plantillas?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            // Remove all templates in this category
+            var toRemove = _allTemplates.Where(t => string.Equals(t.Category, catName, StringComparison.OrdinalIgnoreCase)).ToList();
+            foreach (var t in toRemove) _allTemplates.Remove(t);
+
+            // Also remove any placeholders for this category
+            var placeholders = _allTemplates.Where(t => t.Content == "__CATEGORY_PLACEHOLDER__" && string.Equals(t.Category, catName, StringComparison.OrdinalIgnoreCase)).ToList();
+            foreach (var p in placeholders) _allTemplates.Remove(p);
+
+            _storageService.SaveTemplates(_allTemplates.ToList());
+
+            // Rebuild: switch to "Sin Categorizar" if the deleted category was selected
+            BuildCategoryList();
+            if (SelectedCategory?.Name == catName || !Categories.Any())
+            {
+                SelectedCategory = Categories.FirstOrDefault(c => c.Name == "Sin Categorizar") ?? Categories.FirstOrDefault();
+            }
+
+            ApplySearchAndCategoryFilter();
         }
 
         // --- Drag & Drop Implementation ---
@@ -661,6 +693,34 @@ namespace PautaDinamicaApp.Views
                 window.Left = lpPoint.X + 5;
                 window.Top = lpPoint.Y + 5;
             }
+        }
+
+        /// <summary>
+        /// Handles dropping a template onto a category button — reassigns the template's Category.
+        /// </summary>
+        private void CategoriesPanel_Drop(object sender, System.Windows.DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent("MessageTemplate")) return;
+            var template = e.Data.GetData("MessageTemplate") as MessageTemplate;
+            if (template == null || SelectedCategory == null) return;
+
+            string targetCategory = SelectedCategory.Name;
+
+            // Don't reassign to the same category
+            if (string.Equals(template.Category, targetCategory, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            // Cannot drop into "Sin Categorizar" via category buttons (use the list reorder)
+            if (targetCategory == "Sin Categorizar")
+                return;
+
+            template.Category = targetCategory;
+            _storageService.SaveTemplates(_allTemplates.ToList());
+
+            // Rebuild counts but keep selection
+            BuildCategoryList();
+            SelectedCategory = Categories.FirstOrDefault(c => c.Name.Equals(targetCategory, StringComparison.OrdinalIgnoreCase)) ?? SelectedCategory;
+            ApplySearchAndCategoryFilter();
         }
     }
 

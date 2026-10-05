@@ -101,7 +101,8 @@
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="Categorías" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
                 <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                    <UniformGrid x:Name="CategoriesPanel" Margin="0" HorizontalAlignment="Left" Columns="5" MinHeight="40">
+                    <UniformGrid x:Name="CategoriesPanel" Margin="0" HorizontalAlignment="Left" Columns="5" MinHeight="40"
+                                 AllowDrop="True" Drop="CategoriesPanel_Drop">
                         <ItemsControl ItemsSource="{Binding Categories}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -136,6 +137,8 @@
                              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                              Padding="8,0" VerticalContentAlignment="Center"/>
                     <Button Content="+ Crear" Click="CreateCategory_Click" Style="{StaticResource SuccessButton}"
+                            Height="32" Margin="8,0,0,0" Padding="12,0"/>
+                    <Button Content="🗑️ Eliminar" Click="DeleteCategory_Click" Style="{StaticResource DangerButton}"
                             Height="32" Margin="8,0,0,0" Padding="12,0"/>
                 </StackPanel>
             </Grid>

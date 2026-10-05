@@ -72,6 +72,13 @@ namespace PautaDinamicaApp.ViewModels
             set => SetProperty(ref _selectedCategory, value);
         }
 
+        private bool _isCategorizedMode;
+        public bool IsCategorizedMode
+        {
+            get => _isCategorizedMode;
+            set => SetProperty(ref _isCategorizedMode, value);
+        }
+
         public ObservableCollection<string> AvailableCategories { get; } = new();
 
         public ICommand AddTemplateCommand { get; }
@@ -88,14 +95,21 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand SaveChangesCommand { get; }
         public ICommand ApplyChangesCommand { get; }
         public ICommand CancelCommand { get; }
+        public ICommand CreateCategoryCommand { get; }
+        public ICommand DeleteCategoryCommand { get; }
 
         public event Action? RequestClose;
+
+        public string NewCategoryText { get; set; } = string.Empty;
 
         public TemplateManagementViewModel(string? pautaId = null)
         {
             _storageService = new StorageService();
             _pautaId = pautaId ?? string.Empty;
             LoadTemplates();
+
+            CreateCategoryCommand = new RelayCommand(_ => CreateCategory());
+            DeleteCategoryCommand = new RelayCommand(_ => DeleteCategory());
 
             AddTemplateCommand = new RelayCommand(_ => AddTemplate(), _ => !string.IsNullOrWhiteSpace(NewTemplateContent));
             DeleteTemplateCommand = new RelayCommand(p => DeleteTemplate(p as TemplateItemVM));
@@ -157,21 +171,16 @@ namespace PautaDinamicaApp.ViewModels
             var models = _storageService.LoadTemplatesForPauta(_pautaId);
             Templates = new ObservableCollection<TemplateItemVM>(models.Select(m => new TemplateItemVM(m)));
 
-            // Build available categories from existing templates
+            // Build available categories from templates only (Category field)
             var cats = models.Where(t => !string.IsNullOrWhiteSpace(t.Category))
                 .Select(t => t.Category)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            // Include explicitly-persisted categories (created via the template picker)
-            // that may exist with no backing template yet.
-            var explicitCats = _storageService.LoadTemplateCategories(_pautaId);
-            cats = cats.Concat(explicitCats)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
-                .ToList();
             AvailableCategories.Clear();
             foreach (var c in cats) AvailableCategories.Add(c);
+
+            IsCategorizedMode = models.Any(t => !string.IsNullOrWhiteSpace(t.Category));
         }
 
         private void SaveTemplates()
@@ -354,6 +363,65 @@ namespace PautaDinamicaApp.ViewModels
                     MessageBoxHelper.Show("Error al importar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+        }
+
+        private void CreateCategory()
+        {
+            string name = NewCategoryText?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                MessageBoxHelper.Show("El nombre de la categoría no puede estar vacío.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Check for duplicate
+            if (AvailableCategories.Any(c => c.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBoxHelper.Show("La categoría \"" + name + "\" ya existe.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Create a placeholder template so the category persists via templates.json
+            var placeholder = new MessageTemplate
+            {
+                Id = Guid.NewGuid().ToString(),
+                Content = "__CATEGORY_PLACEHOLDER__",
+                PautaId = _pautaId,
+                Category = name
+            };
+            Templates.Add(new TemplateItemVM(placeholder));
+            SaveTemplates();
+            LoadTemplates(); // Refresh AvailableCategories + IsCategorizedMode
+
+            NewCategoryText = string.Empty;
+            OnPropertyChanged(nameof(NewCategoryText));
+        }
+
+        private void DeleteCategory()
+        {
+            if (string.IsNullOrWhiteSpace(_selectedCategory))
+            {
+                MessageBoxHelper.Show("Selecciona una categoría para eliminar.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string catName = _selectedCategory;
+
+            if (catName == "Sin Categorizar")
+            {
+                MessageBoxHelper.Show("No se puede eliminar la categoría 'Sin Categorizar'.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (MessageBoxHelper.ShowNonCritical("¿Eliminar la categoría \"" + catName + "\" y todas sus plantillas?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            // Remove all templates in this category
+            var toRemove = Templates.Where(t => string.Equals(t.Model.Category, catName, StringComparison.OrdinalIgnoreCase)).ToList();
+            foreach (var t in toRemove) Templates.Remove(t);
+
+            SaveTemplates();
+            LoadTemplates();
         }
     }
 }
