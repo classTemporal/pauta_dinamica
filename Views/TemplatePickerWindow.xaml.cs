@@ -500,7 +500,7 @@ namespace PautaDinamicaApp.Views
             var window = new Window
             {
                 WindowStyle = WindowStyle.None,
-                AllowsTransparency = true,
+                AllowsTransparency = false,
                 Background = System.Windows.Media.Brushes.Transparent,
                 SizeToContent = SizeToContent.WidthAndHeight,
                 Topmost = true,

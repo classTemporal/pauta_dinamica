@@ -136,7 +136,7 @@ namespace PautaDinamicaApp.Views
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(10),
-                Opacity = 0.7,
+                Opacity = 0.85,
                 Child = new TextBlock
                 {
                     Text = text,
@@ -148,7 +148,7 @@ namespace PautaDinamicaApp.Views
             var window = new Window
             {
                 WindowStyle = WindowStyle.None,
-                AllowsTransparency = true,
+                AllowsTransparency = false,
                 Background = System.Windows.Media.Brushes.Transparent,
                 SizeToContent = SizeToContent.WidthAndHeight,
                 Topmost = true,
