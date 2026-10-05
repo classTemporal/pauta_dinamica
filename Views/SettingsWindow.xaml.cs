@@ -15,7 +15,15 @@ namespace PautaDinamicaApp.Views
         public int InitialTabIndex
         {
             get => _initialTabIndex;
-            set => _initialTabIndex = value;
+            set
+            {
+                _initialTabIndex = value;
+                // Object initializers run AFTER the constructor, so the tab selection
+                // must happen here for property-set values to take effect.
+                if (MainTabControl != null && _initialTabIndex > 0
+                    && _initialTabIndex < MainTabControl.Items.Count)
+                    MainTabControl.SelectedIndex = _initialTabIndex;
+            }
         }
 
         [DllImport("user32.dll")]
