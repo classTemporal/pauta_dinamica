@@ -14,6 +14,7 @@ namespace PautaDinamicaApp.Services
         private readonly string _lastPautaPath;
         private readonly string _settingsPath; // Path for global settings
         private readonly string _templatesPath;
+        private readonly string _templateCategoriesPath; // Path for template_categories.json
 
         public StorageService(string? username = null)
         {
@@ -27,6 +28,7 @@ namespace PautaDinamicaApp.Services
             _lastPautaPath = Path.Combine(_basePath, "last_pauta.txt");
             _settingsPath = Path.Combine(_basePath, "app_settings.json");
             _templatesPath = Path.Combine(_basePath, "templates.json");
+            _templateCategoriesPath = Path.Combine(_basePath, "template_categories.json");
 
             EnsureDefaultPautaExists();
         }
@@ -224,6 +226,29 @@ namespace PautaDinamicaApp.Services
             if (string.IsNullOrEmpty(pautaId))
                 return all.Where(t => string.IsNullOrEmpty(t.PautaId) || t.PautaId == pautaId).ToList();
             return all.Where(t => t.PautaId == pautaId).ToList();
+        }
+
+        // --- TEMPLATE CATEGORIES (template_categories.json) ---
+
+        public List<string> LoadTemplateCategories()
+        {
+            if (!File.Exists(_templateCategoriesPath)) return new List<string>();
+            try
+            {
+                string json = File.ReadAllText(_templateCategoriesPath);
+                return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+            }
+            catch { return new List<string>(); }
+        }
+
+        public void SaveTemplateCategories(List<string> categories)
+        {
+            try
+            {
+                string json = JsonSerializer.Serialize(categories, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(_templateCategoriesPath, json);
+            }
+            catch { }
         }
 
         // --- ATTACHMENT MANAGEMENT ---

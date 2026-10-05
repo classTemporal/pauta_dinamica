@@ -171,16 +171,24 @@ namespace PautaDinamicaApp.ViewModels
             var models = _storageService.LoadTemplatesForPauta(_pautaId);
             Templates = new ObservableCollection<TemplateItemVM>(models.Select(m => new TemplateItemVM(m)));
 
-            // Build available categories from templates only (Category field)
-            var cats = models.Where(t => !string.IsNullOrWhiteSpace(t.Category))
+            // Build available categories from template_categories.json
+            var persistedCategories = _storageService.LoadTemplateCategories();
+            AvailableCategories.Clear();
+            foreach (var c in persistedCategories.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
+                AvailableCategories.Add(c);
+            
+            // Also add categories from existing templates that aren't in the file
+            var templateCategories = models.Where(t => !string.IsNullOrWhiteSpace(t.Category))
                 .Select(t => t.Category)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            AvailableCategories.Clear();
-            foreach (var c in cats) AvailableCategories.Add(c);
+            foreach (var c in templateCategories)
+            {
+                if (!AvailableCategories.Any(ac => ac.Equals(c, StringComparison.OrdinalIgnoreCase)))
+                    AvailableCategories.Add(c);
+            }
 
-            IsCategorizedMode = models.Any(t => !string.IsNullOrWhiteSpace(t.Category));
+            IsCategorizedMode = models.Any(t => !string.IsNullOrWhiteSpace(t.Category)) || persistedCategories.Any();
         }
 
         private void SaveTemplates()
@@ -365,6 +373,9 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        /// <summary>
+        /// Crea una nueva categoría persistiéndola en template_categories.json.
+        /// </summary>
         private void CreateCategory()
         {
             string name = NewCategoryText?.Trim() ?? string.Empty;
@@ -374,29 +385,32 @@ namespace PautaDinamicaApp.ViewModels
                 return;
             }
 
-            // Check for duplicate
+            // Check for duplicate in file + AvailableCategories
+            var fileCategories = _storageService.LoadTemplateCategories();
+            if (fileCategories.Any(c => c.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBoxHelper.Show("La categoría \"" + name + "\" ya existe.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             if (AvailableCategories.Any(c => c.Equals(name, StringComparison.OrdinalIgnoreCase)))
             {
                 MessageBoxHelper.Show("La categoría \"" + name + "\" ya existe.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // Create a placeholder template so the category persists via templates.json
-            var placeholder = new MessageTemplate
-            {
-                Id = Guid.NewGuid().ToString(),
-                Content = "__CATEGORY_PLACEHOLDER__",
-                PautaId = _pautaId,
-                Category = name
-            };
-            Templates.Add(new TemplateItemVM(placeholder));
-            SaveTemplates();
+            // Persist to template_categories.json
+            fileCategories.Add(name);
+            _storageService.SaveTemplateCategories(fileCategories);
+
             LoadTemplates(); // Refresh AvailableCategories + IsCategorizedMode
 
             NewCategoryText = string.Empty;
             OnPropertyChanged(nameof(NewCategoryText));
         }
 
+        /// <summary>
+        /// Elimina una categoría: la borra de template_categories.json y borra sus templates.
+        /// </summary>
         private void DeleteCategory()
         {
             if (string.IsNullOrWhiteSpace(_selectedCategory))
@@ -416,7 +430,12 @@ namespace PautaDinamicaApp.ViewModels
             if (MessageBoxHelper.ShowNonCritical("¿Eliminar la categoría \"" + catName + "\" y todas sus plantillas?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
 
-            // Remove all templates in this category
+            // Remove from categories file
+            var categories = _storageService.LoadTemplateCategories();
+            categories.RemoveAll(c => c.Equals(catName, StringComparison.OrdinalIgnoreCase));
+            _storageService.SaveTemplateCategories(categories);
+
+            // Remove templates with this category
             var toRemove = Templates.Where(t => string.Equals(t.Model.Category, catName, StringComparison.OrdinalIgnoreCase)).ToList();
             foreach (var t in toRemove) Templates.Remove(t);
 
