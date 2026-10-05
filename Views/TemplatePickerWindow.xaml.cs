@@ -18,11 +18,7 @@ namespace PautaDinamicaApp.Views
         private readonly string _pautaId;
         private readonly PautaSchema? _currentPauta;
 
-        // Category navigation
-        private ObservableCollection<CategoryItem> _categories = new();
-        private CategoryItem? _selectedCategory;
-
-        // Templates filtered (flat list when in "all un-categorized" mode)
+        // Templates filtered (flat list)
         private ObservableCollection<MessageTemplate> _displayedTemplates = new();
         private readonly ObservableCollection<MessageTemplate> _allTemplates = new();
 
@@ -34,10 +30,6 @@ namespace PautaDinamicaApp.Views
         private System.Windows.Point _startPoint;
         private System.Windows.Controls.ListBoxItem? _draggedItem;
         private bool _isDraggingNow;
-
-        // View state flags
-        private bool _isCategoryMode = true; // true = show category pane; false = show flat list
-        private bool _isCategorizedMode = true; // true = templates are categorized; false = all in "Todas las Plantillas"
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -67,38 +59,11 @@ namespace PautaDinamicaApp.Views
             }
         }
 
-        // --- Public properties for binding ---
-
-        public ObservableCollection<CategoryItem> Categories
-        {
-            get => _categories;
-            set { _categories = value; OnPropertyChanged(); }
-        }
-
-        public CategoryItem? SelectedCategory
-        {
-            get => _selectedCategory;
-            set
-            {
-                if (_selectedCategory != value)
-                {
-                    // Update IsSelected flags
-                    if (_selectedCategory != null) _selectedCategory.IsSelected = false;
-                    if (value != null) value.IsSelected = true;
-                    _selectedCategory = value;
-                    OnPropertyChanged();
-                    ApplySearchAndCategoryFilter();
-                }
-            }
-        }
-
         public ObservableCollection<MessageTemplate> DisplayedTemplates
         {
             get => _displayedTemplates;
             set { _displayedTemplates = value; OnPropertyChanged(); }
         }
-
-        public string NewCategoryText { get; set; } = string.Empty;
 
         public string SearchText
         {
@@ -109,7 +74,7 @@ namespace PautaDinamicaApp.Views
                 {
                     _searchText = value;
                     OnPropertyChanged();
-                    ApplySearchAndCategoryFilter();
+                    ApplySearchFilter();
                 }
             }
         }
@@ -117,18 +82,6 @@ namespace PautaDinamicaApp.Views
         public string CurrentPautaName
         {
             get => _currentPauta?.Name ?? (_pautaId == "default" ? "Todas las Pautas" : _pautaId);
-        }
-
-        public bool IsCategoryMode
-        {
-            get => _isCategoryMode;
-            set { _isCategoryMode = value; OnPropertyChanged(); }
-        }
-
-        public bool IsCategorizedMode
-        {
-            get => _isCategorizedMode;
-            set { _isCategorizedMode = value; OnPropertyChanged(); }
         }
 
         public TemplatePickerWindow(string pautaId)
@@ -140,27 +93,8 @@ namespace PautaDinamicaApp.Views
             // Load the pauta schema to get its name for display
             var allPautas = _storageService.LoadPautas();
             _currentPauta = allPautas.FirstOrDefault(p => p.Id == _pautaId);
-            if (_currentPauta != null)
-                _currentPauta.TemplateCategories = _storageService.LoadTemplateCategories();
 
             LoadTemplates();
-
-            // Determine if categories mode: check if template_categories.json has entries
-            var persistedCategories = _storageService.LoadTemplateCategories();
-            bool hasCategories = persistedCategories.Any();
-            IsCategorizedMode = hasCategories;
-            if (IsCategorizedMode)
-            {
-                BuildCategoryList();
-            }
-            else
-            {
-                BuildFlatCategoryList();
-            }
-
-            // Initially select first category
-            SelectedCategory = Categories.FirstOrDefault();
-
             DataContext = this;
         }
 
@@ -179,66 +113,15 @@ namespace PautaDinamicaApp.Views
             foreach (var t in pautaTemplates) _allTemplates.Add(t);
 
             // Initial display: all templates (filtered by search if any)
-            ApplySearchAndCategoryFilter();
+            ApplySearchFilter();
         }
 
-        private void BuildCategoryList()
-        {
-            var categories = new ObservableCollection<CategoryItem>();
-
-            // "Todas las Plantillas" — always first
-            categories.Add(new CategoryItem { Name = "Todas las Plantillas", Count = _allTemplates.Count });
-
-            // "Sin Categorizar" — templates with empty category
-            int uncategorizedCount = _allTemplates.Count(t => string.IsNullOrWhiteSpace(t.Category));
-            categories.Add(new CategoryItem { Name = "Sin Categorizar", Count = uncategorizedCount });
-
-            // Persisted categories from template_categories.json (each with count, including 0)
-            var persistedCategories = _storageService.LoadTemplateCategories();
-            foreach (var cat in persistedCategories.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
-            {
-                int count = _allTemplates.Count(t => string.Equals(t.Category, cat, StringComparison.OrdinalIgnoreCase));
-                categories.Add(new CategoryItem { Name = cat, Count = count });
-            }
-
-            Categories = categories;
-        }
-
-        private void BuildFlatCategoryList()
-        {
-            // All templates in "Todas las Plantillas"
-            var categories = new ObservableCollection<CategoryItem>();
-            categories.Add(new CategoryItem { Name = "Todas las Plantillas", Count = _allTemplates.Count });
-            Categories = categories;
-        }
-
-        private void ApplySearchAndCategoryFilter()
+        private void ApplySearchFilter()
         {
             string search = _searchText?.ToLower() ?? "";
             bool hasSearch = !string.IsNullOrWhiteSpace(search);
 
-            // Determine which templates to show based on category selection
-            IEnumerable<MessageTemplate> filtered;
-
-            if (IsCategorizedMode)
-            {
-                if (SelectedCategory?.Name == "Sin Categorizar")
-                {
-                    filtered = _allTemplates.Where(t => string.IsNullOrWhiteSpace(t.Category));
-                }
-                else if (SelectedCategory != null && SelectedCategory.Name != "Todas las Plantillas")
-                {
-                    filtered = _allTemplates.Where(t => string.Equals(t.Category, SelectedCategory.Name, StringComparison.OrdinalIgnoreCase));
-                }
-                else
-                {
-                    filtered = _allTemplates;
-                }
-            }
-            else
-            {
-                filtered = _allTemplates;
-            }
+            IEnumerable<MessageTemplate> filtered = _allTemplates;
 
             // Apply search filter on top
             if (hasSearch)
@@ -291,14 +174,6 @@ namespace PautaDinamicaApp.Views
             Close();
         }
 
-        private void CategoryButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is System.Windows.Controls.Button btn && btn.DataContext is CategoryItem cat)
-            {
-                SelectedCategory = cat;
-            }
-        }
-
         private void ShowAdd_Click(object sender, RoutedEventArgs e)
         {
             AddTemplateGrid.Visibility = Visibility.Visible;
@@ -329,33 +204,9 @@ namespace PautaDinamicaApp.Views
                 PautaId = _pautaId
             };
 
-            // If we're in categorized mode and a category is selected (not system categories),
-            // assign the template to that category
-            if (IsCategorizedMode && SelectedCategory != null &&
-                SelectedCategory.Name != "Sin Categorizar" && SelectedCategory.Name != "Todas las Plantillas")
-            {
-                newTemplate.Category = SelectedCategory.Name;
-            }
-            else
-            {
-                newTemplate.Category = string.Empty; // "Sin Categorizar"
-            }
-
             _allTemplates.Add(newTemplate);
 
-            // Rebuild categories and refresh display
-            if (IsCategorizedMode)
-                BuildCategoryList();
-            else
-                BuildFlatCategoryList();
-
-            // Keep the selected category
-            if (Categories.Any())
-            {
-                SelectedCategory = Categories.FirstOrDefault(c => c.Name == (SelectedCategory?.Name ?? Categories[0].Name));
-            }
-
-            SaveCurrentState();
+            RefreshDisplay();
 
             // Reset UI
             NewTemplateTextBox.Clear();
@@ -451,111 +302,12 @@ namespace PautaDinamicaApp.Views
             var updated = _storageService.LoadTemplatesForPauta(_pautaId);
             foreach (var t in updated) _allTemplates.Add(t);
 
-            // Rebuild categories and refresh
-            var persistedCategories = _storageService.LoadTemplateCategories();
-            IsCategorizedMode = persistedCategories.Any();
-            if (IsCategorizedMode)
-                BuildCategoryList();
-            else
-                BuildFlatCategoryList();
-
-            if (Categories.Any())
-            {
-                SelectedCategory = Categories.FirstOrDefault();
-            }
+            RefreshDisplay();
         }
 
         private void RefreshDisplay()
         {
-            // Rebuild categories (counts changed)
-            if (IsCategorizedMode)
-                BuildCategoryList();
-            else
-                BuildFlatCategoryList();
-
-            ApplySearchAndCategoryFilter();
-        }
-
-        /// <summary>
-        /// Crea una nueva categoría, la persiste en template_categories.json y rebuild UI.
-        /// </summary>
-        private void CreateCategory_Click(object sender, RoutedEventArgs e)
-        {
-            // DEBUGGING: verificar que se ejecuta
-            MessageBoxHelper.Show("CreateCategory_Click ejecutado — verificando que se ejecuta.", "Debug", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            string name = NewCategoryText?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                MessageBoxHelper.Show("El nombre de la categoría no puede estar vacío.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Switch to categorized mode
-            IsCategorizedMode = true;
-
-            // Check for duplicate (after rebuild)
-            BuildCategoryList();
-            if (Categories.Any(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-            {
-                MessageBoxHelper.Show("La categoría \"" + name + "\" ya existe.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // PERSIST: add category to template_categories.json
-            var categories = _storageService.LoadTemplateCategories();
-            categories.Add(name);
-            _storageService.SaveTemplateCategories(categories);
-
-            // Rebuild categories and select the new one
-            BuildCategoryList();
-            SelectedCategory = Categories.FirstOrDefault(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-
-            NewCategoryText = string.Empty;
-            OnPropertyChanged(nameof(NewCategoryText));
-        }
-
-        /// <summary>
-        /// Elimina una categoría: la borra de template_categories.json y borra sus templates.
-        /// </summary>
-        private void DeleteCategory_Click(object sender, RoutedEventArgs e)
-        {
-            if (SelectedCategory == null)
-            {
-                MessageBoxHelper.Show("Selecciona una categoría para eliminar.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            string catName = SelectedCategory.Name;
-
-            // Cannot delete system categories
-            if (catName == "Sin Categorizar" || catName == "Todas las Plantillas")
-            {
-                MessageBoxHelper.Show("No se puede eliminar esta categoría del sistema.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            if (MessageBoxHelper.ShowNonCritical("¿Eliminar la categoría \"" + catName + "\" y todas sus plantillas?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
-                return;
-
-            // Remove from categories file
-            var categories = _storageService.LoadTemplateCategories();
-            categories.RemoveAll(c => c.Equals(catName, StringComparison.OrdinalIgnoreCase));
-            _storageService.SaveTemplateCategories(categories);
-
-            // Remove templates with this category
-            var toRemove = _allTemplates.Where(t => string.Equals(t.Category, catName, StringComparison.OrdinalIgnoreCase)).ToList();
-            foreach (var t in toRemove) _allTemplates.Remove(t);
-            _storageService.SaveTemplates(_allTemplates.ToList());
-
-            // Rebuild: switch to first category if the deleted one was selected
-            BuildCategoryList();
-            if (SelectedCategory?.Name == catName || !Categories.Any())
-            {
-                SelectedCategory = Categories.FirstOrDefault();
-            }
-
-            ApplySearchAndCategoryFilter();
+            ApplySearchFilter();
         }
 
         // --- Drag & Drop Implementation ---
@@ -698,55 +450,5 @@ namespace PautaDinamicaApp.Views
                 window.Top = lpPoint.Y + 5;
             }
         }
-
-        /// <summary>
-        /// Handles dropping a template onto a category button — reassigns the template's Category.
-        /// </summary>
-        private void CategoriesPanel_Drop(object sender, System.Windows.DragEventArgs e)
-        {
-            if (!e.Data.GetDataPresent("MessageTemplate")) return;
-            var template = e.Data.GetData("MessageTemplate") as MessageTemplate;
-            if (template == null || SelectedCategory == null) return;
-
-            string targetCategory = SelectedCategory.Name;
-
-            // Don't reassign to "Todas las Plantillas" (it's a view, not a category)
-            if (targetCategory == "Todas las Plantillas")
-                return;
-
-            // Don't reassign to same category
-            if (string.Equals(template.Category, targetCategory, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            if (targetCategory == "Sin Categorizar")
-                template.Category = string.Empty;
-            else
-                template.Category = targetCategory;
-
-            _storageService.SaveTemplates(_allTemplates.ToList());
-
-            // Rebuild counts but keep selection
-            BuildCategoryList();
-            SelectedCategory = Categories.FirstOrDefault(c => c.Name.Equals(targetCategory, StringComparison.OrdinalIgnoreCase)) ?? SelectedCategory;
-            ApplySearchAndCategoryFilter();
-        }
-    }
-
-    /// <summary>
-    /// Represents a category (or group) in the template picker's category navigation.
-    /// </summary>
-    public class CategoryItem : INotifyPropertyChanged
-    {
-        private string _name = string.Empty;
-        private int _count;
-        private bool _isSelected;
-
-        public string Name { get => _name; set { _name = value; OnPropertyChanged(); } }
-        public int Count { get => _count; set { _count = value; OnPropertyChanged(); } }
-        public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

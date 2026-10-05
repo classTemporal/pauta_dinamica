@@ -17,18 +17,6 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 
-        <Style x:Key="CategoryButtonStyle" TargetType="Button" BasedOn="{StaticResource GhostButton}">
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Height" Value="40"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
         <Style x:Key="MultiSelectToggleStyle" TargetType="CheckBox">
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Template">
@@ -88,54 +76,8 @@
                  VerticalAlignment="Center"
                  TextWrapping="NoWrap" SpellCheck.IsEnabled="True"/>
 
-        <!-- Category Bar -->
-        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="12" Margin="0,0,0,15"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="Categorías" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
-                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                    <UniformGrid x:Name="CategoriesPanel" Margin="0" HorizontalAlignment="Left" Columns="5" MinHeight="40"
-                                 AllowDrop="True" Drop="CategoriesPanel_Drop">
-                        <ItemsControl ItemsSource="{Binding Categories}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button x:Name="CatBtn" Click="CategoryButton_Click" Style="{StaticResource CategoryButtonStyle}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding Count, StringFormat=' ({0})'}" VerticalAlignment="Center" Opacity="0.6" Margin="4,0,0,0"/>
-                                        </StackPanel>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </UniformGrid>
-                </ScrollViewer>
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBox x:Name="NewCategoryTextBox" Height="32" Width="180"
-                             Text="{Binding NewCategoryText, UpdateSourceTrigger=PropertyChanged}"
-                             Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
-                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                             Padding="8,0" VerticalContentAlignment="Center"/>
-                    <Button Content="+ Crear" Click="CreateCategory_Click" Style="{StaticResource SuccessButton}"
-                            Height="32" Margin="8,0,0,0" Padding="12,0"/>
-                    <Button Content="🗑️ Eliminar" Click="DeleteCategory_Click" Style="{StaticResource DangerButton}"
-                            Height="32" Margin="8,0,0,0" Padding="12,0"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-
         <!-- MultiSelect Bar -->
-        <Border Grid.Row="3" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="12,6" Margin="0,0,0,15"
+        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="12,6" Margin="0,0,0,15"
                 BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.2"
                 Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVis}}">
             <Grid>
@@ -156,7 +98,7 @@
         </Border>
 
         <!-- Templates List -->
-        <ListBox x:Name="TemplatesList" Grid.Row="3"
+        <ListBox x:Name="TemplatesList" Grid.Row="2"
                   ItemsSource="{Binding DisplayedTemplates}"
                   Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -218,7 +160,7 @@
         </ListBox>
 
         <!-- Footer -->
-        <StackPanel Grid.Row="4" Margin="0,15,0,0">
+        <StackPanel Grid.Row="3" Margin="0,15,0,0">
             <!-- Add Template Section -->
             <Grid x:Name="AddTemplateGrid" Visibility="Collapsed" Margin="0,0,0,15">
                 <Grid.RowDefinitions>

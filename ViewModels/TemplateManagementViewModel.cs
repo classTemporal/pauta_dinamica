@@ -42,11 +42,11 @@ namespace PautaDinamicaApp.ViewModels
         private readonly StorageService _storageService;
         private readonly string _pautaId;
         private ObservableCollection<TemplateItemVM> _templates = new();
+        private ObservableCollection<TemplateItemVM> _allTemplates = new();
         private string _newTemplateContent = string.Empty;
         private bool _isMultiSelectMode;
         private TemplateItemVM? _editingTemplate;
         private bool _isEditing;
-        private string _selectedCategory = string.Empty;
 
         public ObservableCollection<TemplateItemVM> Templates { get => _templates; set => SetProperty(ref _templates, value); }
         public string NewTemplateContent { get => _newTemplateContent; set => SetProperty(ref _newTemplateContent, value); }
@@ -66,10 +66,17 @@ namespace PautaDinamicaApp.ViewModels
 
         public string AddButtonText => IsEditing ? "💾 ACTUALIZAR" : "➕ AGREGAR";
 
+        private string _selectedCategory = string.Empty;
         public string SelectedCategory
         {
             get => _selectedCategory;
-            set => SetProperty(ref _selectedCategory, value);
+            set
+            {
+                if (SetProperty(ref _selectedCategory, value))
+                {
+                    ApplyCategoryFilter();
+                }
+            }
         }
 
         private bool _isCategorizedMode;
@@ -127,36 +134,55 @@ namespace PautaDinamicaApp.ViewModels
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
         }
 
+        private void ApplyCategoryFilter()
+        {
+            if (string.IsNullOrWhiteSpace(_selectedCategory))
+            {
+                // Show all templates
+                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates);
+            }
+            else if (_selectedCategory == "Sin Categorizar")
+            {
+                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.IsNullOrWhiteSpace(t.Model.Category)));
+            }
+            else
+            {
+                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.Equals(t.Model.Category, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
+            }
+        }
+
         private void MoveUp(TemplateItemVM? item)
         {
-            var selected = Templates.Where(t => t.IsSelected).ToList();
+            var selected = _allTemplates.Where(t => t.IsSelected).ToList();
             if (!selected.Any()) { if (item != null) selected.Add(item); else return; }
 
-            var orderedSelected = selected.OrderBy(t => Templates.IndexOf(t)).ToList();
+            var orderedSelected = selected.OrderBy(t => _allTemplates.IndexOf(t)).ToList();
             foreach (var t in orderedSelected)
             {
-                int idx = Templates.IndexOf(t);
-                if (idx > 0 && !Templates[idx - 1].IsSelected)
+                int idx = _allTemplates.IndexOf(t);
+                if (idx > 0 && !_allTemplates[idx - 1].IsSelected)
                 {
-                    Templates.Move(idx, idx - 1);
+                    _allTemplates.Move(idx, idx - 1);
                 }
             }
+            ApplyCategoryFilter();
         }
 
         private void MoveDown(TemplateItemVM? item)
         {
-            var selected = Templates.Where(t => t.IsSelected).ToList();
+            var selected = _allTemplates.Where(t => t.IsSelected).ToList();
             if (!selected.Any()) { if (item != null) selected.Add(item); else return; }
 
-            var orderedSelected = selected.OrderByDescending(t => Templates.IndexOf(t)).ToList();
+            var orderedSelected = selected.OrderByDescending(t => _allTemplates.IndexOf(t)).ToList();
             foreach (var t in orderedSelected)
             {
-                int idx = Templates.IndexOf(t);
-                if (idx < Templates.Count - 1 && !Templates[idx + 1].IsSelected)
+                int idx = _allTemplates.IndexOf(t);
+                if (idx < _allTemplates.Count - 1 && !_allTemplates[idx + 1].IsSelected)
                 {
-                    Templates.Move(idx, idx + 1);
+                    _allTemplates.Move(idx, idx + 1);
                 }
             }
+            ApplyCategoryFilter();
         }
 
         private void SaveAndClose()
@@ -169,7 +195,7 @@ namespace PautaDinamicaApp.ViewModels
         private void LoadTemplates()
         {
             var models = _storageService.LoadTemplatesForPauta(_pautaId);
-            Templates = new ObservableCollection<TemplateItemVM>(models.Select(m => new TemplateItemVM(m)));
+            _allTemplates = new ObservableCollection<TemplateItemVM>(models.Select(m => new TemplateItemVM(m)));
 
             // Build available categories from template_categories.json
             var persistedCategories = _storageService.LoadTemplateCategories();
@@ -189,6 +215,8 @@ namespace PautaDinamicaApp.ViewModels
             }
 
             IsCategorizedMode = models.Any(t => !string.IsNullOrWhiteSpace(t.Category)) || persistedCategories.Any();
+
+            ApplyCategoryFilter();
         }
 
         private void SaveTemplates()
@@ -197,7 +225,7 @@ namespace PautaDinamicaApp.ViewModels
             // Load the global store, remove all templates for this pauta, then add the current ones.
             var global = _storageService.LoadTemplates();
             global.RemoveAll(t => t.PautaId == _pautaId);
-            var updated = Templates.Select(t =>
+            var updated = _allTemplates.Select(t =>
             {
                 t.Model.PautaId = _pautaId;
                 return t.Model;
@@ -222,9 +250,10 @@ namespace PautaDinamicaApp.ViewModels
             else
             {
                 var newModel = new MessageTemplate { Content = NewTemplateContent.Trim(), PautaId = _pautaId, Category = _selectedCategory };
-                Templates.Add(new TemplateItemVM(newModel));
+                _allTemplates.Add(new TemplateItemVM(newModel));
                 NewTemplateContent = string.Empty;
             }
+            ApplyCategoryFilter();
         }
 
         private void StartEdit(TemplateItemVM? template)
@@ -250,7 +279,8 @@ namespace PautaDinamicaApp.ViewModels
                 if (MessageBoxHelper.ShowNonCritical("¿Eliminar esta plantilla?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     if (_editingTemplate == template) CancelEdit();
-                    Templates.Remove(template);
+                    _allTemplates.Remove(template);
+                    ApplyCategoryFilter();
                 }
             }
         }
@@ -262,7 +292,8 @@ namespace PautaDinamicaApp.ViewModels
 
             if (MessageBoxHelper.ShowNonCritical($"¿Eliminar {toRemove.Count} plantillas seleccionadas?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                foreach (var t in toRemove) Templates.Remove(t);
+                foreach (var t in toRemove) _allTemplates.Remove(t);
+                ApplyCategoryFilter();
             }
         }
 
@@ -356,7 +387,7 @@ namespace PautaDinamicaApp.ViewModels
                             string category = row.Cell(2).GetValue<string>() ?? string.Empty;
                             if (!string.IsNullOrWhiteSpace(content))
                             {
-                                Templates.Add(new TemplateItemVM(new MessageTemplate { Content = content, PautaId = _pautaId, Category = category }));
+                                _allTemplates.Add(new TemplateItemVM(new MessageTemplate { Content = content, PautaId = _pautaId, Category = category }));
                                 count++;
                             }
                         }
@@ -371,6 +402,7 @@ namespace PautaDinamicaApp.ViewModels
                     MessageBoxHelper.Show("Error al importar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+            ApplyCategoryFilter();
         }
 
         /// <summary>
@@ -436,8 +468,8 @@ namespace PautaDinamicaApp.ViewModels
             _storageService.SaveTemplateCategories(categories);
 
             // Remove templates with this category
-            var toRemove = Templates.Where(t => string.Equals(t.Model.Category, catName, StringComparison.OrdinalIgnoreCase)).ToList();
-            foreach (var t in toRemove) Templates.Remove(t);
+            var toRemove = _allTemplates.Where(t => string.Equals(t.Model.Category, catName, StringComparison.OrdinalIgnoreCase)).ToList();
+            foreach (var t in toRemove) _allTemplates.Remove(t);
 
             SaveTemplates();
             LoadTemplates();
