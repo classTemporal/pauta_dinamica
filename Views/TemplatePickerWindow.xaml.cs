@@ -145,7 +145,8 @@ namespace PautaDinamicaApp.Views
 
             // Determine if templates are categorized (any template has a non-empty category)
             // or if they're all in "Sin Categorizar" mode (category empty for all)
-            bool hasAnyCategory = _allTemplates.Any(t => !string.IsNullOrWhiteSpace(t.Category));
+            bool hasAnyCategory = _allTemplates.Any(t => !string.IsNullOrWhiteSpace(t.Category))
+                               || _storageService.LoadTemplateCategories(_pautaId).Any();
             if (hasAnyCategory)
             {
                 IsCategorizedMode = true;
@@ -193,6 +194,18 @@ namespace PautaDinamicaApp.Views
             foreach (var group in grouped)
             {
                 categories.Add(new CategoryItem { Name = group.Key, Count = group.Count() });
+            }
+
+            // Merge explicitly-persisted categories that have no backing template (Count = 0).
+            // These are categories created via "Crear Categoría" that survived reloads via
+            // template_categories.json and must keep showing even when no template uses them.
+            var explicitCats = _storageService.LoadTemplateCategories(_pautaId);
+            foreach (var cat in explicitCats)
+            {
+                if (!categories.Any(c => c.Name.Equals(cat, StringComparison.OrdinalIgnoreCase)))
+                {
+                    categories.Add(new CategoryItem { Name = cat, Count = 0 });
+                }
             }
 
             Categories = categories;
@@ -447,7 +460,8 @@ namespace PautaDinamicaApp.Views
             foreach (var t in updated) _allTemplates.Add(t);
 
             // Rebuild categories and refresh
-            bool hasAnyCategory = _allTemplates.Any(t => !string.IsNullOrWhiteSpace(t.Category));
+            bool hasAnyCategory = _allTemplates.Any(t => !string.IsNullOrWhiteSpace(t.Category))
+                               || _storageService.LoadTemplateCategories(_pautaId).Any();
             IsCategorizedMode = hasAnyCategory;
             if (IsCategorizedMode)
                 BuildCategoryList();
@@ -493,6 +507,15 @@ namespace PautaDinamicaApp.Views
 
             // Add the new category and select it
             Categories.Add(new CategoryItem { Name = name, Count = 0, IsSelected = true });
+
+            // PERSIST: save the category so it survives window reloads. Categories are stored
+            // separately from templates (a category may exist with no template assigned yet),
+            // in template_categories.json keyed by pautaId.
+            var persisted = _storageService.LoadTemplateCategories(_pautaId);
+            if (!persisted.Any(c => c.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                persisted.Add(name);
+            _storageService.SaveTemplateCategories(_pautaId, persisted);
+
             SelectedCategory = Categories.First(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
             NewCategoryText = string.Empty;
