@@ -66,7 +66,7 @@
                                 <!-- Categoría de la Plantilla -->
                                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
                                     <ComboBox x:Name="CategoryCombo"
-                                              ItemsSource="{Binding AvailableCategories}"
+                                              ItemsSource="{Binding CategoryOptions}"
                                               SelectedItem="{Binding SelectedCategory}"
                                               Height="32" Width="220" Margin="0,0,10,0"
                                               ToolTip="Asigna esta plantilla a una categoría"
@@ -293,9 +293,6 @@
                             <Button Content="+ Nueva Categoría" Command="{Binding CreateCategoryCommand}" Style="{StaticResource SuccessButton}"
                                     Height="40" Margin="10,0,0,0" Padding="16,0"
                                     ToolTip="Crear categoría con este nombre"/>
-                            <Button Content="🗑️ Eliminar" Command="{Binding DeleteCategoryCommand}" Style="{StaticResource DangerButton}"
-                                    Height="40" Margin="8,0,0,0" Padding="12,0"
-                                    ToolTip="Eliminar categoría seleccionada"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
