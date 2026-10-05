@@ -174,5 +174,10 @@ namespace PautaDinamicaApp.Views
         {
             InitialTabIndex = MainTabControl.SelectedIndex;
         }
+
+        private void CategoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // SelectedCategory is bound TwoWay; this handler exists to allow future keyboard navigation
+        }
     }
 }
