@@ -103,41 +103,41 @@
             </Grid>
         </Border>
 
-        <!-- Category Management Bar -->
+        <!-- Categorías -->
         <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}" Padding="12,8" CornerRadius="10" Margin="0,0,0,15"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 Visibility="{Binding IsCategorizedMode, Converter={StaticResource BoolToVis}}">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Categorías:" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <ItemsControl ItemsSource="{Binding AvailableCategories}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,3" Margin="0,0,6,0">
-                                    <TextBlock Text="{Binding}" FontSize="11" Foreground="White" FontWeight="SemiBold"/>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Categorías" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+
+                <ListBox Grid.Row="1" ItemsSource="{Binding AvailableCategories}"
+                         SelectedItem="{Binding SelectedCategory}"
+                         Height="120" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                         Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
+                         Padding="4,2">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontSize="12" Padding="4,2"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
                     <TextBox x:Name="NewCategoryTextBox" Height="30" Width="140"
                              Text="{Binding NewCategoryText, UpdateSourceTrigger=PropertyChanged}"
                              Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
                              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                              Padding="6,0" VerticalContentAlignment="Center"/>
-                    <Button Content="+ Crear" Command="{Binding CreateCategoryCommand}" Style="{StaticResource SuccessButton}"
+                    <Button Content="+ Nueva Categoría" Command="{Binding CreateCategoryCommand}" Style="{StaticResource SuccessButton}"
                             Height="30" Margin="6,0,4,0" Padding="10,0"/>
-                    <Button Content="🗑️" Command="{Binding DeleteCategoryCommand}" Style="{StaticResource DangerButton}"
+                    <Button Content="🗑️ Eliminar" Command="{Binding DeleteCategoryCommand}" Style="{StaticResource DangerButton}"
                             Height="30" Padding="8,0" ToolTip="Eliminar categoría seleccionada"/>
                 </StackPanel>
             </Grid>
