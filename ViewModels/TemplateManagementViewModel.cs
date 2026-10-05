@@ -72,7 +72,7 @@ namespace PautaDinamicaApp.ViewModels
             get => _selectedCategory;
             set
             {
-                if (SetProperty(ref _selectedCategory, value))
+                if (SetProperty(ref _selectedCategory, value) && !_isApplyingFilter)
                 {
                     ApplyCategoryFilter();
                 }
@@ -134,45 +134,50 @@ namespace PautaDinamicaApp.ViewModels
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
         }
 
+        private bool _isApplyingFilter;
+
         private void ApplyCategoryFilter()
         {
-            // Preserve current selection
-            string preservedSelection = _selectedCategory;
-
-            // Build available categories with "No categorizado" as default
-            AvailableCategories.Clear();
-            AvailableCategories.Add("No categorizado");
-            var persistedCategories = _storageService.LoadTemplateCategories().OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "No categorizado" };
-            foreach (var c in persistedCategories)
-                if (seen.Add(c))
-                    AvailableCategories.Add(c);
-            var templateCategories = _allTemplates
-                .Where(t => !string.IsNullOrWhiteSpace(t.Model.Category) && t.Model.Category != "No categorizado")
-                .Select(t => t.Model.Category)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            foreach (var c in templateCategories)
-                if (seen.Add(c))
-                    AvailableCategories.Add(c);
-
-            // Restore selection if still valid; otherwise default
-            if (string.IsNullOrWhiteSpace(preservedSelection) || !AvailableCategories.Contains(preservedSelection, StringComparer.OrdinalIgnoreCase))
-                _selectedCategory = "No categorizado";
-            else
-                _selectedCategory = preservedSelection;
-
-            // Notify UI if the selection was restored (needed when called internally without the setter)
-            OnPropertyChanged(nameof(SelectedCategory));
-
-            if (string.IsNullOrWhiteSpace(_selectedCategory) || _selectedCategory == "No categorizado")
+            if (_isApplyingFilter) return;
+            _isApplyingFilter = true;
+            try
             {
-                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates);
+                // Build available categories with "No categorizado" as default
+                AvailableCategories.Clear();
+                AvailableCategories.Add("No categorizado");
+                var persistedCategories = _storageService.LoadTemplateCategories().OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "No categorizado" };
+                foreach (var c in persistedCategories)
+                    if (seen.Add(c))
+                        AvailableCategories.Add(c);
+                var templateCategories = _allTemplates
+                    .Where(t => !string.IsNullOrWhiteSpace(t.Model.Category) && t.Model.Category != "No categorizado")
+                    .Select(t => t.Model.Category)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                foreach (var c in templateCategories)
+                    if (seen.Add(c))
+                        AvailableCategories.Add(c);
+
+                // Restore selection if still valid; otherwise default
+                if (string.IsNullOrWhiteSpace(_selectedCategory) || !AvailableCategories.Contains(_selectedCategory, StringComparer.OrdinalIgnoreCase))
+                    _selectedCategory = "No categorizado";
+
+                OnPropertyChanged(nameof(SelectedCategory));
+
+                if (_selectedCategory == "No categorizado")
+                {
+                    Templates = new ObservableCollection<TemplateItemVM>(_allTemplates);
+                }
+                else
+                {
+                    Templates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.Equals(t.Model.Category, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
+                }
             }
-            else
+            finally
             {
-                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.Equals(t.Model.Category, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
+                _isApplyingFilter = false;
             }
         }
 
