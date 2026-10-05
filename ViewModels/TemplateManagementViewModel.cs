@@ -66,7 +66,7 @@ namespace PautaDinamicaApp.ViewModels
 
         public string AddButtonText => IsEditing ? "💾 ACTUALIZAR" : "➕ AGREGAR";
 
-        private string _selectedCategory = string.Empty;
+        private string _selectedCategory = "No categorizado";
         public string SelectedCategory
         {
             get => _selectedCategory;
@@ -136,14 +136,28 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ApplyCategoryFilter()
         {
-            if (string.IsNullOrWhiteSpace(_selectedCategory))
+            // Build available categories with "No categorizado" as default
+            AvailableCategories.Clear();
+            AvailableCategories.Add("No categorizado");
+            var persistedCategories = _storageService.LoadTemplateCategories().OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
+            foreach (var c in persistedCategories)
+                if (c != "No categorizado")
+                    AvailableCategories.Add(c);
+            var templateCategories = _allTemplates
+                .Where(t => !string.IsNullOrWhiteSpace(t.Model.Category) && t.Model.Category != "No categorizado")
+                .Select(t => t.Model.Category)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            foreach (var c in templateCategories)
             {
-                // Show all templates
-                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates);
+                if (!AvailableCategories.Any(ac => ac.Equals(c, StringComparison.OrdinalIgnoreCase)))
+                    AvailableCategories.Add(c);
             }
-            else if (_selectedCategory == "Sin Categorizar")
+
+            if (string.IsNullOrWhiteSpace(_selectedCategory) || _selectedCategory == "No categorizado")
             {
-                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.IsNullOrWhiteSpace(t.Model.Category)));
+                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates);
             }
             else
             {
@@ -197,25 +211,9 @@ namespace PautaDinamicaApp.ViewModels
             var models = _storageService.LoadTemplatesForPauta(_pautaId);
             _allTemplates = new ObservableCollection<TemplateItemVM>(models.Select(m => new TemplateItemVM(m)));
 
-            // Build available categories from template_categories.json
-            var persistedCategories = _storageService.LoadTemplateCategories();
-            AvailableCategories.Clear();
-            foreach (var c in persistedCategories.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
-                AvailableCategories.Add(c);
-            
-            // Also add categories from existing templates that aren't in the file
-            var templateCategories = models.Where(t => !string.IsNullOrWhiteSpace(t.Category))
-                .Select(t => t.Category)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            foreach (var c in templateCategories)
-            {
-                if (!AvailableCategories.Any(ac => ac.Equals(c, StringComparison.OrdinalIgnoreCase)))
-                    AvailableCategories.Add(c);
-            }
+            IsCategorizedMode = models.Any(t => !string.IsNullOrWhiteSpace(t.Category)) || _storageService.LoadTemplateCategories().Any();
 
-            IsCategorizedMode = models.Any(t => !string.IsNullOrWhiteSpace(t.Category)) || persistedCategories.Any();
-
+            // ApplyCategoryFilter rebuilds AvailableCategories + filters Templates
             ApplyCategoryFilter();
         }
 
@@ -240,16 +238,18 @@ namespace PautaDinamicaApp.ViewModels
             {
                 _editingTemplate.Model.Content = NewTemplateContent.Trim();
                 _editingTemplate.Model.PautaId = _pautaId;
-                if (!string.IsNullOrWhiteSpace(_selectedCategory))
-                    _editingTemplate.Model.Category = _selectedCategory;
-                else
-                    _editingTemplate.Model.Category = string.Empty;
+                _editingTemplate.Model.Category = string.IsNullOrWhiteSpace(_selectedCategory) ? "No categorizado" : _selectedCategory;
                 _editingTemplate.NotifyContentChanged();
                 CancelEdit();
             }
             else
             {
-                var newModel = new MessageTemplate { Content = NewTemplateContent.Trim(), PautaId = _pautaId, Category = _selectedCategory };
+                var newModel = new MessageTemplate
+                {
+                    Content = NewTemplateContent.Trim(),
+                    PautaId = _pautaId,
+                    Category = string.IsNullOrWhiteSpace(_selectedCategory) ? "No categorizado" : _selectedCategory
+                };
                 _allTemplates.Add(new TemplateItemVM(newModel));
                 NewTemplateContent = string.Empty;
             }
@@ -261,7 +261,7 @@ namespace PautaDinamicaApp.ViewModels
             if (template == null) return;
             _editingTemplate = template;
             NewTemplateContent = template.Model.Content;
-            SelectedCategory = template.Model.Category ?? string.Empty;
+            SelectedCategory = string.IsNullOrWhiteSpace(template.Model.Category) ? "No categorizado" : template.Model.Category;
             IsEditing = true;
         }
 
@@ -434,7 +434,15 @@ namespace PautaDinamicaApp.ViewModels
             fileCategories.Add(name);
             _storageService.SaveTemplateCategories(fileCategories);
 
-            LoadTemplates(); // Refresh AvailableCategories + IsCategorizedMode
+            // Preserve SelectedCategory if still valid; otherwise default
+            string previousSelection = _selectedCategory;
+            LoadTemplates();
+            if (!string.Equals(_selectedCategory, previousSelection, StringComparison.OrdinalIgnoreCase) || _selectedCategory == "No categorizado")
+            {
+                // Ensure new category is visible if it was just created
+                if (AvailableCategories.Contains(name, StringComparer.OrdinalIgnoreCase))
+                    SelectedCategory = name;
+            }
 
             NewCategoryText = string.Empty;
             OnPropertyChanged(nameof(NewCategoryText));
@@ -453,9 +461,9 @@ namespace PautaDinamicaApp.ViewModels
 
             string catName = _selectedCategory;
 
-            if (catName == "Sin Categorizar")
+            if (catName == "No categorizado")
             {
-                MessageBoxHelper.Show("No se puede eliminar la categoría 'Sin Categorizar'.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxHelper.Show("No se puede eliminar la categoría 'No categorizado'.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
