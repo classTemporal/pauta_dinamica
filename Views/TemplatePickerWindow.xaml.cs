@@ -25,6 +25,10 @@ namespace PautaDinamicaApp.Views
         // Search
         private string _searchText = string.Empty;
 
+        // Category filter
+        private string _selectedCategory = "Todas";
+        private readonly ObservableCollection<string> _availableCategories = new() { "Todas" };
+
         // Misc
         private bool _isMultiSelectMode;
         private System.Windows.Point _startPoint;
@@ -74,9 +78,28 @@ namespace PautaDinamicaApp.Views
                 {
                     _searchText = value;
                     OnPropertyChanged();
-                    ApplySearchFilter();
+                    ApplyFilters();
                 }
             }
+        }
+
+        public string SelectedCategory
+        {
+            get => _selectedCategory;
+            set
+            {
+                if (_selectedCategory != value)
+                {
+                    _selectedCategory = value ?? "Todas";
+                    OnPropertyChanged();
+                    ApplyFilters();
+                }
+            }
+        }
+
+        public ObservableCollection<string> AvailableCategories
+        {
+            get => _availableCategories;
         }
 
         public string CurrentPautaName
@@ -95,6 +118,7 @@ namespace PautaDinamicaApp.Views
             _currentPauta = allPautas.FirstOrDefault(p => p.Id == _pautaId);
 
             LoadTemplates();
+            LoadCategories();
             DataContext = this;
         }
 
@@ -113,15 +137,56 @@ namespace PautaDinamicaApp.Views
             foreach (var t in pautaTemplates) _allTemplates.Add(t);
 
             // Initial display: all templates (filtered by search if any)
-            ApplySearchFilter();
+            ApplyFilters();
         }
 
-        private void ApplySearchFilter()
+        private void LoadCategories()
+        {
+            _availableCategories.Clear();
+            _availableCategories.Add("Todas");
+
+            // Load from persisted categories
+            var persisted = _storageService.LoadTemplateCategories();
+            foreach (var c in persisted.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
+            {
+                if (!_availableCategories.Contains(c, StringComparer.OrdinalIgnoreCase))
+                    _availableCategories.Add(c);
+            }
+
+            // Also add categories from existing templates
+            var templateCats = _allTemplates
+                .Where(t => !string.IsNullOrWhiteSpace(t.Category))
+                .Select(t => t.Category!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
+            foreach (var c in templateCats)
+            {
+                if (!_availableCategories.Contains(c, StringComparer.OrdinalIgnoreCase))
+                    _availableCategories.Add(c);
+            }
+        }
+
+        private void ApplyFilters()
         {
             string search = _searchText?.ToLower() ?? "";
             bool hasSearch = !string.IsNullOrWhiteSpace(search);
+            string category = _selectedCategory;
 
             IEnumerable<MessageTemplate> filtered = _allTemplates;
+
+            // Apply category filter
+            if (category != "Todas" && !string.IsNullOrWhiteSpace(category))
+            {
+                if (category == "Sin Categorizar")
+                {
+                    filtered = filtered.Where(t => string.IsNullOrWhiteSpace(t.Category));
+                }
+                else
+                {
+                    filtered = filtered.Where(t =>
+                        string.Equals(t.Category, category, StringComparison.OrdinalIgnoreCase));
+                }
+            }
 
             // Apply search filter on top
             if (hasSearch)
@@ -129,11 +194,15 @@ namespace PautaDinamicaApp.Views
                 filtered = filtered.Where(t => t.Content?.ToLower().Contains(search) == true);
             }
 
-            var filteredList = filtered.ToList();
-
             // Update DisplayedTemplates in-place to keep the ListBox bound to the same ObservableCollection
             _displayedTemplates.Clear();
-            foreach (var t in filteredList) _displayedTemplates.Add(t);
+            foreach (var t in filtered) _displayedTemplates.Add(t);
+        }
+
+        private void CategoryCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // SelectedCategory is bound TwoWay, ApplyFilters runs automatically via setter
+            ApplyFilters();
         }
 
         private void Select_Click(object sender, RoutedEventArgs e)
@@ -205,7 +274,7 @@ namespace PautaDinamicaApp.Views
             };
 
             _allTemplates.Add(newTemplate);
-
+            LoadCategories();
             RefreshDisplay();
 
             // Reset UI
@@ -285,6 +354,7 @@ namespace PautaDinamicaApp.Views
             if (selected.Any() && MessageBoxHelper.ShowNonCritical($"¿Eliminar {selected.Count} plantillas?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 foreach (var t in selected) _allTemplates.Remove(t);
+                LoadCategories();
                 RefreshDisplay();
                 SaveCurrentState();
             }
@@ -302,12 +372,13 @@ namespace PautaDinamicaApp.Views
             var updated = _storageService.LoadTemplatesForPauta(_pautaId);
             foreach (var t in updated) _allTemplates.Add(t);
 
+            LoadCategories();
             RefreshDisplay();
         }
 
         private void RefreshDisplay()
         {
-            ApplySearchFilter();
+            ApplyFilters();
         }
 
         // --- Drag & Drop Implementation ---

@@ -7,6 +7,7 @@ namespace PautaDinamicaApp.Views
 {
     public partial class TemplateManagementWindow : Window
     {
+        public int InitialTabIndex { get; set; } = 0;
         private System.Windows.Point _startPoint;
         private System.Windows.Controls.ListBoxItem? _draggedItem;
         private bool _isDraggingNow;
@@ -27,6 +28,7 @@ namespace PautaDinamicaApp.Views
                     vm.RequestClose += () => Close();
                 }
             };
+            Loaded += (s, e) => MainTabControl.SelectedIndex = InitialTabIndex;
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -166,6 +168,11 @@ namespace PautaDinamicaApp.Views
                 window.Left = lpPoint.X + 5;
                 window.Top = lpPoint.Y + 5;
             }
+        }
+
+        private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            InitialTabIndex = MainTabControl.SelectedIndex;
         }
     }
 }
