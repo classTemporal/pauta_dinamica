@@ -67,9 +67,8 @@
                                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
                                     <ComboBox x:Name="CategoryCombo"
                                               ItemsSource="{Binding AvailableCategories}"
-                                              Text="{Binding SelectedCategory, UpdateSourceTrigger=PropertyChanged}"
-                                              IsEditable="True"
-                                              Height="32" Width="200" Margin="0,0,10,0"
+                                              SelectedItem="{Binding SelectedCategory}"
+                                              Height="32" Width="220" Margin="0,0,10,0"
                                               ToolTip="Asigna esta plantilla a una categoría"
                                               VerticalContentAlignment="Center"
                                               Background="{DynamicResource InputBackground}"
@@ -224,33 +223,36 @@
                         <TextBlock Text="Las categorías organizan las plantillas. Crea, selecciona y elimina categorías de forma intuitiva." FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                         <!-- Lista de Categorías -->
-                        <Border Background="{DynamicResource InputBackground}" CornerRadius="10" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Margin="0,0,0,20" Padding="4">
+                        <Border Background="{DynamicResource InputBackground}" CornerRadius="10" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Margin="0,0,0,20" Padding="6">
                             <ListBox x:Name="CategoryList" ItemsSource="{Binding AvailableCategories}"
                                      SelectedItem="{Binding SelectedCategory}"
                                      Height="220"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
-                                     Padding="2" BorderThickness="0"
-                                     SelectionChanged="CategoryList_SelectionChanged">
+                                     Padding="4" BorderThickness="0">
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
                                         <Setter Property="Padding" Value="0"/>
                                         <Setter Property="Background" Value="Transparent"/>
                                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Margin" Value="0"/>
+                                        <Setter Property="Margin" Value="0,2"/>
+                                        <Setter Property="MinHeight" Value="36"/>
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="ListBoxItem">
-                                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="8">
-                                                        <ContentPresenter />
+                                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" BorderThickness="1.5" BorderBrush="Transparent">
+                                                        <ContentPresenter VerticalAlignment="Center" Margin="10,0"/>
                                                     </Border>
                                                     <ControlTemplate.Triggers>
                                                         <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="#15FFFFFF"/>
+                                                            <Setter TargetName="Bd" Property="Background" Value="#1AFFFFFF"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#33FFFFFF"/>
                                                         </Trigger>
                                                         <Trigger Property="IsSelected" Value="True">
                                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="White"/>
+                                                            <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
                                                         </Trigger>
                                                     </ControlTemplate.Triggers>
                                                 </ControlTemplate>
@@ -260,38 +262,41 @@
                                 </ListBox.ItemContainerStyle>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid Margin="4,2">
+                                        <Grid Margin="4,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding}" FontSize="13" VerticalAlignment="Center" Padding="6,4"/>
+                                            <TextBlock Grid.Column="0" Text="{Binding}" FontSize="13" VerticalAlignment="Center" Padding="4,0"/>
                                             <Button x:Name="DeleteCategoryBtn" Grid.Column="1" Content="🗑️"
                                                     Command="{Binding DataContext.DeleteCategoryCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                     CommandParameter="{Binding}"
-                                                    ToolTip="Eliminar categoría seleccionada"
-                                                    Style="{StaticResource DangerMoveButtonStyle}" Width="28" Height="28"
-                                                    Margin="4,0,6,0"/>
+                                                    ToolTip="Eliminar categoría"
+                                                    Style="{StaticResource DangerMoveButtonStyle}" Width="30" Height="30"
+                                                    Margin="8,0,0,0"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
                         </Border>
 
-                        <!-- Campo de Nueva Categoría -->
-                        <Border Background="{DynamicResource CardBackgroundBrush}" Padding="12,10" CornerRadius="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBox x:Name="NewCategoryTextBox" Height="38" Width="240"
+                        <!-- Nueva Categoría + Eliminar -->
+                        <StackPanel Orientation="Horizontal">
+                            <Border Background="{DynamicResource CardBackgroundBrush}" Padding="4" CornerRadius="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <TextBox x:Name="NewCategoryTextBox" Height="40" Width="240"
                                          Text="{Binding NewCategoryText, UpdateSourceTrigger=PropertyChanged}"
                                          Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
-                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                         Padding="10,0" VerticalContentAlignment="Center"
+                                         BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                                         Padding="12,0" VerticalContentAlignment="Center"
                                          ToolTip="Nombre de la nueva categoría"/>
-                                <Button Content="+ Nueva Categoría" Command="{Binding CreateCategoryCommand}" Style="{StaticResource SuccessButton}"
-                                        Height="38" Margin="10,0,0,0" Padding="16,0"
-                                        ToolTip="Crear categoría con este nombre"/>
-                            </StackPanel>
-                        </Border>
+                            </Border>
+                            <Button Content="+ Nueva Categoría" Command="{Binding CreateCategoryCommand}" Style="{StaticResource SuccessButton}"
+                                    Height="40" Margin="10,0,0,0" Padding="16,0"
+                                    ToolTip="Crear categoría con este nombre"/>
+                            <Button Content="🗑️ Eliminar" Command="{Binding DeleteCategoryCommand}" Style="{StaticResource DangerButton}"
+                                    Height="40" Margin="8,0,0,0" Padding="12,0"
+                                    ToolTip="Eliminar categoría seleccionada"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </TabItem>
