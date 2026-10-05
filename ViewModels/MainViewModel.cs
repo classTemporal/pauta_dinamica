@@ -710,7 +710,7 @@ namespace PautaDinamicaApp.ViewModels
         private void OpenEmailConfig()
         {
             var vm = new SettingsViewModel(CurrentPauta?.Id ?? "");
-            var settingsWin = new Views.SettingsWindow { DataContext = vm, InitialTabIndex = 4 };
+            var settingsWin = new Views.SettingsWindow { DataContext = vm, InitialTabIndex = 3 };
             var owner = GetBestOwner();
             if (owner != null && owner != settingsWin) settingsWin.Owner = owner;
 
