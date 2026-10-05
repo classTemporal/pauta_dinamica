@@ -54,6 +54,16 @@ namespace PautaDinamicaApp.Models
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsValid => true;
 
+        // --- Categorías de Plantillas ---
+        private List<string> _templateCategories = new();
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public List<string> TemplateCategories
+        {
+            get => _templateCategories;
+            set => SetProperty(ref _templateCategories, value);
+        }
+
         // --- Configuración de Correo por Pauta ---
         private EmailMethod _emailMethod = EmailMethod.Mailto;
         private string _emailToTemplate = "";
