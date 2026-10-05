@@ -14,7 +14,6 @@ namespace PautaDinamicaApp.Services
         private readonly string _lastPautaPath;
         private readonly string _settingsPath; // Path for global settings
         private readonly string _templatesPath;
-        private readonly string _categoriesPath; // Path for persisted explicit template categories
 
         public StorageService(string? username = null)
         {
@@ -28,7 +27,6 @@ namespace PautaDinamicaApp.Services
             _lastPautaPath = Path.Combine(_basePath, "last_pauta.txt");
             _settingsPath = Path.Combine(_basePath, "app_settings.json");
             _templatesPath = Path.Combine(_basePath, "templates.json");
-            _categoriesPath = Path.Combine(_basePath, "template_categories.json");
 
             EnsureDefaultPautaExists();
         }
@@ -226,55 +224,6 @@ namespace PautaDinamicaApp.Services
             if (string.IsNullOrEmpty(pautaId))
                 return all.Where(t => string.IsNullOrEmpty(t.PautaId) || t.PautaId == pautaId).ToList();
             return all.Where(t => t.PautaId == pautaId).ToList();
-        }
-
-        /// <summary>
-        /// Loads the explicitly-persisted template category names created by the user for a pauta
-        /// (e.g. via "Crear Categoría"). These are categories that may exist with no backing
-        /// template yet. Categories derived from templates themselves are not returned here;
-        /// callers merge both sources as needed. Persisted via <see cref="SaveTemplateCategories"/>.
-        /// </summary>
-        public List<string> LoadTemplateCategories(string? pautaId)
-        {
-            if (string.IsNullOrWhiteSpace(pautaId)) pautaId = string.Empty;
-            var all = LoadExplicitCategoriesDict();
-            return all.TryGetValue(pautaId, out var cats) ? new List<string>(cats) : new List<string>();
-        }
-
-        /// <summary>
-        /// Persists the explicitly-created template category names for a pauta so they survive
-        /// reloads (e.g. categories created before any template is assigned to them). This only
-        /// stores the explicit list; categories derived from templates are read back separately.
-        /// </summary>
-        public void SaveTemplateCategories(string? pautaId, List<string> categories)
-        {
-            if (string.IsNullOrWhiteSpace(pautaId)) pautaId = string.Empty;
-            var all = LoadExplicitCategoriesDict();
-            all[pautaId] = categories ?? new List<string>();
-            SaveExplicitCategoriesDict(all);
-        }
-
-        private Dictionary<string, List<string>> LoadExplicitCategoriesDict()
-        {
-            if (!File.Exists(_categoriesPath)) return new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-            try
-            {
-                string json = File.ReadAllText(_categoriesPath);
-                return JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                    ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-            }
-            catch { return new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase); }
-        }
-
-        private void SaveExplicitCategoriesDict(Dictionary<string, List<string>> all)
-        {
-            try
-            {
-                string json = JsonSerializer.Serialize(all, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_categoriesPath, json);
-            }
-            catch { }
         }
 
         // --- ATTACHMENT MANAGEMENT ---
