@@ -87,6 +87,8 @@ namespace PautaDinamicaApp.ViewModels
         }
 
         public ObservableCollection<string> AvailableCategories { get; } = new();
+        /// <summary>Categories for the template-creation dropdown, includes "No categorizado" as default.</summary>
+        public ObservableCollection<string> CategoryOptions { get; } = new();
 
         public ICommand AddTemplateCommand { get; }
         public ICommand DeleteTemplateCommand { get; }
@@ -142,13 +144,12 @@ namespace PautaDinamicaApp.ViewModels
             _isApplyingFilter = true;
             try
             {
-                // Build available categories with "No categorizado" as default
+                // Build available categories excluding "No categorizado" (internal default, not user-editable)
                 AvailableCategories.Clear();
-                AvailableCategories.Add("No categorizado");
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var persistedCategories = _storageService.LoadTemplateCategories().OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
-                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "No categorizado" };
                 foreach (var c in persistedCategories)
-                    if (seen.Add(c))
+                    if (c != "No categorizado" && seen.Add(c))
                         AvailableCategories.Add(c);
                 var templateCategories = _allTemplates
                     .Where(t => !string.IsNullOrWhiteSpace(t.Model.Category) && t.Model.Category != "No categorizado")
@@ -160,11 +161,17 @@ namespace PautaDinamicaApp.ViewModels
                     if (seen.Add(c))
                         AvailableCategories.Add(c);
 
-                // Restore selection if still valid; otherwise default
-                if (string.IsNullOrWhiteSpace(_selectedCategory) || !AvailableCategories.Contains(_selectedCategory, StringComparer.OrdinalIgnoreCase))
+                // Restore selection if still valid; otherwise default to "No categorizado" (shows all)
+                if (string.IsNullOrWhiteSpace(_selectedCategory) || (AvailableCategories.Count > 0 && !AvailableCategories.Any(c => c.Equals(_selectedCategory, StringComparison.OrdinalIgnoreCase))))
                     _selectedCategory = "No categorizado";
 
                 OnPropertyChanged(nameof(SelectedCategory));
+
+                // Populate dropdown options with "No categorizado" + real categories
+                CategoryOptions.Clear();
+                CategoryOptions.Add("No categorizado");
+                foreach (var c in AvailableCategories)
+                    CategoryOptions.Add(c);
 
                 if (_selectedCategory == "No categorizado")
                 {
