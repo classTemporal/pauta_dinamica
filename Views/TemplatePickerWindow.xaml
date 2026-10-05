@@ -51,6 +51,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -70,14 +71,29 @@
 
         <!-- Search Box -->
         <TextBox Grid.Row="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                 Height="36" Margin="0,0,0,12" Padding="12,0"
+                 Height="36" Margin="0,0,0,8" Padding="12,0"
                  Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
                  BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                  VerticalAlignment="Center"
                  TextWrapping="NoWrap" SpellCheck.IsEnabled="True"/>
 
+        <!-- Category Filter -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12" VerticalAlignment="Center">
+            <ComboBox x:Name="CategoryCombo"
+                      ItemsSource="{Binding AvailableCategories}"
+                      SelectedItem="{Binding SelectedCategory}"
+                      Height="32" Width="220" Margin="0,0,10,0"
+                      ToolTip="Filtrar plantillas por categoría"
+                      VerticalContentAlignment="Center"
+                      Background="{DynamicResource InputBackground}"
+                      Foreground="{DynamicResource TextBrush}"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      SelectionChanged="CategoryCombo_SelectionChanged"/>
+            <TextBlock Text="Filtrar por categoría" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+        </StackPanel>
+
         <!-- MultiSelect Bar -->
-        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="12,6" Margin="0,0,0,15"
+        <Border Grid.Row="3" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="12,6" Margin="0,0,0,15"
                 BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.2"
                 Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVis}}">
             <Grid>
@@ -98,7 +114,7 @@
         </Border>
 
         <!-- Templates List -->
-        <ListBox x:Name="TemplatesList" Grid.Row="2"
+        <ListBox x:Name="TemplatesList" Grid.Row="4"
                   ItemsSource="{Binding DisplayedTemplates}"
                   Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -160,7 +176,7 @@
         </ListBox>
 
         <!-- Footer -->
-        <StackPanel Grid.Row="3" Margin="0,15,0,0">
+        <StackPanel Grid.Row="5" Margin="0,15,0,0">
             <!-- Add Template Section -->
             <Grid x:Name="AddTemplateGrid" Visibility="Collapsed" Margin="0,0,0,15">
                 <Grid.RowDefinitions>
