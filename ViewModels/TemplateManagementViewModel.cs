@@ -147,6 +147,20 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ApplyCategoryFilter()
         {
+            // Filter Templates based on selected category (does NOT rebuild CategoryOptions to avoid ComboBox StackOverflow)
+            if (_selectedCategory == "No categorizado")
+            {
+                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates);
+            }
+            else
+            {
+                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.Equals(t.Model.Category, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
+            }
+        }
+
+        /// <summary>Rebuilds CategoryOptions (dropdown) + AvailableCategories (categories tab) + restores valid selection.</summary>
+        private void RefreshCategoryOptions()
+        {
             // Build available categories excluding "No categorizado" (internal default, not user-editable)
             AvailableCategories.Clear();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -173,15 +187,6 @@ namespace PautaDinamicaApp.ViewModels
             CategoryOptions.Add("No categorizado");
             foreach (var c in AvailableCategories)
                 CategoryOptions.Add(c);
-
-            if (_selectedCategory == "No categorizado")
-            {
-                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates);
-            }
-            else
-            {
-                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.Equals(t.Model.Category, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
-            }
         }
 
         private void MoveUp(TemplateItemVM? item)
@@ -232,8 +237,8 @@ namespace PautaDinamicaApp.ViewModels
 
             IsCategorizedMode = models.Any(t => !string.IsNullOrWhiteSpace(t.Category)) || _storageService.LoadTemplateCategories().Any();
 
-            // ApplyCategoryFilter rebuilds AvailableCategories + filters Templates
-            ApplyCategoryFilter();
+            // RefreshCategoryOptions rebuilds AvailableCategories + CategoryOptions + filters Templates
+            RefreshCategoryOptions();
         }
 
         private void SaveTemplates()
@@ -272,7 +277,7 @@ namespace PautaDinamicaApp.ViewModels
                 _allTemplates.Add(new TemplateItemVM(newModel));
                 NewTemplateContent = string.Empty;
             }
-            ApplyCategoryFilter();
+            RefreshCategoryOptions();
         }
 
         private void StartEdit(TemplateItemVM? template)
@@ -421,7 +426,7 @@ namespace PautaDinamicaApp.ViewModels
                     MessageBoxHelper.Show("Error al importar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            ApplyCategoryFilter();
+            RefreshCategoryOptions();
         }
 
         /// <summary>
