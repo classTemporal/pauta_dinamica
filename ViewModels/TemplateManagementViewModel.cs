@@ -161,8 +161,6 @@ namespace PautaDinamicaApp.ViewModels
             if (string.IsNullOrWhiteSpace(_selectedCategory) || (AvailableCategories.Count > 0 && !AvailableCategories.Any(c => c.Equals(_selectedCategory, StringComparison.OrdinalIgnoreCase))))
                 _selectedCategory = "No categorizado";
 
-            OnPropertyChanged(nameof(SelectedCategory));
-
             // Populate dropdown options with "No categorizado" + real categories
             CategoryOptions.Clear();
             CategoryOptions.Add("No categorizado");
