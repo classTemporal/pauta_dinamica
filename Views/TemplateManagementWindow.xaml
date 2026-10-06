@@ -236,8 +236,8 @@
                                         <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
                                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Margin" Value="0,2"/>
-                                        <Setter Property="MinHeight" Value="36"/>
+                                        <Setter Property="Margin" Value="0,4"/>
+                                        <Setter Property="MinHeight" Value="40"/>
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="ListBoxItem">
@@ -269,7 +269,7 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="{Binding}" FontSize="13" VerticalAlignment="Center" Padding="4,0"/>
                                             <Button x:Name="DeleteCategoryBtn" Grid.Column="1" Content="🗑️"
-                                                    Command="{Binding DataContext.DeleteCategoryCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                    Command="{Binding DataContext.DeleteCategoryAtCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                     CommandParameter="{Binding}"
                                                     ToolTip="Eliminar categoría"
                                                     Style="{StaticResource DangerMoveButtonStyle}" Width="30" Height="30"

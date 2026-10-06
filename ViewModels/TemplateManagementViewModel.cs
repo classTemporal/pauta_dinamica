@@ -72,7 +72,7 @@ namespace PautaDinamicaApp.ViewModels
             get => _selectedCategory;
             set
             {
-                if (SetProperty(ref _selectedCategory, value) && !_isApplyingFilter)
+                if (SetProperty(ref _selectedCategory, value))
                 {
                     ApplyCategoryFilter();
                 }
@@ -106,6 +106,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand CancelCommand { get; }
         public ICommand CreateCategoryCommand { get; }
         public ICommand DeleteCategoryCommand { get; }
+        public ICommand DeleteCategoryAtCommand { get; }
 
         public event Action? RequestClose;
 
@@ -119,6 +120,7 @@ namespace PautaDinamicaApp.ViewModels
 
             CreateCategoryCommand = new RelayCommand(_ => CreateCategory());
             DeleteCategoryCommand = new RelayCommand(_ => DeleteCategory());
+            DeleteCategoryAtCommand = new RelayCommand(c => DeleteCategoryAt(c as string));
 
             AddTemplateCommand = new RelayCommand(_ => AddTemplate(), _ => !string.IsNullOrWhiteSpace(NewTemplateContent));
             DeleteTemplateCommand = new RelayCommand(p => DeleteTemplate(p as TemplateItemVM));
@@ -136,55 +138,44 @@ namespace PautaDinamicaApp.ViewModels
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
         }
 
-        private bool _isApplyingFilter;
-
         private void ApplyCategoryFilter()
         {
-            if (_isApplyingFilter) return;
-            _isApplyingFilter = true;
-            try
+            // Build available categories excluding "No categorizado" (internal default, not user-editable)
+            AvailableCategories.Clear();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var persistedCategories = _storageService.LoadTemplateCategories().OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
+            foreach (var c in persistedCategories)
+                if (c != "No categorizado" && seen.Add(c))
+                    AvailableCategories.Add(c);
+            var templateCategories = _allTemplates
+                .Where(t => !string.IsNullOrWhiteSpace(t.Model.Category) && t.Model.Category != "No categorizado")
+                .Select(t => t.Model.Category)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            foreach (var c in templateCategories)
+                if (seen.Add(c))
+                    AvailableCategories.Add(c);
+
+            // Restore selection if still valid; otherwise default to "No categorizado" (shows all)
+            if (string.IsNullOrWhiteSpace(_selectedCategory) || (AvailableCategories.Count > 0 && !AvailableCategories.Any(c => c.Equals(_selectedCategory, StringComparison.OrdinalIgnoreCase))))
+                _selectedCategory = "No categorizado";
+
+            OnPropertyChanged(nameof(SelectedCategory));
+
+            // Populate dropdown options with "No categorizado" + real categories
+            CategoryOptions.Clear();
+            CategoryOptions.Add("No categorizado");
+            foreach (var c in AvailableCategories)
+                CategoryOptions.Add(c);
+
+            if (_selectedCategory == "No categorizado")
             {
-                // Build available categories excluding "No categorizado" (internal default, not user-editable)
-                AvailableCategories.Clear();
-                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                var persistedCategories = _storageService.LoadTemplateCategories().OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
-                foreach (var c in persistedCategories)
-                    if (c != "No categorizado" && seen.Add(c))
-                        AvailableCategories.Add(c);
-                var templateCategories = _allTemplates
-                    .Where(t => !string.IsNullOrWhiteSpace(t.Model.Category) && t.Model.Category != "No categorizado")
-                    .Select(t => t.Model.Category)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-                foreach (var c in templateCategories)
-                    if (seen.Add(c))
-                        AvailableCategories.Add(c);
-
-                // Restore selection if still valid; otherwise default to "No categorizado" (shows all)
-                if (string.IsNullOrWhiteSpace(_selectedCategory) || (AvailableCategories.Count > 0 && !AvailableCategories.Any(c => c.Equals(_selectedCategory, StringComparison.OrdinalIgnoreCase))))
-                    _selectedCategory = "No categorizado";
-
-                OnPropertyChanged(nameof(SelectedCategory));
-
-                // Populate dropdown options with "No categorizado" + real categories
-                CategoryOptions.Clear();
-                CategoryOptions.Add("No categorizado");
-                foreach (var c in AvailableCategories)
-                    CategoryOptions.Add(c);
-
-                if (_selectedCategory == "No categorizado")
-                {
-                    Templates = new ObservableCollection<TemplateItemVM>(_allTemplates);
-                }
-                else
-                {
-                    Templates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.Equals(t.Model.Category, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
-                }
+                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates);
             }
-            finally
+            else
             {
-                _isApplyingFilter = false;
+                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.Equals(t.Model.Category, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
             }
         }
 
@@ -469,6 +460,33 @@ namespace PautaDinamicaApp.ViewModels
 
             NewCategoryText = string.Empty;
             OnPropertyChanged(nameof(NewCategoryText));
+        }
+
+        /// <summary>
+        /// Elimina una categoría específica por nombre (viene del botón inline de la lista).
+        /// </summary>
+        private void DeleteCategoryAt(string categoryName)
+        {
+            if (string.IsNullOrWhiteSpace(categoryName) || categoryName == "No categorizado")
+            {
+                MessageBoxHelper.Show("No se puede eliminar 'No categorizado'.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (MessageBoxHelper.ShowNonCritical("¿Eliminar la categoría \"" + categoryName + "\" y todas sus plantillas?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            // Remove from categories file
+            var categories = _storageService.LoadTemplateCategories();
+            categories.RemoveAll(c => c.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+            _storageService.SaveTemplateCategories(categories);
+
+            // Remove templates with this category
+            var toRemove = _allTemplates.Where(t => string.Equals(t.Model.Category, categoryName, StringComparison.OrdinalIgnoreCase)).ToList();
+            foreach (var t in toRemove) _allTemplates.Remove(t);
+
+            SaveTemplates();
+            LoadTemplates();
         }
 
         /// <summary>
