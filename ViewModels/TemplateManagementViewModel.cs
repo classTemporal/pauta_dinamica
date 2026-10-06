@@ -79,6 +79,14 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        /// <summary>Selection in the categories ListBox — does NOT drive the template filter, just the UI. Kept separate to avoid StackOverflow loops.</summary>
+        private string? _categoryListSelection;
+        public string? CategoryListSelection
+        {
+            get => _categoryListSelection;
+            set => SetProperty(ref _categoryListSelection, value);
+        }
+
         private bool _isCategorizedMode;
         public bool IsCategorizedMode
         {
@@ -89,7 +97,6 @@ namespace PautaDinamicaApp.ViewModels
         public ObservableCollection<string> AvailableCategories { get; } = new();
         /// <summary>Categories for the template-creation dropdown, includes "No categorizado" as default.</summary>
         public ObservableCollection<string> CategoryOptions { get; } = new();
-
         public ICommand AddTemplateCommand { get; }
         public ICommand DeleteTemplateCommand { get; }
         public ICommand DeleteSelectedCommand { get; }
@@ -492,13 +499,12 @@ namespace PautaDinamicaApp.ViewModels
         /// </summary>
         private void DeleteCategory()
         {
-            if (string.IsNullOrWhiteSpace(_selectedCategory))
+            string catName = _categoryListSelection ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(catName))
             {
                 MessageBoxHelper.Show("Selecciona una categoría para eliminar.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-
-            string catName = _selectedCategory;
 
             if (catName == "No categorizado")
             {

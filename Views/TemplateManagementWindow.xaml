@@ -225,7 +225,7 @@
                         <!-- Lista de Categorías -->
                         <Border Background="{DynamicResource InputBackground}" CornerRadius="10" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Margin="0,0,0,20" Padding="6">
                             <ListBox x:Name="CategoryList" ItemsSource="{Binding AvailableCategories}"
-                                     SelectedItem="{Binding SelectedCategory}"
+                                     SelectedItem="{Binding CategoryListSelection}"
                                      Height="220"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
@@ -236,13 +236,13 @@
                                         <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
                                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Margin" Value="0,4"/>
-                                        <Setter Property="MinHeight" Value="40"/>
+                                        <Setter Property="Margin" Value="0,0,0,6"/>
+                                        <Setter Property="MinHeight" Value="44"/>
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="ListBoxItem">
                                                     <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" BorderThickness="1.5" BorderBrush="Transparent">
-                                                        <ContentPresenter VerticalAlignment="Center" Margin="10,0"/>
+                                                        <ContentPresenter VerticalAlignment="Center" Margin="14,4"/>
                                                     </Border>
                                                     <ControlTemplate.Triggers>
                                                         <Trigger Property="IsMouseOver" Value="True">
