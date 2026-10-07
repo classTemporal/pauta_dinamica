@@ -70,13 +70,34 @@
             <CheckBox Grid.Column="1" Content="Selección Múltiple" IsChecked="{Binding IsMultiSelectMode}" Style="{StaticResource MultiSelectToggleStyle}"/>
         </Grid>
 
-        <!-- Search Box -->
-        <TextBox Grid.Row="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                 Height="36" Margin="0,0,0,8" Padding="12,0"
-                 Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
-                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                 VerticalAlignment="Center"
-                 TextWrapping="NoWrap" SpellCheck.IsEnabled="True"/>
+        <!-- Search Box (con icono y placeholder) -->
+        <Grid Grid.Row="1" Margin="0,0,0,8" Height="36" VerticalAlignment="Center">
+            <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     Height="36" Padding="36,0,12,0"
+                     Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
+                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                     VerticalContentAlignment="Center"
+                     TextWrapping="NoWrap" SpellCheck.IsEnabled="True"/>
+            <!-- Capa superpuesta: icono siempre visible + placeholder que se oculta al escribir -->
+            <StackPanel Orientation="Horizontal" IsHitTestVisible="False"
+                        VerticalAlignment="Center" HorizontalAlignment="Left" Margin="12,0,0,0">
+                <TextBlock Text="🔍" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{DynamicResource SecondaryTextBrush}"/>
+                <TextBlock Text="Buscar..." FontSize="13" VerticalAlignment="Center"
+                           Foreground="{DynamicResource SecondaryTextBrush}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SearchText}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </Grid>
 
         <!-- Category Filter -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12" VerticalAlignment="Center">
