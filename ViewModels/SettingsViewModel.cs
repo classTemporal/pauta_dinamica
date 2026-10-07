@@ -526,6 +526,24 @@ namespace PautaDinamicaApp.ViewModels
             HasMissingEmails = missing.Any();
         }
 
+        /// <summary>
+        /// Persiste el Directorio de Contactos (y los datos de la pauta seleccionada) en disco.
+        /// Se invoca al cerrar el EmailDirectoryWindow con "Aceptar y Regresar" para que los
+        /// correos escritos no se pierdan y la validación de "Correos Faltantes" los reconozca.
+        /// </summary>
+        public void SaveDirectoryChanges()
+        {
+            SyncContacts();
+            try
+            {
+                _storageService.SavePautas(Pautas.ToList());
+            }
+            catch (Exception ex)
+            {
+                MessageBoxHelper.Show("No se pudo guardar el Directorio de Contactos: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
 
 
  public Array EmailMethods => Enum.GetValues(typeof(EmailMethod));

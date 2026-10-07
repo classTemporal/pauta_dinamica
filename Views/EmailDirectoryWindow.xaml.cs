@@ -20,6 +20,13 @@ namespace PautaDinamicaApp.Views
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
+            // FIX: "Aceptar y Regresar" cerraba sin persistir los correos escritos en el grid,
+            // por lo que la validación de "Correos Faltantes" seguía marcándolos como inexistentes.
+            if (DataContext is ViewModels.SettingsViewModel vm)
+            {
+                vm.SaveDirectoryChanges();
+            }
+
             this.DialogResult = true;
             this.Close();
         }

@@ -705,6 +705,10 @@ namespace PautaDinamicaApp.ViewModels
                 ApplyRowColoring();
                 UpdateAuditStats();
             }
+
+            // Refrescar directorio/plantillas aunque no se haya pulsado "Guardar"
+            // (pudieron guardarse cambios con "Aplicar" o desde el Directorio de Contactos).
+            RefreshEmailConfigFromDisk();
         }
 
         private void OpenEmailConfig()
@@ -724,6 +728,10 @@ namespace PautaDinamicaApp.ViewModels
                 ApplyRowColoring();
                 UpdateAuditStats();
             }
+
+            // Refrescar directorio/plantillas aunque no se haya pulsado "Guardar"
+            // (pudieron guardarse cambios con "Aplicar" o desde el Directorio de Contactos).
+            RefreshEmailConfigFromDisk();
         }
 
         private void ApplyRowColoring()
@@ -1497,6 +1505,39 @@ namespace PautaDinamicaApp.ViewModels
             HasMissingEmails = hasMissing;
         }
 
+        /// <summary>
+        /// Recarga desde disco los datos de correo de la pauta activa (Directorio de Contactos,
+        /// campo de origen, método y plantillas). Evita que el envío y la validación de
+        /// "Correos Faltantes" trabajen con datos en memoria obsoletos cuando el usuario acaba
+        /// de editar el Directorio de Contactos o la configuración de correo.
+        /// </summary>
+        private void RefreshEmailConfigFromDisk()
+        {
+            if (CurrentPauta == null) return;
+
+            try
+            {
+                var diskPauta = _storageService.LoadPautas().FirstOrDefault(p => p.Id == CurrentPauta.Id);
+                if (diskPauta == null) return;
+
+                CurrentPauta.RecipientContacts = diskPauta.RecipientContacts ?? new List<RecipientContact>();
+                CurrentPauta.UseAutomatedRecipient = diskPauta.UseAutomatedRecipient;
+                CurrentPauta.EmailNameFieldId = diskPauta.EmailNameFieldId;
+                CurrentPauta.EmailMethod = diskPauta.EmailMethod;
+                CurrentPauta.EmailToTemplate = diskPauta.EmailToTemplate;
+                CurrentPauta.EmailCcTemplate = diskPauta.EmailCcTemplate;
+                CurrentPauta.EmailSubjectTemplate = diskPauta.EmailSubjectTemplate;
+                CurrentPauta.EmailBodyTemplate = diskPauta.EmailBodyTemplate;
+                CurrentPauta.EmailReplacementRules = diskPauta.EmailReplacementRules;
+            }
+            catch
+            {
+                // Un fallo de lectura no debe abortar el envío; se conserva lo que haya en memoria.
+            }
+
+            CheckMissingEmails();
+        }
+
         private void LoadData()
         {
             if (CurrentPauta == null) return;
@@ -2121,6 +2162,11 @@ namespace PautaDinamicaApp.ViewModels
                 return;
             }
 
+            // Refrescar directorio/plantillas desde disco: si el usuario acaba de guardar el
+            // Directorio de Contactos, la validación y el envío deben usar los datos actuales,
+            // no la copia en memoria de la sesión (causa del aviso permanente de correos faltantes).
+            RefreshEmailConfigFromDisk();
+
             // Aplicar lógica de exclusión por calificación/campo valor
             // Funciona tanto para envío individual como múltiple.
             if (!string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldId) && !string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldValue))
@@ -2144,28 +2190,48 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
 
+            // Cargar ajustes globales y definiciones de campos (la plantilla "Para" se usa como
+            // respaldo del Directorio de Contactos y también se valida aquí).
+            var globalSettings = _storageService.LoadSettings();
+            var fieldDefinitions = _storageService.LoadConfiguration(CurrentPauta.Id);
+
             // --- VALIDACIÓN DE CORREOS FALTANTES (Card 31) ---
             // Si el envío es automático (UseAutomatedRecipient) y hay agentes sin correo asociado,
-            // bloquear el envío y mostrar un mensaje con opción de ir al directorio de contactos.
-            if (CurrentPauta.UseAutomatedRecipient && !string.IsNullOrEmpty(CurrentPauta.EmailNameFieldId))
+            // mostrar un mensaje con opción de ir al directorio de contactos. Se re-valida en bucle
+            // cada vez que el usuario regresa del Directorio de Contactos con datos recién guardados.
+            while (CurrentPauta.UseAutomatedRecipient && !string.IsNullOrEmpty(CurrentPauta.EmailNameFieldId))
             {
                 var contacts = CurrentPauta.RecipientContacts ?? new List<RecipientContact>();
                 var missingEmailAgents = new List<string>();
 
                 foreach (var entry in toProcess)
                 {
+                    string nameText = "";
                     if (entry.Values.TryGetValue(CurrentPauta.EmailNameFieldId, out var nameVal) && nameVal != null)
                     {
-                        string nameText = nameVal.ToString()?.Trim() ?? "";
-                        if (string.IsNullOrWhiteSpace(nameText)) continue;
+                        nameText = nameVal.ToString()?.Trim() ?? "";
+                    }
 
-                        var contact = contacts.FirstOrDefault(c => string.Equals(c.Name?.Trim(), nameText, StringComparison.OrdinalIgnoreCase));
-                        if (contact == null || string.IsNullOrWhiteSpace(contact.Email))
+                    if (string.IsNullOrWhiteSpace(nameText))
+                    {
+                        // Sin nombre en el campo de origen: solo puede usarse la plantilla "Para".
+                        // Si tampoco produce destinatario, el envío de este registro fallaría.
+                        string fallbackTo = _emailService.ProcessTemplate(CurrentPauta.EmailToTemplate, entry, fieldDefinitions, CurrentPauta.EmailReplacementRules);
+                        if (string.IsNullOrWhiteSpace(fallbackTo))
                         {
-                            missingEmailAgents.Add(nameText);
+                            missingEmailAgents.Add($"Registro del {entry.Timestamp:dd/MM/yyyy HH:mm} (sin nombre y sin plantilla \"Para\")");
                         }
+                        continue;
+                    }
+
+                    var contact = contacts.FirstOrDefault(c => string.Equals(c.Name?.Trim(), nameText, StringComparison.OrdinalIgnoreCase));
+                    if (contact == null || string.IsNullOrWhiteSpace(contact.Email))
+                    {
+                        missingEmailAgents.Add(nameText);
                     }
                 }
+
+                if (!missingEmailAgents.Any()) break;
 
                 if (missingEmailAgents.Any())
                 {
@@ -2174,21 +2240,19 @@ namespace PautaDinamicaApp.ViewModels
                                  "Diríjase al Directorio de Contactos para completar los correos.";
 
                     var result = MessageBoxHelper.Show(msg, "Correos Faltantes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, true);
-                    if (result == MessageBoxResult.Yes)
+                    if (result == MessageBoxResult.Yes) break; // Enviar de todas formas
+
+                    if (result == MessageBoxResult.No)
                     {
-                        // Enviar de todas formas: continuar con el envío (sin abrir nada)
-                    }
-                    else if (result == MessageBoxResult.No)
-                    {
-                        // Agregar correos faltantes: abrir EmailDirectoryWindow directamente
+                        // Abrir el Directorio de Contactos y volver a validar con los datos
+                        // recién guardados (evita enviar con contactos obsoletos en memoria).
                         var win = new Views.EmailDirectoryWindow { DataContext = new ViewModels.SettingsViewModel(CurrentPauta.Id), Owner = System.Windows.Application.Current.MainWindow };
                         win.ShowDialog();
+                        RefreshEmailConfigFromDisk();
+                        continue;
                     }
-                    else
-                    {
-                        // Cancelar: bloquear envío
-                        return;
-                    }
+
+                    return; // Cancelar: bloquear envío
                 }
             }
 
@@ -2198,9 +2262,8 @@ namespace PautaDinamicaApp.ViewModels
                 if (confirm == MessageBoxResult.No) return;
             }
 
-            var globalSettings = _storageService.LoadSettings();
-            var fieldDefinitions = _storageService.LoadConfiguration(CurrentPauta.Id);
             int count = 0;
+            int failedCount = 0;
             var generatedPdfs = new List<string>();
 
             foreach (var entry in toProcess)
@@ -2211,9 +2274,12 @@ namespace PautaDinamicaApp.ViewModels
                     string? pdfPath = GeneratePdfCommon(new List<AuditEntry> { entry }, silent: true);
                     if (!string.IsNullOrEmpty(pdfPath)) generatedPdfs.Add(pdfPath);
 
-                    // El EmailService ahora maneja la herencia internamente
-                    _emailService.SendEmail(globalSettings, CurrentPauta, entry, fieldDefinitions, pdfPath);
-                    count++;
+                    // El EmailService ahora maneja la herencia internamente.
+                    // En lotes (silent) no se muestra un aviso por cada registro fallido;
+                    // el resumen final informa cuántos no se pudieron procesar.
+                    bool sent = _emailService.SendEmail(globalSettings, CurrentPauta, entry, fieldDefinitions, pdfPath, silent: toProcess.Count > 1);
+                    if (sent) count++;
+                    else failedCount++;
 
                     // Añadir un pequeño retraso para evitar que Windows ignore las peticiones (especialmente con Mailto)
                     if (toProcess.Count > 1)
@@ -2223,13 +2289,18 @@ namespace PautaDinamicaApp.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBoxHelper.Show($"Error al exportar Excel: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    failedCount++;
+                    MessageBoxHelper.Show($"Error al enviar el correo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
 
-            if (count > 0)
+            if (count > 0 || failedCount > 0)
             {
                 string msg = $"{count} correos procesados.";
+                if (failedCount > 0)
+                {
+                    msg += $"\n\n⚠️ {failedCount} registros no se pudieron procesar. Verifique que tengan correo asociado o que la plantilla 'Para' produzca un destinatario.";
+                }
 
                 // Determinar el método efectivo para el aviso de adjuntos
                 EmailMethod effectiveMethod = CurrentPauta.EmailMethod;

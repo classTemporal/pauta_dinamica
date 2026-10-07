@@ -62,9 +62,15 @@ namespace PautaDinamicaApp.Services
             return result;
         }
 
-        public void SendEmail(AppSettings globalSettings, PautaSchema? pauta, AuditEntry entry, List<FieldDefinition> fields, string? pdfPath = null)
+        /// <summary>
+        /// Prepara y abre el correo en el cliente configurado (Outlook o mailto).
+        /// Devuelve true si el correo fue entregado al cliente de forma exitosa.
+        /// </summary>
+        /// <param name="silent">Si es true no se muestra un aviso por destinatario vacío
+        /// (útil en envíos múltiples, donde el resumen final informa los fallos).</param>
+        public bool SendEmail(AppSettings globalSettings, PautaSchema? pauta, AuditEntry entry, List<FieldDefinition> fields, string? pdfPath = null, bool silent = false)
         {
-            if (pauta == null) return;
+            if (pauta == null) return false;
 
             string to = "";
             bool directoryFound = false;
@@ -98,13 +104,16 @@ namespace PautaDinamicaApp.Services
             to = (to ?? "").Trim();
             if (string.IsNullOrWhiteSpace(to))
             {
-                MessageBoxHelper.Show(
-                    "No se pudo determinar el destinatario del correo (To vacío). Verifique que la pauta tenga configurada la plantilla de correo o el Directorio de Contactos.\n\n" +
-                    "Si usa Detección Automática, asegúrese de que el agente tenga correo asociado.",
-                    "Destinatario no encontrado",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
+                if (!silent)
+                {
+                    MessageBoxHelper.Show(
+                        "No se pudo determinar el destinatario del correo (To vacío). Verifique que la pauta tenga configurada la plantilla de correo o el Directorio de Contactos.\n\n" +
+                        "Si usa Detección Automática, asegúrese de que el agente tenga correo asociado.",
+                        "Destinatario no encontrado",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+                return false;
             }
 
             // Collect all attachments
@@ -131,15 +140,13 @@ namespace PautaDinamicaApp.Services
 
             if (method == EmailMethod.Outlook)
             {
-                SendViaOutlook(to, cc, subject, body, attachments);
+                return SendViaOutlook(to, cc, subject, body, attachments);
             }
-            else
-            {
-                SendViaMailto(to, cc, subject, body);
-            }
+
+            return SendViaMailto(to, cc, subject, body);
         }
 
-        private void SendViaMailto(string to, string cc, string subject, string body)
+        private bool SendViaMailto(string to, string cc, string subject, string body)
         {
             // RFC 6068: line breaks inside mailto body must be CRLF encoded as %0D%0A.
             // Uri.EscapeDataString maps '\n' -> '%0A' which some clients ignore, so we
@@ -162,22 +169,42 @@ namespace PautaDinamicaApp.Services
                     "Aviso de longitud mailto",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning, true);
-                if (warn == System.Windows.MessageBoxResult.No) return;
+                if (warn == System.Windows.MessageBoxResult.No) return false;
             }
 
             try
             {
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                return true;
             }
             catch (Exception ex)
             {
                 MessageBoxHelper.Show("No se pudo abrir el cliente de correo predeterminado: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
             }
         }
 
-        private void SendViaOutlook(string to, string cc, string subject, string body, List<string> attachmentPaths)
+        // Instancia única de Outlook reutilizada para todo el lote de envíos. Crear una nueva
+        // aplicación COM por cada correo provocaba errores intermitentes al enviar varios
+        // correos seguidos (modo selección múltiple).
+        private static dynamic? _outlookApp;
+
+        private static dynamic GetOutlookApp()
         {
-            try
+            if (_outlookApp != null)
+            {
+                try
+                {
+                    // Verificar que la instancia siga viva (Outlook pudo haberse cerrado)
+                    _ = _outlookApp.ProductCode;
+                }
+                catch
+                {
+                    _outlookApp = null;
+                }
+            }
+
+            if (_outlookApp == null)
             {
                 Type? outlookType = Type.GetTypeFromProgID("Outlook.Application");
                 if (outlookType == null)
@@ -185,8 +212,17 @@ namespace PautaDinamicaApp.Services
                     throw new Exception("Microsoft Outlook no parece estar instalado o no se pudo crear la instancia COM.");
                 }
 
-                dynamic outlookApp = Activator.CreateInstance(outlookType)!;
-                dynamic mailItem = outlookApp.CreateItem(0); // 0 = olMailItem
+                _outlookApp = Activator.CreateInstance(outlookType)!;
+            }
+
+            return _outlookApp!;
+        }
+
+        private bool SendViaOutlook(string to, string cc, string subject, string body, List<string> attachmentPaths)
+        {
+            try
+            {
+                dynamic mailItem = GetOutlookApp().CreateItem(0); // 0 = olMailItem
 
                 mailItem.To = to;
                 mailItem.CC = cc;
@@ -225,10 +261,12 @@ namespace PautaDinamicaApp.Services
                 }
 
                 mailItem.Display();
+                return true;
             }
             catch (Exception ex)
             {
                 MessageBoxHelper.Show("Error al usar Outlook Interop: " + ex.Message + "\n\nIntente usar el método 'mailto' en la configuración general.", "Error correo", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
             }
         }
 
