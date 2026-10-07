@@ -7,6 +7,7 @@
     
     <Window.Resources>
         <conv:BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:CategoryToVisibilityConverter x:Key="CategoryToVisibilityConverter"/>
         <Style x:Key="MoveButtonStyle" TargetType="Button" BasedOn="{StaticResource GhostButton}">
             <Setter Property="Width" Value="28"/>
             <Setter Property="Height" Value="28"/>
@@ -158,14 +159,32 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         
-                        <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                        <CheckBox Grid.RowSpan="2" IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
                                   Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVis}}"
                                   Margin="0,0,12,0" VerticalAlignment="Center"/>
                         
                         <TextBlock Grid.Column="1" Text="{Binding Content}" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" MaxHeight="60" TextTrimming="CharacterEllipsis" FontSize="13" VerticalAlignment="Center" Margin="5,0"/>
                         
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,5,0"
+                        <!-- Tag de categoría: misma pill que en Gestión de Plantillas -->
+                        <Border Grid.Column="1" Grid.Row="1"
+                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                Background="#1A3B82F6" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                                CornerRadius="10" Padding="10,3" Margin="5,2,0,0"
+                                Visibility="{Binding Category, Converter={StaticResource CategoryToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🏷️" FontSize="9" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="{Binding Category}" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
+                                           MaxWidth="220" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <StackPanel Grid.Column="2" Grid.RowSpan="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,5,0"
                                     Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
                             <Button Content="▲" Click="MoveUp_Click" Style="{StaticResource MoveButtonStyle}" Margin="0,0,6,0"/>
                             <Button Content="▼" Click="MoveDown_Click" Style="{StaticResource MoveButtonStyle}"/>

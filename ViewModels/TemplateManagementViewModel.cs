@@ -66,18 +66,30 @@ namespace PautaDinamicaApp.ViewModels
 
         public string AddButtonText => IsEditing ? "💾 ACTUALIZAR" : "➕ AGREGAR";
 
-        private string _selectedCategory = "No categorizado";
+        /// <summary>Categoría que se asigna a la plantilla nueva / editada (combo del panel superior).</summary>
+        private string _selectedCategory = string.Empty;
         public string SelectedCategory
         {
             get => _selectedCategory;
+            set => SetProperty(ref _selectedCategory, value ?? string.Empty);
+        }
+
+        /// <summary>Categoría usada para FILTRAR la lista (combo del encabezado de la lista). "Todas" = sin filtro.</summary>
+        private string _filterCategory = "Todas";
+        public string FilterCategory
+        {
+            get => _filterCategory;
             set
             {
-                if (SetProperty(ref _selectedCategory, value))
+                if (SetProperty(ref _filterCategory, string.IsNullOrWhiteSpace(value) ? "Todas" : value))
                 {
                     ApplyCategoryFilter();
                 }
             }
         }
+
+        /// <summary>Opciones del combo de filtro: "Todas" + categorías reales. "No categorizado" NO es filtro.</summary>
+        public ObservableCollection<string> FilterOptions { get; } = new();
 
         /// <summary>Selection in the categories ListBox — does NOT drive the template filter, just the UI. Kept separate to avoid StackOverflow loops.</summary>
         private string? _categoryListSelection;
@@ -145,42 +157,125 @@ namespace PautaDinamicaApp.ViewModels
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
         }
 
+        /// <summary>Re-entrancy flag: the bound ComboBox pushes values back into SelectedCategory while
+        /// ApplyCategoryFilter mutates CategoryOptions; nested calls must be ignored.</summary>
+        private bool _isApplyingCategoryFilter;
+
+        /// <summary>
+        /// Rebuilds AvailableCategories/CategoryOptions and refreshes the filtered Templates list.
+        /// Guarded against re-entrancy: without the guard, CategoryCombo.SelectedItem (TwoWay binding)
+        /// writes back into SelectedCategory on every CategoryOptions mutation, which re-enters this
+        /// method mid-update and ends in a StackOverflowException
+        /// (Selector.OnItemsChanged → binding UpdateSource → set_SelectedCategory → here → …).
+        /// </summary>
         private void ApplyCategoryFilter()
         {
-            // Build available categories excluding "No categorizado" (internal default, not user-editable)
-            AvailableCategories.Clear();
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var persistedCategories = _storageService.LoadTemplateCategories().OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
-            foreach (var c in persistedCategories)
-                if (c != "No categorizado" && seen.Add(c))
-                    AvailableCategories.Add(c);
-            var templateCategories = _allTemplates
-                .Where(t => !string.IsNullOrWhiteSpace(t.Model.Category) && t.Model.Category != "No categorizado")
-                .Select(t => t.Model.Category)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            foreach (var c in templateCategories)
-                if (seen.Add(c))
-                    AvailableCategories.Add(c);
-
-            // Restore selection if still valid; otherwise default to "No categorizado" (shows all)
-            if (string.IsNullOrWhiteSpace(_selectedCategory) || (AvailableCategories.Count > 0 && !AvailableCategories.Any(c => c.Equals(_selectedCategory, StringComparison.OrdinalIgnoreCase))))
-                _selectedCategory = "No categorizado";
-
-            // Populate dropdown options with "No categorizado" + real categories
-            CategoryOptions.Clear();
-            CategoryOptions.Add("No categorizado");
-            foreach (var c in AvailableCategories)
-                CategoryOptions.Add(c);
-
-            if (_selectedCategory == "No categorizado")
+            if (_isApplyingCategoryFilter) return;
+            _isApplyingCategoryFilter = true;
+            try
             {
-                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates);
+                // Resolve the wanted filter BEFORE touching any collection: the bound ComboBox
+                // pushes null into FilterCategory as soon as FilterOptions is cleared.
+                string desired = string.IsNullOrWhiteSpace(_filterCategory) ? "Todas" : _filterCategory;
+
+                // Build available categories excluding "No categorizado" (internal default, not user-editable)
+                var newAvailable = new List<string>();
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Todas", "No categorizado" };
+                var persistedCategories = _storageService.LoadTemplateCategories().OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
+                foreach (var c in persistedCategories)
+                    if (!string.IsNullOrWhiteSpace(c) && !c.Equals("No categorizado", StringComparison.OrdinalIgnoreCase) && seen.Add(c))
+                        newAvailable.Add(c);
+                var templateCategories = _allTemplates
+                    .Where(t => !string.IsNullOrWhiteSpace(t.Model.Category) && !t.Model.Category.Equals("No categorizado", StringComparison.OrdinalIgnoreCase))
+                    .Select(t => t.Model.Category)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                foreach (var c in templateCategories)
+                    if (seen.Add(c))
+                        newAvailable.Add(c);
+
+                bool IsPinnedFilter(string c) =>
+                    c.Equals("Todas", StringComparison.OrdinalIgnoreCase) ||
+                    c.Equals("No categorizado", StringComparison.OrdinalIgnoreCase);
+
+                // Restore filter if still valid; otherwise default to "Todas" (shows all)
+                if (!IsPinnedFilter(desired) && !newAvailable.Any(c => c.Equals(desired, StringComparison.OrdinalIgnoreCase)))
+                    desired = "Todas";
+
+                // Only mutate AvailableCategories when the content really changed, so the ListBox
+                // highlight (CategoryListSelection) is not wiped on every filter refresh.
+                if (!AvailableCategories.SequenceEqual(newAvailable, StringComparer.Ordinal))
+                {
+                    AvailableCategories.Clear();
+                    foreach (var c in newAvailable) AvailableCategories.Add(c);
+                }
+                if (_categoryListSelection != null && !newAvailable.Contains(_categoryListSelection, StringComparer.OrdinalIgnoreCase))
+                {
+                    _categoryListSelection = null;
+                    OnPropertyChanged(nameof(CategoryListSelection));
+                }
+
+                // Filter options: "Todas" pinned first, "No categorizado" pinned second,
+                // then the real categories alphabetically (only mutate when changed,
+                // so the bound ComboBox is not reset on every refresh)
+                var newFilterOptions = new List<string> { "Todas", "No categorizado" };
+                newFilterOptions.AddRange(newAvailable);
+                if (!FilterOptions.SequenceEqual(newFilterOptions, StringComparer.Ordinal))
+                {
+                    FilterOptions.Clear();
+                    foreach (var c in newFilterOptions) FilterOptions.Add(c);
+                }
+
+                // Populate dropdown options for the add/edit panel with "No categorizado" + real categories (only when changed)
+                var newOptions = new List<string> { "No categorizado" };
+                newOptions.AddRange(newAvailable);
+                if (!CategoryOptions.SequenceEqual(newOptions, StringComparer.Ordinal))
+                {
+                    CategoryOptions.Clear();
+                    foreach (var c in newOptions) CategoryOptions.Add(c);
+                }
+
+                // Clearing FilterOptions makes the bound ComboBox null out FilterCategory while we
+                // are still inside this method (re-entrant setter calls are blocked by the guard above).
+                // Put the resolved value back and re-sync the ComboBox selection.
+                if (!string.Equals(_filterCategory, desired, StringComparison.Ordinal))
+                {
+                    _filterCategory = desired;
+                    OnPropertyChanged(nameof(FilterCategory));
+                }
+
+                // "Todas" = no filter → show everything, including uncategorized (""/null/"No categorizado").
+                // "No categorizado" matches templates with empty/null/"No categorizado" category.
+                ObservableCollection<TemplateItemVM> newTemplates;
+                if (desired == "Todas")
+                {
+                    newTemplates = new ObservableCollection<TemplateItemVM>(_allTemplates);
+                }
+                else if (desired.Equals("No categorizado", StringComparison.OrdinalIgnoreCase))
+                {
+                    newTemplates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t =>
+                        string.IsNullOrWhiteSpace(t.Model.Category) ||
+                        string.Equals(t.Model.Category, "No categorizado", StringComparison.OrdinalIgnoreCase)));
+                }
+                else
+                {
+                    newTemplates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.Equals(t.Model.Category ?? string.Empty, desired, StringComparison.OrdinalIgnoreCase)));
+                    // Safety net: if the assigned filter yields nothing (e.g. templates were
+                    // added with a legacy/removed category value), fall back to showing all
+                    // instead of an empty list.
+                    if (newTemplates.Count == 0 && _allTemplates.Count > 0)
+                    {
+                        newTemplates = new ObservableCollection<TemplateItemVM>(_allTemplates);
+                        _filterCategory = "Todas";
+                        OnPropertyChanged(nameof(FilterCategory));
+                    }
+                }
+                Templates = newTemplates;
             }
-            else
+            finally
             {
-                Templates = new ObservableCollection<TemplateItemVM>(_allTemplates.Where(t => string.Equals(t.Model.Category, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
+                _isApplyingCategoryFilter = false;
             }
         }
 
@@ -280,7 +375,10 @@ namespace PautaDinamicaApp.ViewModels
             if (template == null) return;
             _editingTemplate = template;
             NewTemplateContent = template.Model.Content;
-            SelectedCategory = string.IsNullOrWhiteSpace(template.Model.Category) ? "No categorizado" : template.Model.Category;
+            // "No categorizado" = sin categoría asignada → combo en blanco
+            SelectedCategory = string.IsNullOrWhiteSpace(template.Model.Category) || template.Model.Category == "No categorizado"
+                ? string.Empty
+                : template.Model.Category;
             IsEditing = true;
         }
 
@@ -453,15 +551,13 @@ namespace PautaDinamicaApp.ViewModels
             fileCategories.Add(name);
             _storageService.SaveTemplateCategories(fileCategories);
 
-            // Preserve SelectedCategory if still valid; otherwise default
-            string previousSelection = _selectedCategory;
-            LoadTemplates();
-            if (!string.Equals(_selectedCategory, previousSelection, StringComparison.OrdinalIgnoreCase) || _selectedCategory == "No categorizado")
-            {
-                // Ensure new category is visible if it was just created
-                if (AvailableCategories.Contains(name, StringComparer.OrdinalIgnoreCase))
-                    SelectedCategory = name;
-            }
+            // Refresh lists WITHOUT re-reading templates from disk (LoadTemplates would
+            // discard in-memory templates added but not yet saved via "Aplicar").
+            ApplyCategoryFilter();
+
+            // Preselect the new category in the add-panel combo for convenience
+            if (AvailableCategories.Contains(name, StringComparer.OrdinalIgnoreCase))
+                SelectedCategory = name;
 
             NewCategoryText = string.Empty;
             OnPropertyChanged(nameof(NewCategoryText));

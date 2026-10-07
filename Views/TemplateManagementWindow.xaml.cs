@@ -59,6 +59,28 @@ namespace PautaDinamicaApp.Views
             _draggedItem = null;
         }
 
+        /// <summary>
+        /// The templates ListBox lives inside the tab's ScrollViewer. The ListBox's own viewer
+        /// swallows the mouse wheel (marks it handled) even when it has nothing to scroll, so the
+        /// page behind appears "dead" when the mouse is over a template. Forward the wheel to the
+        /// outer ScrollViewer so the whole tab scrolls.
+        /// </summary>
+        private void TemplatesList_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (e.Handled) return;
+            e.Handled = true;
+
+            var outer = FindVisualParent<System.Windows.Controls.ScrollViewer>((System.Windows.DependencyObject)sender);
+            if (outer == null) return;
+
+            var forwarded = new System.Windows.Input.MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+            {
+                RoutedEvent = System.Windows.UIElement.MouseWheelEvent,
+                Source = sender
+            };
+            outer.RaiseEvent(forwarded);
+        }
+
         private void TemplatesList_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
         {
             if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed && _draggedItem != null)

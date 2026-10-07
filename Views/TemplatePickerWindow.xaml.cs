@@ -144,18 +144,22 @@ namespace PautaDinamicaApp.Views
         {
             _availableCategories.Clear();
             _availableCategories.Add("Todas");
+            _availableCategories.Add("No categorizado");
 
-            // Load from persisted categories
+            // Load from persisted categories ("No categorizado" stays pinned 2nd — never duplicated)
             var persisted = _storageService.LoadTemplateCategories();
             foreach (var c in persisted.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
             {
-                if (!_availableCategories.Contains(c, StringComparer.OrdinalIgnoreCase))
+                if (!string.IsNullOrWhiteSpace(c)
+                    && !c.Equals("No categorizado", StringComparison.OrdinalIgnoreCase)
+                    && !_availableCategories.Contains(c, StringComparer.OrdinalIgnoreCase))
                     _availableCategories.Add(c);
             }
 
-            // Also add categories from existing templates
+            // Also add categories from existing templates (same pinned rule)
             var templateCats = _allTemplates
-                .Where(t => !string.IsNullOrWhiteSpace(t.Category))
+                .Where(t => !string.IsNullOrWhiteSpace(t.Category)
+                    && !t.Category!.Equals("No categorizado", StringComparison.OrdinalIgnoreCase))
                 .Select(t => t.Category!)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
@@ -174,12 +178,13 @@ namespace PautaDinamicaApp.Views
 
             IEnumerable<MessageTemplate> filtered = _allTemplates;
 
-            // Apply category filter
+            // Apply category filter ("Todas" = all, "No categorizado" = empty/null/"No categorizado")
             if (category != "Todas" && !string.IsNullOrWhiteSpace(category))
             {
-                if (category == "Sin Categorizar")
+                if (category.Equals("No categorizado", StringComparison.OrdinalIgnoreCase))
                 {
-                    filtered = filtered.Where(t => string.IsNullOrWhiteSpace(t.Category));
+                    filtered = filtered.Where(t => string.IsNullOrWhiteSpace(t.Category) ||
+                        string.Equals(t.Category, "No categorizado", StringComparison.OrdinalIgnoreCase));
                 }
                 else
                 {
