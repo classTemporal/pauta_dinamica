@@ -326,10 +326,16 @@ namespace PautaDinamicaApp.ViewModels
             win.Owner = System.Windows.Application.Current.MainWindow;
             if (win.ShowDialog() == true)
             {
-                if (win.SelectedValue == "TODAY")
+                if (win.SelectedValue.Trim().Equals(Models.DateDefaultValue.TodayToken, StringComparison.OrdinalIgnoreCase))
                 {
                     if (isFrom) FilterStartDate = DateTime.Today;
                     else FilterEndDate = DateTime.Today.AddHours(23).AddMinutes(59);
+                }
+                else if (Models.DateDefaultValue.TryParseMonthDay(win.SelectedValue, out int monthDay))
+                {
+                    DateTime resolved = Models.DateDefaultValue.ResolveMonthDay(monthDay);
+                    if (isFrom) FilterStartDate = resolved;
+                    else FilterEndDate = resolved.AddHours(23).AddMinutes(59);
                 }
                 else if (DateTime.TryParse(win.SelectedValue, out DateTime date))
                 {

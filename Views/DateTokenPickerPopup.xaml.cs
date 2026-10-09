@@ -216,7 +216,9 @@ namespace PautaDinamicaApp.Views
         {
             var win = new DateSelectorWindow(current) { Owner = this };
             if (win.ShowDialog() != true) return null;
-            if (win.SelectedValue == "TODAY") return DateTime.Today;
+            if (win.SelectedValue.Trim().Equals(Models.DateDefaultValue.TodayToken, StringComparison.OrdinalIgnoreCase)) return DateTime.Today;
+            if (Models.DateDefaultValue.TryParseMonthDay(win.SelectedValue, out int day))
+                return Models.DateDefaultValue.ResolveMonthDay(day);
             if (DateTime.TryParse(win.SelectedValue, out DateTime d)) return d.Date;
             return null;
         }

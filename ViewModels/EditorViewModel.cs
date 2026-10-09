@@ -788,10 +788,12 @@ namespace PautaDinamicaApp.ViewModels
         private void PickDate(FieldDefinition? field)
         {
             if (field == null) return;
-            var selector = new DateSelectorWindow(field.DefaultValue) { Owner = System.Windows.Application.Current.MainWindow };
+            var selector = new DateSelectorWindow(field.DefaultValue, allowFixedMonthDay: true) { Owner = System.Windows.Application.Current.MainWindow };
             if (selector.ShowDialog() == true)
             {
-                field.DefaultValue = selector.SelectedValue == "TODAY" ? DateTime.Now.ToString("dd/MM/yyyy") : selector.SelectedValue;
+                // Se guarda el token tal cual para conservar los dinámicos:
+                // "TODAY" → hoy, "MONTHDAY:N" → día N de cada mes (se recalcula solo).
+                field.DefaultValue = selector.SelectedValue;
             }
         }
 

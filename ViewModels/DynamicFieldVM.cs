@@ -146,9 +146,9 @@ namespace PautaDinamicaApp.ViewModels
             if (selector.ShowDialog() == true)
             {
                 string val = selector.SelectedValue;
-                if (val == "TODAY")
+                if (DateDefaultValue.IsDynamic(val))
                 {
-                    val = DateTime.Now.ToString("dd/MM/yyyy");
+                    val = DateDefaultValue.Resolve(val);
                 }
                 Value = val;
             }
@@ -190,9 +190,9 @@ namespace PautaDinamicaApp.ViewModels
                 }
                 else if (Definition.Type == FieldType.Date)
                 {
-                    if (DateTime.TryParse(Definition.DefaultValue, out DateTime d)) _value = d.ToString("dd/MM/yyyy");
-                    else if (Definition.DefaultValue.Equals("TODAY", StringComparison.OrdinalIgnoreCase)) _value = DateTime.Now.ToString("dd/MM/yyyy");
-                    else _value = Definition.DefaultValue;
+                    _value = DateDefaultValue.Resolve(Definition.DefaultValue);
+                    if (string.IsNullOrEmpty(_value?.ToString()))
+                        _value = Definition.DefaultValue;
                 }
                 else if (Definition.Type == FieldType.Time)
                 {

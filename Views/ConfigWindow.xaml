@@ -22,6 +22,7 @@
             <conv:DictConverter x:Key="DictConverter"/>
             <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <conv:FieldIdsToNamesConverter x:Key="FieldIdsToNamesConverter"/>
+            <conv:DateDefaultDisplayConverter x:Key="DateDefaultDisplayConverter"/>
             <x:Array x:Key="BooleanOptions" Type="{x:Type sys:String}">
                 <sys:String>1</sys:String>
                 <sys:String>0</sys:String>
@@ -156,10 +157,11 @@
                  <Button Command="{Binding DataContext.PickDateCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
                          Style="{StaticResource SecondaryButton}" Padding="6,2" HorizontalContentAlignment="Left"
                          Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource InputBorder}" Foreground="{DynamicResource TextBrush}" BorderThickness="1"
-                         Width="120" Height="28" HorizontalAlignment="Left">
+                         Width="160" Height="28" HorizontalAlignment="Left"
+                         ToolTip="{Binding DefaultValue}">
                       <StackPanel Orientation="Horizontal">
                           <TextBlock Text="📅" Margin="0,0,6,0" VerticalAlignment="Center" FontSize="12" Opacity="0.8"/>
-                          <TextBlock Text="{Binding DefaultValue, FallbackValue='(Fecha)'}" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding DefaultValue, Converter={StaticResource DateDefaultDisplayConverter}}" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis"/>
                       </StackPanel>
                  </Button>
             </DataTemplate>
