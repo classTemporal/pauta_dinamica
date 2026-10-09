@@ -14,6 +14,15 @@ using System.Collections.Generic;
 
 namespace PautaDinamicaApp.ViewModels
 {
+    /// <summary>
+    /// Opción de modo de correo condicional con nombre visible en español.
+    /// </summary>
+    public class ConditionalEmailModeOption
+    {
+        public ConditionalEmailMode Mode { get; set; }
+        public string DisplayName { get; set; } = "";
+    }
+
     public class SettingsViewModel : ViewModelBase
     {
         private readonly StorageService _storageService;
@@ -263,6 +272,22 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand DeleteSelectedEmailRulesCommand { get; }
         public ICommand SelectAllEmailRulesCommand { get; }
         public ICommand EditEmailRuleFieldsCommand { get; }
+        public ICommand AddConditionalEmailRuleCommand { get; }
+        public ICommand RemoveConditionalEmailRuleCommand { get; }
+        public ICommand ToggleConditionalRuleMultiSelectCommand { get; }
+        public ICommand DeleteSelectedConditionalRulesCommand { get; }
+        public ICommand SelectAllConditionalRulesCommand { get; }
+
+        private bool _isConditionalRuleMultiSelectMode;
+        public bool IsConditionalRuleMultiSelectMode { get => _isConditionalRuleMultiSelectMode; set => SetProperty(ref _isConditionalRuleMultiSelectMode, value); }
+        /// <summary>
+        /// Opciones de modo con nombre visible (para el ComboBox de configuración).
+        /// </summary>
+        public List<ConditionalEmailModeOption> ConditionalEmailModeOptions { get; } = new()
+        {
+            new ConditionalEmailModeOption { Mode = ConditionalEmailMode.Ask, DisplayName = "Preguntar" },
+            new ConditionalEmailModeOption { Mode = ConditionalEmailMode.Auto, DisplayName = "Automático" }
+        };
 
         public ICommand PickColorCommand { get; }
 
@@ -317,6 +342,24 @@ namespace PautaDinamicaApp.ViewModels
                 if (SelectedPauta != null)
                 {
                     foreach (var r in SelectedPauta.EmailReplacementRules) r.IsSelected = true;
+                }
+            });
+
+            AddConditionalEmailRuleCommand = new RelayCommand(_ => AddConditionalEmailRule());
+            RemoveConditionalEmailRuleCommand = new RelayCommand(r => RemoveConditionalEmailRule(r as ConditionalEmailRule));
+            DeleteSelectedConditionalRulesCommand = new RelayCommand(_ => DeleteSelectedConditionalRules());
+            ToggleConditionalRuleMultiSelectCommand = new RelayCommand(_ =>
+            {
+                IsConditionalRuleMultiSelectMode = !IsConditionalRuleMultiSelectMode;
+                if (!IsConditionalRuleMultiSelectMode && SelectedPauta != null)
+                    foreach (var r in SelectedPauta.ConditionalEmailRules) r.IsSelected = false;
+            });
+            SelectAllConditionalRulesCommand = new RelayCommand(_ =>
+            {
+                if (SelectedPauta != null)
+                {
+                    bool all = SelectedPauta.ConditionalEmailRules.All(r => r.IsSelected);
+                    foreach (var r in SelectedPauta.ConditionalEmailRules) r.IsSelected = !all;
                 }
             });
 
@@ -462,6 +505,47 @@ namespace PautaDinamicaApp.ViewModels
             if (MessageBoxHelper.ShowNonCritical($"¿Eliminar las {toRemove.Count} reglas seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 foreach (var r in toRemove) SelectedPauta.EmailReplacementRules.Remove(r);
+            }
+        }
+
+        // --- Gestión de Correos Adicionales Condicionales ---
+
+        private void AddConditionalEmailRule()
+        {
+            if (SelectedPauta == null) return;
+            var rule = new ConditionalEmailRule
+            {
+                Name = $"Correo adicional {SelectedPauta.ConditionalEmailRules.Count + 1}",
+                TriggerValue = "0%",
+                Mode = ConditionalEmailMode.Ask
+            };
+
+            var firstField = CurrentPautaFields.FirstOrDefault();
+            if (firstField != null) rule.TriggerFieldId = firstField.Id;
+
+            SelectedPauta.ConditionalEmailRules.Add(rule);
+        }
+
+        private void RemoveConditionalEmailRule(ConditionalEmailRule? rule)
+        {
+            if (SelectedPauta != null && rule != null)
+            {
+                if (MessageBoxHelper.ShowNonCritical("¿Eliminar este correo adicional?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                {
+                    SelectedPauta.ConditionalEmailRules.Remove(rule);
+                }
+            }
+        }
+
+        private void DeleteSelectedConditionalRules()
+        {
+            if (SelectedPauta == null) return;
+            var toRemove = SelectedPauta.ConditionalEmailRules.Where(r => r.IsSelected).ToList();
+            if (toRemove.Count == 0) return;
+
+            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar los {toRemove.Count} correos adicionales seleccionados?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            {
+                foreach (var r in toRemove) SelectedPauta.ConditionalEmailRules.Remove(r);
             }
         }
 
@@ -668,6 +752,28 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     MessageBoxHelper.Show(err, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
+                }
+
+                // Validar plantillas de correos adicionales condicionales
+                if (pauta.ConditionalEmailRules != null)
+                {
+                    foreach (var rule in pauta.ConditionalEmailRules)
+                    {
+                        if (string.IsNullOrWhiteSpace(rule.TriggerFieldId) || string.IsNullOrWhiteSpace(rule.TriggerValue))
+                        {
+                            MessageBoxHelper.Show($"El correo adicional '{rule.Name}' de la pauta '{pauta.Name}' no tiene campo o valor de detección configurado.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+
+                        if (!ValidateTemplateString(rule.ToTemplate, pautaLabels, $"'{pauta.Name}' / '{rule.Name}' (Para)", out err) ||
+                            !ValidateTemplateString(rule.CcTemplate, pautaLabels, $"'{pauta.Name}' / '{rule.Name}' (CC)", out err) ||
+                            !ValidateTemplateString(rule.SubjectTemplate, pautaLabels, $"'{pauta.Name}' / '{rule.Name}' (Asunto)", out err) ||
+                            !ValidateTemplateString(rule.BodyTemplate, pautaLabels, $"'{pauta.Name}' / '{rule.Name}' (Cuerpo)", out err))
+                        {
+                            MessageBoxHelper.Show(err, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+                    }
                 }
             }
 

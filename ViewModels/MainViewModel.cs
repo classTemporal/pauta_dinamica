@@ -1537,6 +1537,7 @@ namespace PautaDinamicaApp.ViewModels
                 CurrentPauta.EmailSubjectTemplate = diskPauta.EmailSubjectTemplate;
                 CurrentPauta.EmailBodyTemplate = diskPauta.EmailBodyTemplate;
                 CurrentPauta.EmailReplacementRules = diskPauta.EmailReplacementRules;
+                CurrentPauta.ConditionalEmailRules = diskPauta.ConditionalEmailRules;
             }
             catch
             {
@@ -2272,7 +2273,14 @@ namespace PautaDinamicaApp.ViewModels
 
             int count = 0;
             int failedCount = 0;
+            int conditionalCount = 0;
+            int conditionalFailedCount = 0;
             var generatedPdfs = new List<string>();
+            var entryPdfPaths = new Dictionary<AuditEntry, string?>();
+            var activeConditionalRules = (CurrentPauta.ConditionalEmailRules ?? new System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule>())
+                .Where(r => r != null && !string.IsNullOrWhiteSpace(r.TriggerFieldId) && !string.IsNullOrWhiteSpace(r.TriggerValue))
+                .ToList();
+            var askMatches = new Dictionary<ConditionalEmailRule, List<AuditEntry>>();
 
             foreach (var entry in toProcess)
             {
@@ -2281,6 +2289,7 @@ namespace PautaDinamicaApp.ViewModels
                     // Generar PDF individual (para el adjunto)
                     string? pdfPath = GeneratePdfCommon(new List<AuditEntry> { entry }, silent: true);
                     if (!string.IsNullOrEmpty(pdfPath)) generatedPdfs.Add(pdfPath);
+                    entryPdfPaths[entry] = pdfPath;
 
                     // El EmailService ahora maneja la herencia internamente.
                     // En lotes (silent) no se muestra un aviso por cada registro fallido;
@@ -2288,6 +2297,33 @@ namespace PautaDinamicaApp.ViewModels
                     bool sent = _emailService.SendEmail(globalSettings, CurrentPauta, entry, fieldDefinitions, pdfPath, silent: toProcess.Count > 1);
                     if (sent) count++;
                     else failedCount++;
+
+                    // Evaluar reglas de correos adicionales condicionales.
+                    // Las Auto se abren de inmediato; las Ask se acumulan para una
+                    // pregunta agrupada por regla al final (evita N diálogos en lotes).
+                    foreach (var rule in activeConditionalRules)
+                    {
+                        bool matches;
+                        try { matches = rule.Matches(entry.Values); }
+                        catch { matches = false; }
+                        if (!matches) continue;
+
+                        if (rule.Mode == ConditionalEmailMode.Auto)
+                        {
+                            bool condSent = _emailService.SendConditionalEmail(globalSettings, CurrentPauta, rule, entry, fieldDefinitions, pdfPath, silent: toProcess.Count > 1);
+                            if (condSent) conditionalCount++;
+                            else conditionalFailedCount++;
+                        }
+                        else
+                        {
+                            if (!askMatches.TryGetValue(rule, out var list))
+                            {
+                                list = new List<AuditEntry>();
+                                askMatches[rule] = list;
+                            }
+                            list.Add(entry);
+                        }
+                    }
 
                     // Añadir un pequeño retraso para evitar que Windows ignore las peticiones (especialmente con Mailto)
                     if (toProcess.Count > 1)
@@ -2302,12 +2338,58 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
 
-            if (count > 0 || failedCount > 0)
+            // Preguntas agrupadas por regla (modo Ask): un solo diálogo por regla con
+            // todos los registros coincidentes, en vez de un diálogo por registro.
+            foreach (var kvp in askMatches)
+            {
+                var rule = kvp.Key;
+                var matched = kvp.Value;
+                if (matched.Count == 0) continue;
+
+                string triggerLabel = fieldDefinitions.FirstOrDefault(f => f.Id == rule.TriggerFieldId)?.Label ?? "campo";
+                var askRes = MessageBoxHelper.Show(
+                    $"{matched.Count} registro(s) coinciden con '{rule.Name}' ({triggerLabel} = '{rule.TriggerValue}').\n\n¿Desea enviar también esos {matched.Count} correo(s) adicional(es)?",
+                    "Correo adicional",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (askRes != MessageBoxResult.Yes) continue;
+
+                foreach (var entry in matched)
+                {
+                    try
+                    {
+                        entryPdfPaths.TryGetValue(entry, out string? pdfPath);
+                        bool condSent = _emailService.SendConditionalEmail(globalSettings, CurrentPauta, rule, entry, fieldDefinitions, pdfPath, silent: false);
+                        if (condSent) conditionalCount++;
+                        else conditionalFailedCount++;
+
+                        if (matched.Count > 1)
+                        {
+                            await System.Threading.Tasks.Task.Delay(800);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        conditionalFailedCount++;
+                        MessageBoxHelper.Show($"Error al enviar el correo adicional '{rule.Name}': {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+
+            if (count > 0 || failedCount > 0 || conditionalCount > 0 || conditionalFailedCount > 0)
             {
                 string msg = $"{count} correos procesados.";
                 if (failedCount > 0)
                 {
                     msg += $"\n\n⚠️ {failedCount} registros no se pudieron procesar. Verifique que tengan correo asociado o que la plantilla 'Para' produzca un destinatario.";
+                }
+                if (conditionalCount > 0 || conditionalFailedCount > 0)
+                {
+                    msg += $"\n\n📧 Correos adicionales: {conditionalCount} procesados.";
+                    if (conditionalFailedCount > 0)
+                    {
+                        msg += $" ⚠️ {conditionalFailedCount} no se pudieron procesar (destinatario vacío).";
+                    }
                 }
 
                 // Determinar el método efectivo para el aviso de adjuntos

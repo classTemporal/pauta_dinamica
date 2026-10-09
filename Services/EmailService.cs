@@ -146,6 +146,89 @@ namespace PautaDinamicaApp.Services
             return SendViaMailto(to, cc, subject, body);
         }
 
+        /// <summary>
+        /// Prepara y abre un correo adicional disparado por una <see cref="ConditionalEmailRule"/>.
+        /// Reutiliza plantillas con placeholders, directorio de contactos, reglas de reemplazo,
+        /// método de envío y adjuntos igual que el correo principal.
+        /// Devuelve true si el correo fue entregado al cliente de forma exitosa.
+        /// </summary>
+        public bool SendConditionalEmail(AppSettings globalSettings, PautaSchema? pauta, ConditionalEmailRule rule, AuditEntry entry, List<FieldDefinition> fields, string? pdfPath = null, bool silent = false)
+        {
+            if (pauta == null || rule == null) return false;
+
+            string to = "";
+            bool directoryFound = false;
+
+            if (pauta.UseAutomatedRecipient && !string.IsNullOrWhiteSpace(pauta.EmailNameFieldId))
+            {
+                if (entry.Values.TryGetValue(pauta.EmailNameFieldId, out var nameVal) && nameVal != null)
+                {
+                    string nameText = nameVal.ToString()?.Trim() ?? "";
+                    var contact = pauta.RecipientContacts?.FirstOrDefault(c => string.Equals(c.Name?.Trim(), nameText, StringComparison.OrdinalIgnoreCase));
+                    if (contact != null && !string.IsNullOrWhiteSpace(contact.Email))
+                    {
+                        to = contact.Email;
+                        directoryFound = true;
+                    }
+                }
+            }
+
+            if (!directoryFound)
+            {
+                // La plantilla "Para" propia de la regla tiene prioridad; si está vacía
+                // se hereda la del correo principal como respaldo.
+                string toTemplate = string.IsNullOrWhiteSpace(rule.ToTemplate) ? pauta.EmailToTemplate : rule.ToTemplate;
+                to = ProcessTemplate(toTemplate, entry, fields, pauta.EmailReplacementRules);
+            }
+
+            string cc = ProcessTemplate(string.IsNullOrWhiteSpace(rule.CcTemplate) ? pauta.EmailCcTemplate : rule.CcTemplate, entry, fields, pauta.EmailReplacementRules);
+            string subject = ProcessTemplate(rule.SubjectTemplate, entry, fields, pauta.EmailReplacementRules);
+            string body = ProcessTemplate(rule.BodyTemplate, entry, fields, pauta.EmailReplacementRules);
+
+            to = (to ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(to))
+            {
+                if (!silent)
+                {
+                    MessageBoxHelper.Show(
+                        $"No se pudo determinar el destinatario del correo adicional '{rule.Name}' (To vacío). Verifique su plantilla 'Para' o el Directorio de Contactos.",
+                        "Destinatario no encontrado",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+                return false;
+            }
+
+            // Mismos adjuntos que el correo principal: PDF generado + archivos adjuntos.
+            var attachments = new List<string>();
+            if (!string.IsNullOrEmpty(pdfPath) && File.Exists(pdfPath)) attachments.Add(pdfPath);
+
+            if (fields != null)
+            {
+                foreach (var f in fields.Where(f => f.Type == FieldType.FileAttachment && f.AttachToEmail))
+                {
+                    if (entry.Values.TryGetValue(f.Id, out var val) && val != null)
+                    {
+                        string strVal = val.ToString() ?? "";
+                        var paths = strVal.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var path in paths)
+                        {
+                            if (File.Exists(path)) attachments.Add(path);
+                        }
+                    }
+                }
+            }
+
+            EmailMethod method = pauta.EmailMethod;
+
+            if (method == EmailMethod.Outlook)
+            {
+                return SendViaOutlook(to, cc, subject, body, attachments);
+            }
+
+            return SendViaMailto(to, cc, subject, body);
+        }
+
         private bool SendViaMailto(string to, string cc, string subject, string body)
         {
             // RFC 6068: line breaks inside mailto body must be CRLF encoded as %0D%0A.

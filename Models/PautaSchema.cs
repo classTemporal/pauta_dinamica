@@ -145,6 +145,12 @@ namespace PautaDinamicaApp.Models
         private System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule> _emailReplacementRules = new();
         public System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule> EmailReplacementRules { get => _emailReplacementRules; set => SetProperty(ref _emailReplacementRules, value); }
 
+        // --- Correos Adicionales Condicionales ---
+        // Reglas que disparan un correo extra cuando un campo contiene un valor específico
+        // (ej: Calificación = "0%" -> correo de "Detractor alto riesgo").
+        private System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule> _conditionalEmailRules = new();
+        public System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule> ConditionalEmailRules { get => _conditionalEmailRules; set => SetProperty(ref _conditionalEmailRules, value); }
+
         // --- Reglas de Reemplazo para PDF ---
         private System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule> _pdfReplacementRules = new();
         public System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule> PdfReplacementRules { get => _pdfReplacementRules; set => SetProperty(ref _pdfReplacementRules, value); }

@@ -904,6 +904,7 @@ namespace PautaDinamicaApp.ViewModels
                                 ep.ColoringValue = m.ColoringValue;
                                 ep.ColoringColor = m.ColoringColor;
                                 ep.EmailReplacementRules = m.EmailReplacementRules ?? new System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule>();
+                                ep.ConditionalEmailRules = m.ConditionalEmailRules ?? new System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule>();
                                 ep.PdfReplacementRules = m.PdfReplacementRules ?? new System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule>();
                                 ep.DashboardFieldOrder = m.DashboardFieldOrder ?? new List<string>();
 
