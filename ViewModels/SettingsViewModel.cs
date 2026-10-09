@@ -160,6 +160,13 @@ namespace PautaDinamicaApp.ViewModels
         private PautaSchema? _selectedPauta;
         public event Action? RequestClose;
 
+        /// <summary>
+        /// Se dispara justo antes de persistir, para que la vista pueda volcar el HTML del
+        /// editor enriquecido a la pauta. El editor solo escribe en el modelo cuando cambia
+        /// la pauta, así que sin este aviso se perdería lo último tecleado.
+        /// </summary>
+        public event Func<Task>? FlushRequested;
+
         public ObservableCollection<PautaSchema> Pautas
         {
             get => _pautas;
@@ -739,6 +746,17 @@ namespace PautaDinamicaApp.ViewModels
 
         private void SaveSettings(bool close)
         {
+            // El editor HTML solo vuelca al modelo cuando cambia la pauta, así que hay
+            // que forzarlo aquí o se pierde lo último tecleado en el cuerpo.
+            if (FlushRequested != null)
+            {
+                try { FlushRequested().GetAwaiter().GetResult(); }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("flush del editor falló: " + ex.Message);
+                }
+            }
+
             SyncContacts();
 
             // Advertencia: contactos sin email

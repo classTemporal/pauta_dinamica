@@ -1536,6 +1536,9 @@ namespace PautaDinamicaApp.ViewModels
                 CurrentPauta.EmailCcTemplate = diskPauta.EmailCcTemplate;
                 CurrentPauta.EmailSubjectTemplate = diskPauta.EmailSubjectTemplate;
                 CurrentPauta.EmailBodyTemplate = diskPauta.EmailBodyTemplate;
+                CurrentPauta.EmailBodyHtmlTemplate = diskPauta.EmailBodyHtmlTemplate;
+                CurrentPauta.UseDynamicDates = diskPauta.UseDynamicDates;
+                CurrentPauta.DynamicDates = diskPauta.DynamicDates ?? new DynamicDateConfig();
                 CurrentPauta.EmailReplacementRules = diskPauta.EmailReplacementRules;
                 CurrentPauta.ConditionalEmailRules = diskPauta.ConditionalEmailRules;
             }

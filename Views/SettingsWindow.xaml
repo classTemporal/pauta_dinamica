@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:PautaDinamicaApp.Views"
         xmlns:models="clr-namespace:PautaDinamicaApp.Models"
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
+        xmlns:editor="clr-namespace:PautaDinamicaApp.Views.HtmlEditor"
         mc:Ignorable="d"
         Title="Configuración General" Height="700" Width="900"
         WindowStartupLocation="CenterOwner" 
@@ -368,6 +369,13 @@
                                                 <Run FontWeight="Bold" Foreground="#0078D4">Requisito de Outlook:</Run>
                                                 <LineBreak/>
                                                 <Run Foreground="{DynamicResource TextBrush}">Este método requiere que la aplicación de escritorio de Microsoft Outlook esté instalada y configurada con una cuenta activa en este equipo.</Run>
+                                                <LineBreak/>
+                                                <LineBreak/>
+                                                <Run FontWeight="Bold" Foreground="{DynamicResource TextBrush}">Cuerpo separado:</Run>
+                                                <Run Foreground="{DynamicResource TextBrush}"> el cuerpo con formato (negritas, tablas, imágenes) es independiente del cuerpo en texto plano de MAILTO. Cada método guarda el suyo, así que puede cambiar de uno a otro sin perder el texto.</Run>
+                                                <LineBreak/>
+                                                <Run FontWeight="Bold" Foreground="{DynamicResource TextBrush}">Editor enriquecido (nativo):</Run>
+                                                <Run Foreground="{DynamicResource TextBrush}"> funciona sin instalar nada extra. Solo Outlook usa este cuerpo con formato; MAILTO sigue usando texto plano.</Run>
                                             </TextBlock>
                                         </Grid>
                                     </Border>
@@ -393,14 +401,56 @@
                                 <TextBox Text="{Binding SelectedPauta.EmailSubjectTemplate}" Margin="0,0,0,10" Height="35" VerticalContentAlignment="Center"/>
 
                                 <TextBlock Text="Cuerpo:" Style="{StaticResource LabelStyle}" FontSize="12"/>
+
+                                <!-- Botones de inserción de marcadores dinámicos -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <Button Content="🏷️ Agregar campo" Click="InsertFieldButton_Click"
+                                            Style="{StaticResource GhostButton}" Height="30" Margin="0,0,6,0"/>
+                                    <Button Content="📅 Agregar fecha" Click="InsertDateButton_Click"
+                                            Style="{StaticResource GhostButton}" Height="30"/>
+                                    <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" FontSize="11"
+                                               Foreground="{DynamicResource SecondaryTextBrush}"
+                                               Text="Inserta [Etiqueta] o [Fecha]; se resuelven al enviar."/>
+                                </StackPanel>
+
                                 <Grid Margin="0,0,0,20">
-                                    <TextBox x:Name="EmailBodyTextBox" 
-                                             Text="{Binding SelectedPauta.EmailBodyTemplate}" 
-                                             AcceptsReturn="True" Height="200" MinHeight="150" 
+                                    <!-- MAILTO: cuerpo en texto plano -->
+                                    <TextBox x:Name="EmailBodyTextBox"
+                                             Text="{Binding SelectedPauta.EmailBodyTemplate}"
+                                             AcceptsReturn="True" Height="200" MinHeight="150"
                                              VerticalContentAlignment="Top" TextWrapping="Wrap"
                                              VerticalScrollBarVisibility="Auto"
                                              SpellCheck.IsEnabled="{Binding SpellCheckLanguage, Converter={StaticResource NotNullToBooleanConverter}}"
-                                             Language="{Binding SpellCheckLanguage, Converter={StaticResource StringToLanguageConverter}, ConverterCulture='es-ES'}"/>
+                                             Language="{Binding SpellCheckLanguage, Converter={StaticResource StringToLanguageConverter}, ConverterCulture='es-ES'}">
+                                        <TextBox.Style>
+                                            <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedPauta.EmailMethod}"
+                                                                 Value="{x:Static models:EmailMethod.Mailto}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBox.Style>
+                                    </TextBox>
+
+                                    <!-- OUTLOOK: cuerpo en HTML enriquecido (nativo) -->
+                                    <editor:NativeRichEditor x:Name="HtmlBodyEditor"
+                                             Html="{Binding SelectedPauta.EmailBodyHtmlTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                        <editor:NativeRichEditor.Style>
+                                            <Style TargetType="editor:NativeRichEditor">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedPauta.EmailMethod}"
+                                                                 Value="{x:Static models:EmailMethod.Outlook}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </editor:NativeRichEditor.Style>
+                                    </editor:NativeRichEditor>
+
                                     <Thumb Width="15" Height="15" HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE" DragDelta="EmailBody_DragDelta">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
@@ -487,7 +537,30 @@
                                                             <TextBlock Text="Asunto:" Style="{StaticResource LabelStyle}" FontSize="11" Margin="0,8,0,3"/>
                                                             <TextBox Text="{Binding SubjectTemplate, UpdateSourceTrigger=PropertyChanged}" Height="38" VerticalContentAlignment="Center"/>
                                                             <TextBlock Text="Cuerpo (acepta [Etiquetas] y [Fecha]):" Style="{StaticResource LabelStyle}" FontSize="11" Margin="0,8,0,3"/>
-                                                            <TextBox Text="{Binding BodyTemplate, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" Height="200" MinHeight="150" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top"/>
+                                                            <TextBox x:Name="RulePlainBox" Text="{Binding BodyTemplate, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" Height="200" MinHeight="150" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top">
+                                                                <TextBox.Style>
+                                                                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Data.SelectedPauta.EmailMethod, Source={StaticResource Proxy}}" Value="Outlook">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBox.Style>
+                                                            </TextBox>
+                                                            <editor:NativeRichEditor x:Name="RuleHtmlBox" Html="{Binding BodyHtmlTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                                                <editor:NativeRichEditor.Style>
+                                                                    <Style TargetType="editor:NativeRichEditor">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Data.SelectedPauta.EmailMethod, Source={StaticResource Proxy}}" Value="Outlook">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </editor:NativeRichEditor.Style>
+                                                            </editor:NativeRichEditor>
                                                         </StackPanel>
                                                     </Border>
                                                 </DataTemplate>

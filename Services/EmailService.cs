@@ -13,14 +13,58 @@ namespace PautaDinamicaApp.Services
 {
     public class EmailService
     {
-        public string ProcessTemplate(string template, AuditEntry entry, List<FieldDefinition> fields, IEnumerable<EmailReplacementRule>? rules = null)
+        private readonly DateTokenService _dates;
+
+        /// <summary>
+        /// Crea el servicio de correo usando el reloj del sistema para las fechas dinámicas.
+        /// </summary>
+        public EmailService() : this(new DateTokenService()) { }
+
+        /// <summary>
+        /// Crea el servicio de correo con una fuente de fechas inyectada (para pruebas).
+        /// </summary>
+        /// <param name="dates">Servicio de tokens de fecha dinámica.</param>
+        public EmailService(DateTokenService dates)
+        {
+            _dates = dates ?? throw new ArgumentNullException(nameof(dates));
+        }
+
+        /// <summary>
+        /// Resuelve los tokens de fecha dinámica de una plantilla.
+        /// Si la pauta no tiene activadas las fechas dinámicas devuelve el texto sin cambios,
+        /// de modo que el comportamiento existente no se altera.
+        /// </summary>
+        private string ResolveDynamicDates(string? text, PautaSchema pauta)
+            => _dates.ResolveTokens(text, pauta.DynamicDates, pauta.UseDynamicDates);
+
+        /// <summary>
+        /// Resuelve los placeholders de una plantilla de correo.
+        /// Reconoce <c>[Etiqueta]</c> de campo y <c>[Fecha]</c> (fecha del registro).
+        ///
+        /// <para>
+        /// Codificación: cuando la plantilla destino es HTML (método Outlook), los VALORES
+        /// inyectados se codifican con <see cref="System.Net.WebUtility.HtmlEncode"/> para que
+        /// caracteres como <c>&amp;</c>, <c>&lt;</c> o <c>&gt;</c> no rompan el marcado. Sin esto,
+        /// un agente llamado "García &amp; Hijos &lt;S.A.&gt;" produce HTML inválido y Outlook
+        /// muestra el cuerpo vacío o truncado.
+        /// </para>
+        /// <para>
+        /// La codificación se aplica SOLO sobre el valor, nunca sobre la plantilla, para
+        /// conservar intacto el HTML que el usuario escribió en el editor.
+        /// </para>
+        /// </summary>
+        public string ProcessTemplate(string template, AuditEntry entry, List<FieldDefinition> fields, IEnumerable<EmailReplacementRule>? rules = null, bool encodeValues = false)
         {
             if (string.IsNullOrWhiteSpace(template)) return "";
 
             string result = template;
 
+            // Codifica solo cuando el destino es HTML. En texto plano (mailto) se conserva
+            // el comportamiento original para no mostrar entidades al usuario.
+            string Clean(string? value) => encodeValues ? System.Net.WebUtility.HtmlEncode(value ?? "") : (value ?? "");
+
             // 1. Reemplazar [Fecha]
-            result = result.Replace("[Fecha]", entry.Timestamp.ToString("dd/MM/yyyy HH:mm"), StringComparison.OrdinalIgnoreCase);
+            result = result.Replace("[Fecha]", Clean(entry.Timestamp.ToString("dd/MM/yyyy HH:mm")), StringComparison.OrdinalIgnoreCase);
 
             // 2. Reemplazar placeholders por etiqueta de campo
             if (fields != null)
@@ -53,8 +97,9 @@ namespace PautaDinamicaApp.Services
                             }
                         }
                         // ---------------------------
-
-                        result = result.Replace(placeholder, value, StringComparison.OrdinalIgnoreCase);
+                        // La comparación de reglas usa el valor crudo; la codificación se
+                        // aplica solo al insertar, para no alterar el matching.
+                        result = result.Replace(placeholder, Clean(value), StringComparison.OrdinalIgnoreCase);
                     }
                 }
             }
@@ -96,7 +141,21 @@ namespace PautaDinamicaApp.Services
 
             string cc = ProcessTemplate(pauta.EmailCcTemplate, entry, fields, pauta.EmailReplacementRules);
             string subject = ProcessTemplate(pauta.EmailSubjectTemplate, entry, fields, pauta.EmailReplacementRules);
-            string body = ProcessTemplate(pauta.EmailBodyTemplate, entry, fields, pauta.EmailReplacementRules);
+
+            // El cuerpo depende del método de envío:
+            //   - Outlook -> plantilla HTML enriquecida (.HTMLBody, admite formato y tablas).
+            //   - Mailto  -> plantilla de texto plano (mailto no puede transportar marcado).
+            // Los campos están separados a propósito, de modo que mailto nunca reciba HTML.
+            bool useHtml = pauta.EmailMethod == EmailMethod.Outlook;
+            string body = ProcessTemplate(
+                useHtml ? pauta.EmailBodyHtmlTemplate : pauta.EmailBodyTemplate,
+                entry, fields, pauta.EmailReplacementRules,
+                encodeValues: useHtml);
+
+            // Tokens de fecha dinámica ([Hoy], [Semana], [Mes], [Año], [Rango]).
+            // Se aplican al final, después de los campos, y solo si la pauta los activó.
+            // El resultado ya viene codificado cuando es HTML, así que se inserta tal cual.
+            body = InsertDynamicDates(body, pauta);
 
             // FIX (Card 37): "mensaje olvidado" — si el destinatario (To) quedó vacío, el
             // correo se abría sin destinatario y podía enviarse en blanco. Bloqueamos el envío
@@ -183,7 +242,20 @@ namespace PautaDinamicaApp.Services
 
             string cc = ProcessTemplate(string.IsNullOrWhiteSpace(rule.CcTemplate) ? pauta.EmailCcTemplate : rule.CcTemplate, entry, fields, pauta.EmailReplacementRules);
             string subject = ProcessTemplate(rule.SubjectTemplate, entry, fields, pauta.EmailReplacementRules);
-            string body = ProcessTemplate(rule.BodyTemplate, entry, fields, pauta.EmailReplacementRules);
+
+            // Igual que el correo principal: el cuerpo sigue el método de la pauta.
+            // El cuerpo HTML propio de la regla tiene prioridad; si está vacío se hereda el
+            // del correo principal para no dejar el correo adicional sin contenido.
+            bool useHtml = pauta.EmailMethod == EmailMethod.Outlook;
+            string body = ProcessTemplate(
+                useHtml
+                    ? (string.IsNullOrWhiteSpace(rule.BodyHtmlTemplate) ? pauta.EmailBodyHtmlTemplate : rule.BodyHtmlTemplate)
+                    : rule.BodyTemplate,
+                entry, fields, pauta.EmailReplacementRules,
+                encodeValues: useHtml);
+
+            // Tokens de fecha dinámica del correo adicional (misma regla que el principal).
+            body = InsertDynamicDates(body, pauta);
 
             to = (to ?? "").Trim();
             if (string.IsNullOrWhiteSpace(to))
@@ -317,7 +389,32 @@ namespace PautaDinamicaApp.Services
                 // etiquetas HTML; si es texto plano se conserva .Body para evitar caracteres escapados.
                 if (IsHtml(body))
                 {
-                    mailItem.HTMLBody = body;
+                    // Outlook DESCarta los data URI del cuerpo: las imágenes insertadas en el
+                    // editor se pierden. Se extraen a archivos temporales y se adjuntan con
+                    // Content-ID, reescribiendo el src como cid:<id>.
+                    var inlined = new List<string>();
+                    string htmlBody = body ?? "";
+                    string rewritten = ExtractInlineImages(htmlBody, mailItem, inlined);
+
+                    mailItem.HTMLBody = rewritten;
+
+                    try
+                    {
+                        mailItem.Display();
+                    }
+                    finally
+                    {
+                        // El adjunto ya viaja con el mensaje de Outlook; el temporal solo
+                        // existía para poder adjuntarlo.
+                        foreach (string temp in inlined)
+                        {
+                            try { if (File.Exists(temp)) File.Delete(temp); }
+                            catch (Exception dex)
+                            {
+                                System.Diagnostics.Debug.WriteLine("no se pudo borrar la imagen temporal: " + dex.Message);
+                            }
+                        }
+                    }
                 }
                 else
                 {
@@ -354,6 +451,30 @@ namespace PautaDinamicaApp.Services
         }
 
         /// <summary>
+        /// Sustituye los tokens de fecha dinámica en un cuerpo ya resuelto.
+        ///
+        /// <para>
+        /// A diferencia de <see cref="ProcessTemplate"/>, aquí el valor insertado se codifica
+        /// cuando el cuerpo destino es HTML: los rangos generados contienen texto libre
+        /// ("03/10/2026 al 09/10/2026") que, aunque hoy no trae caracteres peligrosos, debe
+        /// seguir la misma regla de higiene que los valores de campo.
+        /// </para>
+        /// </summary>
+        private string InsertDynamicDates(string body, PautaSchema pauta)
+        {
+            if (string.IsNullOrEmpty(body)) return body;
+            if (!pauta.UseDynamicDates) return body;
+
+            bool isHtml = IsHtml(body);
+            string resolved = ResolveDynamicDates(body, pauta);
+
+            // Si no había tokens que resolver, devuelve el original sin tocar.
+            if (string.Equals(resolved, body, StringComparison.Ordinal)) return body;
+
+            return isHtml ? System.Net.WebUtility.HtmlEncode(resolved) : resolved;
+        }
+
+        /// <summary>
         /// Determina si un cuerpo de correo contiene etiquetas HTML para decidir entre .Body y .HTMLBody.
         /// </summary>
         private static bool IsHtml(string? content)
@@ -363,6 +484,103 @@ namespace PautaDinamicaApp.Services
             return lower.Contains("<html") || lower.Contains("<body") ||
                    lower.Contains("<br") || lower.Contains("<p>") || lower.Contains("<div") ||
                    lower.Contains("<table") || lower.Contains("<a ") || lower.Contains("<b>") || lower.Contains("<strong");
+        }
+
+        /// <summary>
+        /// Data URI de imagen incrustado en el cuerpo: <c>data:image/png;base64,....</c>.
+        /// </summary>
+        private static readonly System.Text.RegularExpressions.Regex InlineImageRegex = new(
+            @"data:(?<mime>image/[a-zA-Z0-9.+-]+);base64,(?<data>[A-Za-z0-9+/=\s]+)",
+            System.Text.RegularExpressions.RegexOptions.Compiled |
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// Tipos de adjunto de Outlook que se usan aquí. El resto del código trabaja con
+        /// <c>dynamic</c> (COM interop), así que se declara solo lo necesario.
+        /// </summary>
+        private static class OlAttachmentType
+        {
+            /// <summary>El adjunto es una copia del archivo (valor 1 de <c>OlAttachmentType</c>).</summary>
+            public const int olByValue = 1;
+        }
+
+        /// <summary>
+        /// Convierte los <c>data:</c> URI del cuerpo en adjuntos con Content-ID y reescribe el
+        /// <c>src</c> como <c>cid:...</c>.
+        ///
+        /// <para>
+        /// Outlook ignora los data URI dentro de <c>HTMLBody</c>, así que las imágenes del
+        /// editor desaparecían al enviar. Guardándolas como adjunto con Content-ID e
+        /// indicando <c>PR_ATTACH_CONTENT_ID</c> se muestran en línea.
+        /// </para>
+        /// <para>
+        /// Si una imagen no se puede adjuntar se deja el data URI original: el correo se envía
+        /// igual y solo falla esa imagen.
+        /// </para>
+        /// </summary>
+        /// <param name="html">Cuerpo HTML original.</param>
+        /// <param name="mailItem">Mensaje de Outlook donde se agregan los adjuntos.</param>
+        /// <param name="tempFiles">Rutas temporales creadas, para que el llamador las borre.</param>
+        private static string ExtractInlineImages(string html, dynamic mailItem, List<string> tempFiles)
+        {
+            if (string.IsNullOrEmpty(html) || !html.Contains("data:image", StringComparison.OrdinalIgnoreCase))
+                return html;
+
+            return InlineImageRegex.Replace(html, match =>
+            {
+                string data = match.Groups["data"].Value;
+                string mime = match.Groups["mime"].Value.ToLowerInvariant();
+                string extension = mime switch
+                {
+                    "image/jpeg" or "image/jpg" => ".jpg",
+                    "image/gif" => ".gif",
+                    "image/webp" => ".webp",
+                    "image/bmp" => ".bmp",
+                    _ => ".png"
+                };
+
+                byte[] bytes;
+                try
+                {
+                    bytes = Convert.FromBase64String(System.Text.RegularExpressions.Regex.Replace(data, @"\s+", ""));
+                }
+                catch (FormatException)
+                {
+                    // Base64 corrupto: se deja el data URI tal cual.
+                    return match.Value;
+                }
+
+                string? tempPath = null;
+                try
+                {
+                    tempPath = Path.Combine(Path.GetTempPath(), "pauta_img_" + Guid.NewGuid().ToString("N") + extension);
+                    File.WriteAllBytes(tempPath, bytes);
+
+                    string contentId = Guid.NewGuid().ToString();
+
+                    dynamic attachment = mailItem.Attachments.Add(tempPath, OlAttachmentType.olByValue, 0, null);
+                    attachment.PropertyAccessor.SetProperty(
+                        "http://schemas.microsoft.com/mapi/proptag/0x3712001F", contentId);
+
+                    tempFiles.Add(tempPath);
+                    return "cid:" + contentId;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("imagen inline no adjuntada: " + ex.Message);
+
+                    if (tempPath != null)
+                    {
+                        try { if (File.Exists(tempPath)) File.Delete(tempPath); }
+                        catch (Exception dex)
+                        {
+                            System.Diagnostics.Debug.WriteLine("no se pudo borrar la imagen temporal: " + dex.Message);
+                        }
+                    }
+
+                    return match.Value;
+                }
+            });
         }
     }
 }

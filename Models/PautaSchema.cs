@@ -67,9 +67,13 @@ namespace PautaDinamicaApp.Models
         // --- Configuración de Correo por Pauta ---
         private EmailMethod _emailMethod = EmailMethod.Mailto;
         private string _emailToTemplate = "";
+        private string _emailToHtmlTemplate = "";
         private string _emailCcTemplate = "";
+        private string _emailCcHtmlTemplate = "";
         private string _emailSubjectTemplate = "";
+        private string _emailSubjectHtmlTemplate = "";
         private string _emailBodyTemplate = "";
+        private string _emailBodyHtmlTemplate = "";
         private bool _useAutomatedRecipient = false;
         private bool _isDragging;
         private bool _isDropTarget;
@@ -93,6 +97,34 @@ namespace PautaDinamicaApp.Models
         public string EmailCcTemplate { get => _emailCcTemplate; set => SetProperty(ref _emailCcTemplate, value); }
         public string EmailSubjectTemplate { get => _emailSubjectTemplate; set => SetProperty(ref _emailSubjectTemplate, value); }
         public string EmailBodyTemplate { get => _emailBodyTemplate; set => SetProperty(ref _emailBodyTemplate, value); }
+
+        /// <summary>
+        /// Cuerpo del correo en formato HTML enriquecido (negritas, tablas, imágenes inline).
+        /// Solo se usa cuando <see cref="EmailMethod"/> es <see cref="EmailMethod.Outlook"/>,
+        /// que es el único capaz de interpretarlo (.HTMLBody).
+        ///
+        /// Es un campo INDEPENDIENTE de <see cref="EmailBodyTemplate"/> a propósito:
+        ///   - Mailto  -> usa EmailBodyTemplate  (texto plano, no puede transportar marcado).
+        ///   - Outlook -> usa EmailBodyHtmlTemplate (HTML, admite formato y tablas).
+        /// Al estar separados, mailto nunca puede recibir HTML por error.
+        /// </summary>
+        public string EmailBodyHtmlTemplate { get => _emailBodyHtmlTemplate; set => SetProperty(ref _emailBodyHtmlTemplate, value); }
+
+        // --- Fechas Dinámicas (opcionales) ---
+        // Permiten títulos como "Auditorías de llamadas del 03/10/2026 al 09/10/2026"
+        // calculando el rango con la fecha del sistema, sin escribirlo a mano.
+        private bool _useDynamicDates = false;
+        private DynamicDateConfig _dynamicDates = new();
+
+        /// <summary>
+        /// Activa la resolución de los tokens de fecha dinámica ([Hoy], [Semana], [Mes],
+        /// [Año], [Rango]) en las plantillas de esta pauta.
+        /// Por defecto está desactivado, de modo que el comportamiento existente no cambia.
+        /// </summary>
+        public bool UseDynamicDates { get => _useDynamicDates; set => SetProperty(ref _useDynamicDates, value); }
+
+        /// <summary>Configuración del rango custom usado por el token [Rango].</summary>
+        public DynamicDateConfig DynamicDates { get => _dynamicDates; set => SetProperty(ref _dynamicDates, value); }
         public bool UseAutomatedRecipient { get => _useAutomatedRecipient; set => SetProperty(ref _useAutomatedRecipient, value); }
         public string EmailNameFieldId { get => _emailNameFieldId; set => SetProperty(ref _emailNameFieldId, value); }
         public System.Collections.Generic.List<RecipientContact> RecipientContacts { get => _recipientContacts; set => SetProperty(ref _recipientContacts, value); }

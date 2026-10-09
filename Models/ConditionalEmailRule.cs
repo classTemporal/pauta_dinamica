@@ -23,7 +23,9 @@ namespace PautaDinamicaApp.Models
         private string _toTemplate = "";
         private string _ccTemplate = "";
         private string _subjectTemplate = "";
+        private string _subjectHtmlTemplate = "";
         private string _bodyTemplate = "";
+        private string _bodyHtmlTemplate = "";
 
         public string Name { get => _name; set => SetProperty(ref _name, value); }
         public string TriggerFieldId { get => _triggerFieldId; set => SetProperty(ref _triggerFieldId, value); }
@@ -55,6 +57,13 @@ namespace PautaDinamicaApp.Models
         public string CcTemplate { get => _ccTemplate; set => SetProperty(ref _ccTemplate, value); }
         public string SubjectTemplate { get => _subjectTemplate; set => SetProperty(ref _subjectTemplate, value); }
         public string BodyTemplate { get => _bodyTemplate; set => SetProperty(ref _bodyTemplate, value); }
+
+        /// <summary>
+        /// Cuerpo en HTML enriquecido. Se usa solo cuando la pauta está en método Outlook;
+        /// en mailto se usa <see cref="BodyTemplate"/> (texto plano). Ver la nota en
+        /// <see cref="PautaSchema.EmailBodyHtmlTemplate"/>.
+        /// </summary>
+        public string BodyHtmlTemplate { get => _bodyHtmlTemplate; set => SetProperty(ref _bodyHtmlTemplate, value); }
 
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsValid => true;

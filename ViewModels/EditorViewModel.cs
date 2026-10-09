@@ -884,6 +884,9 @@ namespace PautaDinamicaApp.ViewModels
                                 ep.EmailCcTemplate = m.EmailCcTemplate;
                                 ep.EmailSubjectTemplate = m.EmailSubjectTemplate;
                                 ep.EmailBodyTemplate = m.EmailBodyTemplate;
+                                ep.EmailBodyHtmlTemplate = m.EmailBodyHtmlTemplate;
+                                ep.UseDynamicDates = m.UseDynamicDates;
+                                ep.DynamicDates = m.DynamicDates ?? new DynamicDateConfig();
                                 ep.UseAutomatedRecipient = m.UseAutomatedRecipient;
                                 ep.EmailNameFieldId = m.EmailNameFieldId;
                                 ep.RecipientContacts = m.RecipientContacts ?? new List<RecipientContact>();
@@ -1030,6 +1033,9 @@ namespace PautaDinamicaApp.ViewModels
                 EmailCcTemplate = source.EmailCcTemplate,
                 EmailSubjectTemplate = source.EmailSubjectTemplate,
                 EmailBodyTemplate = source.EmailBodyTemplate,
+                EmailBodyHtmlTemplate = source.EmailBodyHtmlTemplate,
+                UseDynamicDates = source.UseDynamicDates,
+                DynamicDates = source.DynamicDates?.Clone() ?? new DynamicDateConfig(),
                 UseAutomatedRecipient = source.UseAutomatedRecipient,
                 EmailNameFieldId = source.EmailNameFieldId,
                 RecipientContacts = source.RecipientContacts?.Select(c => new RecipientContact { Name = c.Name, Email = c.Email }).ToList() ?? new List<RecipientContact>(),

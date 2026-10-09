@@ -16,11 +16,16 @@
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
     <PackageReference Include="QuestPDF" Version="2025.12.3" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Views\HtmlEditor\editor.html" />
   </ItemGroup>
 
 </Project>

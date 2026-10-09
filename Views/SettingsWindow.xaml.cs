@@ -46,6 +46,20 @@ namespace PautaDinamicaApp.Views
                     vm.AdminPassword = AdminPassBox.Password;
                 }
             };
+
+            // Vuelca el HTML del editor a la pauta antes de cada guardado.
+            // Se engancha en DataContextChanged porque la ventana se crea con un
+            // inicializador de objeto (DataContext = vm), es decir, después del ctor.
+            DataContextChanged += (s, args) =>
+            {
+                if (args.OldValue is ViewModels.SettingsViewModel oldVm) oldVm.FlushRequested -= FlushHtmlBodyAsync;
+                if (args.NewValue is ViewModels.SettingsViewModel newVm) newVm.FlushRequested += FlushHtmlBodyAsync;
+            };
+
+            if (DataContext is ViewModels.SettingsViewModel initialVm)
+            {
+                initialVm.FlushRequested += FlushHtmlBodyAsync;
+            }
         }
 
         private void EmailBody_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
@@ -58,6 +72,77 @@ namespace PautaDinamicaApp.Views
                     EmailBodyTextBox.Height = newHeight;
                 }
             }
+        }
+
+        /// <summary>
+        /// Vuelca el HTML de los editores nativos a sus propiedades antes de guardar.
+        /// Recorre el árbol visual porque las reglas adicionales viven en un ItemsControl.
+        /// </summary>
+        public async System.Threading.Tasks.Task FlushHtmlBodyAsync()
+        {
+            foreach (var ed in FindVisualChildren<HtmlEditor.NativeRichEditor>(this))
+                ed.Flush();
+            await System.Threading.Tasks.Task.CompletedTask;
+        }
+
+        private static System.Collections.Generic.IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+        {
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                if (child is T t) yield return t;
+                foreach (var sub in FindVisualChildren<T>(child)) yield return sub;
+            }
+        }
+
+        private System.Collections.Generic.IEnumerable<Models.FieldDefinition> PautaFields()
+            => (DataContext as ViewModels.SettingsViewModel)?.CurrentPautaFields
+               ?? System.Linq.Enumerable.Empty<Models.FieldDefinition>();
+
+        private Models.DynamicDateConfig? CurrentDynamicDates()
+            => (DataContext as ViewModels.SettingsViewModel)?.SelectedPauta?.DynamicDates;
+
+        /// <summary>Inserta el marcador donde está el cursor del cuadro de texto plano.</summary>
+        private void InsertAtCaret(System.Windows.Controls.TextBox box, string placeholder)
+        {
+            if (box == null) return;
+
+            int caret = box.SelectionStart;
+            box.Text = box.Text.Insert(caret, placeholder);
+            box.SelectionStart = caret + placeholder.Length;
+            box.SelectionLength = 0;
+            box.Focus();
+        }
+
+        private void InsertFieldButton_Click(object sender, RoutedEventArgs e)
+        {
+            string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);
+            if (string.IsNullOrEmpty(placeholder)) return;
+            if ((DataContext as ViewModels.SettingsViewModel)?.SelectedPauta?.EmailMethod
+                == Models.EmailMethod.Outlook)
+            {
+                HtmlBodyEditor.InsertTextAtCaret(placeholder);
+                return;
+            }
+            InsertAtCaret(EmailBodyTextBox, placeholder);
+        }
+
+        private void InsertDateButton_Click(object sender, RoutedEventArgs e)
+        {
+            var picked = Views.DateTokenPickerPopup.Pick(CurrentDynamicDates(), this);
+            if (picked == null) return;
+
+            var vm = DataContext as ViewModels.SettingsViewModel;
+            if (picked.Value.Config != null && vm?.SelectedPauta != null)
+                vm.SelectedPauta.DynamicDates = picked.Value.Config;
+
+            if (vm?.SelectedPauta?.EmailMethod == Models.EmailMethod.Outlook)
+            {
+                HtmlBodyEditor.InsertTextAtCaret(picked.Value.Token);
+                return;
+            }
+            InsertAtCaret(EmailBodyTextBox, picked.Value.Token);
         }
 
         // --- Drag & Drop Implementation ---

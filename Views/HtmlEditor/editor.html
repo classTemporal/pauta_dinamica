@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Editor</title>
+<style>
+    /*
+      Nota importante para Outlook de escritorio:
+      el cuerpo se renderiza con el motor de Word, que DESCarta bloques <style>,
+      atributos class y las directivas @media. Por eso todo el formato generado
+      se aplica como estilo INLINE (ver applyInlineFromComputed).
+      El CSS de este archivo solo maquilla el editor en pantalla, no viaja al correo.
+    */
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        font-size: 14px;
+    }
+    #editor {
+        min-height: 100%;
+        padding: 10px 12px;
+        outline: none;
+        box-sizing: border-box;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+    #editor:empty:before {
+        content: attr(data-placeholder);
+        color: #888;
+        pointer-events: none;
+    }
+    /* Borde visible para las tablas que se insertan desde la toolbar. */
+    #editor table { border-collapse: collapse; }
+    #editor table td, #editor table th { border: 1px solid #999999; padding: 6px 8px; }
+    #editor img { max-width: 100%; }
+</style>
+</head>
+<body>
+<div id="editor" contenteditable="true" spellcheck="true"
+     data-placeholder="Escriba el cuerpo del correo..."></div>
+
+<script>
+(function () {
+    "use strict";
+
+    var editor = document.getElementById("editor");
+
+    // --- Puente hacia el host WPF -------------------------------------------
+    // WebView2 exige un objeto COM-visible (HtmlBridge) para el camino de vuelta.
+    function post(payload) {
+        try {
+            if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage(payload);
+            }
+        } catch (e) { /* el host puede no estar listo todavía */ }
+    }
+
+    function postChange() {
+        post({ type: "changed", html: editor.innerHTML });
+    }
+
+    // --- Estado del caret ----------------------------------------------------
+    // Se guarda la selección cuando el usuario interactúa con la toolbar, porque
+    // pulsar un Botón mueve el foco fuera del editor y se perdería el caret.
+    var savedRange = null;
+
+    function saveSelection() {
+        var sel = window.getSelection();
+        if (sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+            savedRange = sel.getRangeAt(0).cloneRange();
+        }
+    }
+
+    function restoreSelection() {
+        editor.focus();
+        if (!savedRange) return;
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
+    }
+
+    // --- Normalización a estilos inline -------------------------------------
+    // Word ignora class y <style>: lo que no sea inline se pierde en Outlook.
+    var INLINE_PROPS = ["fontWeight", "fontStyle", "textDecoration", "color",
+                        "backgroundColor", "fontSize", "fontFamily", "textAlign"];
+
+    function kebab(prop) {
+        return prop.replace(/[A-Z]/g, function (m) { return "-" + m.toLowerCase(); });
+    }
+
+    function stripClassesAndStyles(root) {
+        var nodes = root.querySelectorAll("*");
+        for (var i = 0; i < nodes.length; i++) {
+            nodes[i].removeAttribute("class");
+            nodes[i].removeAttribute("style");
+        }
+        // Los <style> incrustados no aportan nada al correo.
+        var styles = root.querySelectorAll("style");
+        for (var j = 0; j < styles.length; j++) {
+            if (styles[j].parentNode) styles[j].parentNode.removeChild(styles[j]);
+        }
+    }
+
+    function applyInlineFromComputed(root) {
+        var nodes = root.querySelectorAll("*");
+        for (var i = 0; i < nodes.length; i++) {
+            var el = nodes[i];
+            var cs = window.getComputedStyle(el);
+            var own = el.getAttribute("style") || "";
+            var parts = [];
+            for (var p = 0; p < INLINE_PROPS.length; p++) {
+                var val = cs[INLINE_PROPS[p]];
+                if (val && val !== "normal" && val !== "start" && val !== "auto") {
+                    parts.push(kebab(INLINE_PROPS[p]) + ":" + val);
+                }
+            }
+            if (parts.length > 0) {
+                el.setAttribute("style", (own ? own + ";" : "") + parts.join(";"));
+            }
+        }
+    }
+
+    // Convierte el HTML pegado en algo que Outlook pueda mostrar.
+    function sanitizeForOutlook(html) {
+        var holder = document.createElement("div");
+        holder.innerHTML = html;
+        stripClassesAndStyles(holder);
+        // Es necesario adjuntar al documento para que getComputedStyle devuelva
+        // valores reales y no la cadena vacía.
+        holder.style.position = "absolute";
+        holder.style.left = "-9999px";
+        holder.style.top = "0";
+        document.body.appendChild(holder);
+        try {
+            applyInlineFromComputed(holder);
+        } finally {
+            if (holder.parentNode) holder.parentNode.removeChild(holder);
+        }
+        return holder.innerHTML;
+    }
+
+    // --- Pegado --------------------------------------------------------------
+    // Interceptar el pegado es clave: desde Word/Excel llegan <style> y class que
+    // Outlook descartaría, dejando el correo sin formato.
+    editor.addEventListener("paste", function (e) {
+        var clip = e.clipboardData;
+        if (!clip) return;
+
+        var html = clip.getData("text/html");
+        var text = clip.getData("text/plain");
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        restoreSelection();
+
+        if (html) {
+            document.execCommand("insertHTML", false, sanitizeForOutlook(html));
+        } else if (text) {
+
+            var safe = text.replace(/&/g, "&amp;")
+                           .replace(/</g, "&lt;")
+                           .replace(/>/g, "&gt;");
+            var withBreaks = safe.split(/\r?\n/).map(function (line) {
+                return "<div>" + (line === "" ? "<br>" : line) + "</div>";
+            }).join("");
+            document.execCommand("insertHTML", false, withBreaks);
+        }
+
+        saveSelection();
+        postChange();
+    });
+
+    // --- Inserción de tablas -------------------------------------------------
+    function tableHtml(rows, cols) {
+        var html = '<table style="border-collapse:collapse;width:100%;' +
+                   'border:1px solid #999999;font-family:Segoe UI,Arial,sans-serif;' +
+                   'font-size:13px;color:#000000"><tbody>';
+        for (var r = 0; r < rows; r++) {
+            html += "<tr>";
+            for (var c = 0; c < cols; c++) {
+                html += (r === 0)
+                    ? '<th style="border:1px solid #999999;padding:6px 8px;' +
+                      'background-color:#eeeeee;text-align:left">Encabezado</th>'
+                    : '<td style="border:1px solid #999999;padding:6px 8px">&nbsp;</td>';
+            }
+            html += "</tr>";
+        }
+        html += "</tbody></table><p><br></p>";
+        return html;
+    }
+
+    function insertTable(rows, cols) {
+        restoreSelection();
+        document.execCommand("insertHTML", false, tableHtml(rows, cols));
+        saveSelection();
+        postChange();
+    }
+
+    // --- Inserción de imágenes ----------------------------------------------
+    // En el editor se incrusta como data URI para previsualizar.
+    // EmailService se encarga de convertirla en adjunto con Content-ID (cid:),
+    // porque Outlook DESCarta los data URI en el cuerpo del mensaje.
+    function pickImage() {
+        var input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.style.display = "none";
+
+        input.addEventListener("change", function () {
+            var file = input.files && input.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                restoreSelection();
+                var img = '<img src="' + ev.target.result + '" alt="' + file.name + '" ' +
+                          'style="max-width:100%;height:auto" />';
+                document.execCommand("insertHTML", false, img);
+                saveSelection();
+                postChange();
+            };
+            reader.readAsDataURL(file);
+            if (input.parentNode) input.parentNode.removeChild(input);
+        });
+
+        document.body.appendChild(input);
+        input.click();
+    }
+
+    // --- API expuesta al host ------------------------------------------------
+    // El host invoca estos métodos vía ExecuteScriptAsync.
+    window.editorApi = {
+        getHtml: function () { return editor.innerHTML; },
+        setHtml: function (html) {
+            editor.innerHTML = html || "";
+            savedRange = null;
+            postChange();
+        },
+        getText: function () { return editor.innerText; },
+
+        // Comandos de formato. execCommand sigue siendo el mecanismo práctico
+        // para contenteditable; no tiene reemplazo equivalente simple.
+        exec: function (command, value) {
+            restoreSelection();
+            try {
+                document.execCommand(command, false, value === undefined ? null : value);
+            } catch (e) { /* comando no soportado: se ignora */ }
+            saveSelection();
+            postChange();
+        },
+
+        // Inserta texto en la posición del caret (placeholders [Campo] / [Fecha]).
+        insertText: function (text) {
+            restoreSelection();
+            try {
+                document.execCommand("insertText", false, text);
+            } catch (e) {
+                editor.appendChild(document.createTextNode(text));
+            }
+            saveSelection();
+            postChange();
+        },
+
+        insertTable: insertTable,
+        pickImage: pickImage,
+        sanitize: sanitizeForOutlook,
+
+        // Foco explícito; el host lo pide tras insertar un placeholder.
+        focus: function () { editor.focus(); }
+    };
+
+    // --- Notificación de cambios --------------------------------------------
+    // El evento input es la señal de "hay texto sin guardar". El host la usa para
+    // sincronizar, pero además fuerza un flush antes de guardar por si falta alguna.
+    editor.addEventListener("input", postChange);
+
+    // Aviso de listo para que el host sepa cuándo puede cargar contenido.
+    post({ type: "ready" });
+
+    // Cambios de tamaño del contenido: permite al host ajustar la altura.
+    if (window.ResizeObserver) {
+        new ResizeObserver(function () {
+            post({ type: "size", height: editor.scrollHeight });
+        }).observe(editor);
+    }
+})();
+</script>
+</body>
+</html>
