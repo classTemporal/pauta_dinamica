@@ -204,6 +204,8 @@ namespace PautaDinamicaApp.ViewModels
                     _storageService.SaveSettings(_settings);
                     OnPropertyChanged(nameof(DashboardLayout));
                     OnPropertyChanged(nameof(DashboardLayoutString));
+                    OnPropertyChanged(nameof(IsSinglePageLayout));
+                    OnPropertyChanged(nameof(IsSplitLayout));
                 }
             }
         }
@@ -216,6 +218,7 @@ namespace PautaDinamicaApp.ViewModels
                 DashboardLayout.Right => "Derecha",
                 DashboardLayout.Top => "Arriba",
                 DashboardLayout.Bottom => "Abajo",
+                DashboardLayout.SinglePage => "Una ventana",
                 _ => "Izquierda"
             };
             set
@@ -226,12 +229,16 @@ namespace PautaDinamicaApp.ViewModels
                     "Derecha" => DashboardLayout.Right,
                     "Arriba" => DashboardLayout.Top,
                     "Abajo" => DashboardLayout.Bottom,
+                    "Una ventana" => DashboardLayout.SinglePage,
                     _ => DashboardLayout.Left
                 };
             }
         }
 
-        public List<string> DashboardLayoutOptions => new List<string> { "Izquierda", "Derecha", "Arriba", "Abajo" };
+        public List<string> DashboardLayoutOptions => new List<string> { "Izquierda", "Derecha", "Arriba", "Abajo", "Una ventana" };
+
+        public bool IsSinglePageLayout => DashboardLayout == DashboardLayout.SinglePage;
+        public bool IsSplitLayout => DashboardLayout != DashboardLayout.SinglePage;
 
         public ICommand ToggleFiltersCommand { get; }
         public ICommand ChangeLayoutCommand { get; }
@@ -302,7 +309,8 @@ namespace PautaDinamicaApp.ViewModels
                 DashboardLayout.Left => DashboardLayout.Top,
                 DashboardLayout.Top => DashboardLayout.Right,
                 DashboardLayout.Right => DashboardLayout.Bottom,
-                DashboardLayout.Bottom => DashboardLayout.Left,
+                DashboardLayout.Bottom => DashboardLayout.SinglePage,
+                DashboardLayout.SinglePage => DashboardLayout.Left,
                 _ => DashboardLayout.Left
             };
         }

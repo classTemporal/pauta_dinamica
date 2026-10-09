@@ -160,7 +160,7 @@
             </TextBlock>
         </Button>
 
-        <Grid Grid.Row="2" Margin="20">
+        <Grid x:Name="SplitRoot" Grid.Row="2" Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition x:Name="Row0">
                         <RowDefinition.Style>
@@ -256,7 +256,7 @@
             </GridSplitter>
 
             <!-- Dynamic Form (General) -->
-            <DockPanel Margin="0">
+            <DockPanel x:Name="FormPanel" Margin="0">
                 <DockPanel.Style>
                     <Style TargetType="DockPanel">
                         <Style.Triggers>
@@ -356,7 +356,7 @@
             </DockPanel>
 
             <!-- Right: Records Grid (sin recuadro) -->
-            <DockPanel>
+            <DockPanel x:Name="RecordsPanel">
                 <DockPanel.Style>
                     <Style TargetType="DockPanel">
                         <Setter Property="Background" Value="Transparent"/>
@@ -377,8 +377,8 @@
                                 <Setter Property="Grid.Column" Value="0"/>
                                 <Setter Property="Grid.Row" Value="0"/>
                                 <Setter Property="Grid.ColumnSpan" Value="3"/>
-                                <Setter Property="Grid.RowSpan" Value="3"/>
-                                <Setter Property="Margin" Value="0,10,0,0"/>
+                                <Setter Property="Grid.RowSpan" Value="1"/>
+                                <Setter Property="Margin" Value="0,0,0,10"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
                                 <Setter Property="Grid.Column" Value="0"/>
@@ -534,7 +534,7 @@
                         </Border>
                     </StackPanel>
                     
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer x:Name="RecordsScrollWrapper" VerticalScrollBarVisibility="Disabled">
                         <DataGrid x:Name="RecordsGrid" ItemsSource="{Binding RecordsView}" 
                                    AutoGenerateColumns="False"
                                    IsReadOnly="True"
@@ -681,6 +681,13 @@
                     </ScrollViewer>
                 </DockPanel>
         </Grid>
+
+        <!-- Página única: campos arriba + auditorías abajo, un solo scroll (sin splitter) -->
+        <ScrollViewer x:Name="SinglePageRoot" Grid.Row="2" Margin="20"
+                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Visibility="Collapsed">
+            <StackPanel x:Name="SinglePageStack" Orientation="Vertical"/>
+        </ScrollViewer>
     </Grid>
 
 </Window>

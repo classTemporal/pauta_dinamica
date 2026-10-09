@@ -29,8 +29,149 @@ namespace PautaDinamicaApp
                 {
                     vm.FieldsRefreshed += RebuildColumns;
                     RebuildColumns();
+                    vm.PropertyChanged += (sender, args) =>
+                    {
+                        if (args.PropertyName == nameof(MainViewModel.DashboardLayout)
+                            || args.PropertyName == nameof(MainViewModel.IsSinglePageLayout)
+                            || args.PropertyName == nameof(MainViewModel.IsSplitLayout))
+                        {
+                            ApplyDashboardLayoutMode();
+                        }
+                    };
+                    RecordsGrid.PreviewMouseWheel += RecordsGrid_ForwardWheelToPage;
+                    ApplyDashboardLayoutMode();
                 }
             };
+        }
+
+        private bool _singlePageApplied;
+
+        private void ApplyDashboardLayoutMode()
+        {
+            if (DataContext is not MainViewModel vm) return;
+            if (SplitRoot == null || SinglePageRoot == null || SinglePageStack == null) return;
+            if (FormPanel == null || RecordsPanel == null) return;
+
+            bool single = vm.IsSinglePageLayout;
+
+            // Guardia anti-contaminación: si NO es página única y nunca entramos
+            // a ella, no tocar absolutamente nada (los triggers XAML mandan).
+            if (!single && !_singlePageApplied)
+            {
+                SplitRoot.Visibility = Visibility.Visible;
+                SinglePageRoot.Visibility = Visibility.Collapsed;
+                // Restaurar scrolls a sus defaults del XAML (por si el modo
+                // página los dejó desactivados y el usuario vuelve aquí).
+                DashboardScrollViewer.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto;
+                DashboardScrollViewer.HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+                // El wrapper NO debe competir con el scroll interno del DataGrid:
+                // desactivado para que la rueda llegue a la tabla en split modes.
+                if (RecordsScrollWrapper != null)
+                    RecordsScrollWrapper.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+                RecordsGrid.ClearValue(System.Windows.Controls.DataGrid.MaxHeightProperty);
+                RecordsGrid.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto;
+                return;
+            }
+
+            if (single && !_singlePageApplied)
+            {
+                if (FormPanel.Parent is System.Windows.Controls.Panel fp) fp.Children.Remove(FormPanel);
+                if (RecordsPanel.Parent is System.Windows.Controls.Panel rp) rp.Children.Remove(RecordsPanel);
+                // Campos arriba, auditorías abajo, en una sola columna.
+                FormPanel.Margin = new Thickness(0);
+                SinglePageStack.Children.Add(FormPanel);
+                SinglePageStack.Children.Add(RecordsPanel);
+                RecordsPanel.Margin = new Thickness(0, 20, 0, 0);
+                _singlePageApplied = true;
+            }
+            else if (!single && _singlePageApplied)
+            {
+                if (FormPanel.Parent is System.Windows.Controls.Panel p1) p1.Children.Remove(FormPanel);
+                if (RecordsPanel.Parent is System.Windows.Controls.Panel p2) p2.Children.Remove(RecordsPanel);
+                SinglePageStack.Children.Clear();
+                SplitRoot.Children.Add(FormPanel);
+                SplitRoot.Children.Add(RecordsPanel);
+
+                // Las posiciones las controlan los DataTriggers del XAML: limpiar
+                // valores locales para no anularlos permanentemente.
+                FormPanel.ClearValue(System.Windows.Controls.Grid.RowProperty);
+                FormPanel.ClearValue(System.Windows.Controls.Grid.ColumnProperty);
+                FormPanel.ClearValue(System.Windows.Controls.Grid.RowSpanProperty);
+                FormPanel.ClearValue(System.Windows.Controls.Grid.ColumnSpanProperty);
+                FormPanel.ClearValue(MarginProperty);
+                RecordsPanel.ClearValue(System.Windows.Controls.Grid.RowProperty);
+                RecordsPanel.ClearValue(System.Windows.Controls.Grid.ColumnProperty);
+                RecordsPanel.ClearValue(System.Windows.Controls.Grid.RowSpanProperty);
+                RecordsPanel.ClearValue(System.Windows.Controls.Grid.ColumnSpanProperty);
+                RecordsPanel.ClearValue(MarginProperty);
+                // Restaurar scrolls a sus defaults. El wrapper queda Disabled para
+                // no robar la rueda al scroll interno del DataGrid.
+                DashboardScrollViewer.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto;
+                DashboardScrollViewer.HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+                if (RecordsScrollWrapper != null)
+                    RecordsScrollWrapper.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+                RecordsGrid.ClearValue(System.Windows.Controls.DataGrid.MaxHeightProperty);
+                RecordsGrid.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto;
+                _singlePageApplied = false;
+            }
+
+            if (single)
+            {
+                // Página única: ocultar el grid con splitter (vacío) para que no
+                // compita por el mismo espacio, y mostrar la página única.
+                SplitRoot.Visibility = Visibility.Collapsed;
+                SinglePageRoot.Visibility = Visibility.Visible;
+                DashboardScrollViewer.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+                DashboardScrollViewer.HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+                if (RecordsScrollWrapper != null)
+                    RecordsScrollWrapper.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+                RecordsGrid.MaxHeight = 600;
+                RecordsGrid.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto;
+            }
+            else
+            {
+                // Modos con splitter: restaurar valores por defecto.
+                // Wrapper Disabled: la rueda va directo al DataGrid.
+                SplitRoot.Visibility = Visibility.Visible;
+                SinglePageRoot.Visibility = Visibility.Collapsed;
+                DashboardScrollViewer.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto;
+                DashboardScrollViewer.HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+                if (RecordsScrollWrapper != null)
+                    RecordsScrollWrapper.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled;
+                RecordsGrid.ClearValue(System.Windows.Controls.DataGrid.MaxHeightProperty);
+                RecordsGrid.VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto;
+            }
+        }
+
+        /// <summary>
+        /// En modo "Una ventana", la rueda sobre la tabla quedaba atrapada por el
+        /// ScrollViewer interno del DataGrid. Cuando la tabla ya no puede avanzar
+        /// en esa dirección, se reenvía el evento al scroll de la página.
+        /// </summary>
+        private void RecordsGrid_ForwardWheelToPage(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (DataContext is not MainViewModel vm || !vm.IsSinglePageLayout) return;
+            if (SinglePageRoot == null) return;
+
+            var inner = FindVisualChild<System.Windows.Controls.ScrollViewer>(RecordsGrid);
+            bool atLimit = true;
+            if (inner != null && inner.ScrollableHeight > 0)
+            {
+                if (e.Delta < 0) atLimit = inner.VerticalOffset >= inner.ScrollableHeight - 0.5;
+                else atLimit = inner.VerticalOffset <= 0.5;
+            }
+
+            if (atLimit)
+            {
+                e.Handled = true;
+                var forwarded = new System.Windows.Input.MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+                {
+                    RoutedEvent = System.Windows.UIElement.MouseWheelEvent,
+                    Source = SinglePageRoot
+                };
+                SinglePageRoot.RaiseEvent(forwarded);
+            }
+            // Si no está en el límite, se deja que la tabla haga scroll con normalidad.
         }
 
         // --- Dashboard ItemsControl handlers ---
