@@ -31,13 +31,25 @@ namespace PautaDinamicaApp.Services
     public sealed class DragScrollHelper
     {
         private const double EdgeZone = 60.0;   // px desde el borde donde inicia el auto-scroll
-        private const int TickMs = 25;           // cadencia del auto-scroll
+        private const int TickMs = 60;           // cadencia del timer de respaldo
+        private const int HookMinIntervalMs = 50; // intervalo mínimo entre scrolls del hook
+        private const int MaxStepsPerTick = 2;   // tope de líneas por evento (antes 4)
         private const int WmMouseWheel = 0x020A;
+        private const int WmMouseMove = 0x0200;
+        private const int WmLButtonUp = 0x0202;
 
-        private FrameworkElement? _resolvedFor;
+        // --- Estado del arrastre: el hook WH_MOUSE_LL es el motor. ---
+        // Durante DoDragDrop el message pump de WPF/OLE no despacha el
+        // DispatcherTimer (por eso el auto-scroll anterior jamás avanzaba),
+        // pero los hooks de bajo nivel SÍ reciben eventos. Así que cada
+        // movimiento de ratón (WM_MOUSEMOVE) que capture el hook actualiza la
+        // posición y hace el auto-scroll de forma síncrona.
+
         private ScrollViewer? _target;
-        private System.Windows.Point _cursor;                   // última posición del cursor relativa a _target
-        private DispatcherTimer? _timer;
+        private FrameworkElement? _dropTarget;
+        private System.Threading.Timer? _timer;
+        private bool _running;
+        private long _lastHookScrollTick; // Environment.TickCount64 del último scroll por hook
 
         // --- Hook global de la rueda (solo mientras hay un arrastre activo) ---
         private static DragScrollHelper? s_active;
@@ -47,33 +59,28 @@ namespace PautaDinamicaApp.Services
         private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         /// <summary>
-        /// Actualiza la posición del cursor y (re)inicia el auto-scroll y el hook de
-        /// la rueda. Debe llamarse en DragEnter/DragOver con el elemento de la lista.
+        /// Instancia compartida por todas las ventanas (solo hay un arrastre activo a la vez).
         /// </summary>
-        public void Update(System.Windows.DragEventArgs e, FrameworkElement dropTarget)
+        public static DragScrollHelper Current { get; } = new DragScrollHelper();
+
+        /// <summary>
+        /// Inicia el auto-scroll y el hook de la rueda para el arrastre que está por
+        /// comenzar. Debe llamarse justo antes de DragDrop.DoDragDrop, pasando el
+        /// elemento contenedor de la lista (ListBox/ItemsControl/ScrollViewer).
+        /// </summary>
+        public void BeginDrag(FrameworkElement dropTarget)
         {
             if (dropTarget == null) return;
 
-            if (!ReferenceEquals(_resolvedFor, dropTarget))
-            {
-                _resolvedFor = dropTarget;
-                _target = ResolveScrollViewer(dropTarget);
-            }
+            Stop(); // por si quedó un arrastre anterior sin cerrar
 
-            var sv = _target;
-            if (sv == null) return;
+            _dropTarget = dropTarget;
+            _target = ResolveScrollViewer(dropTarget);
+            _running = true;
 
-            _cursor = e.GetPosition(sv);
-
-            if (_timer == null)
-            {
-                _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(TickMs), DispatcherPriority.Input, OnTick, sv.Dispatcher);
-                _timer.Start();
-            }
-            else if (!_timer.IsEnabled)
-            {
-                _timer.Start();
-            }
+            // Timer de respaldo (hilo de pool): sigue latiendo durante
+            // DoDragDrop aunque el Dispatcher esté bloqueado en el bucle OLE.
+            _timer = new System.Threading.Timer(OnTimerTick, null, TickMs, TickMs);
 
             EnsureHook();
         }
@@ -83,37 +90,128 @@ namespace PautaDinamicaApp.Services
         /// </summary>
         public void Stop()
         {
-            if (_timer != null)
-            {
-                _timer.Stop();
-                _timer = null;
-            }
+            _running = false;
+
+            try { _timer?.Dispose(); } catch { /* ya liberado */ }
+            _timer = null;
 
             ReleaseHook();
 
             _target = null;
-            _resolvedFor = null;
+            _dropTarget = null;
+        }
+
+        /// <summary>
+        /// Re-resuelve el ScrollViewer objetivo (las listas virtualizadas pueden
+        /// recrear su ScrollViewer interno al hacer scroll) y reanuda el
+        /// auto-scroll. Llamar desde DragOver.
+        /// </summary>
+        public void Update(System.Windows.DragEventArgs e, FrameworkElement? dropTarget = null)
+        {
+            if (!_running) return;
+            FrameworkElement? anchor = dropTarget ?? _dropTarget;
+            if (anchor == null) return;
+
+            var resolved = ResolveScrollViewer(anchor);
+            if (resolved != null) _target = resolved;
+        }
+
+        /// <summary>
+        /// Mantiene el hook activo pero frena el auto-scroll mientras el cursor
+        /// está fuera del área (DragLeave). Al re-entrar, Update() lo reanuda.
+        /// Implementado como no-op de compatibilidad: el auto-scroll solo actúa
+        /// cuando el cursor está dentro de la zona de borde del ScrollViewer.
+        /// </summary>
+        public void PauseAutoScroll()
+        {
+            // Intencionalmente vacío: el Tick ya verifica la posición del cursor
+            // y no scrollea si está fuera del área. Se conserva por compatibilidad
+            // con las ventanas que lo llaman desde DragLeave.
         }
 
         // ---------------- Auto-scroll ----------------
 
-        private void OnTick(object? sender, EventArgs e)
+        /// <summary>
+        /// Tick de respaldo (hilo de pool): usa la última posición conocida del
+        /// cursor capturada por el hook y pide el scroll en el Dispatcher.
+        /// </summary>
+        private void OnTimerTick(object? state)
+        {
+            if (!_running) return;
+            var sv = _target;
+            if (sv == null) return;
+            if (!GetCursorPos(out POINT pt)) return;
+
+            try
+            {
+                sv.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (!_running) return;
+                    AutoScrollAtScreenPoint(pt);
+                }), DispatcherPriority.Input);
+            }
+            catch { /* dispatcher cerrándose */ }
+        }
+
+        /// <summary>
+        /// Auto-scroll síncrono en el hilo del hook: funciona dentro del bucle
+        /// modal de DoDragDrop porque el hilo del hook NO está bloqueado por OLE.
+        /// Invoca el scroll por el Dispatcher de forma síncrona (Invoke, no
+        /// BeginInvoke) para que el desplazamiento ocurra de inmediato.
+        /// </summary>
+        private void AutoScrollFromHook(POINT screenPt)
         {
             var sv = _target;
-            if (sv == null || sv.Dispatcher.HasShutdownStarted)
-            {
-                Stop();
-                return;
-            }
+            if (sv == null || !_running) return;
 
-            if (!sv.IsVisible) return;
+            // Limitador: el hook recibe decenas de WM_MOUSEMOVE por segundo;
+            // sin esto cada micro-movimiento scrollea y se vuelve incontrolable.
+            long now = Environment.TickCount64;
+            if (now - _lastHookScrollTick < HookMinIntervalMs) return;
+            _lastHookScrollTick = now;
+
+            try
+            {
+                if (sv.Dispatcher.HasShutdownStarted || sv.Dispatcher.HasShutdownFinished) return;
+                sv.Dispatcher.Invoke(() =>
+                {
+                    if (!_running) return;
+                    AutoScrollAtScreenPoint(screenPt);
+                }, DispatcherPriority.Input);
+            }
+            catch { /* dispatcher ocupado/cerrándose: el timer lo reintentará */ }
+        }
+
+        /// <summary>
+        /// Debe ejecutarse en el hilo de UI. Desplaza si el cursor está en la
+        /// zona de borde del ScrollViewer objetivo.
+        /// </summary>
+        private void AutoScrollAtScreenPoint(POINT screenPt)
+        {
+            var sv = _target;
+            if (sv == null || !sv.IsVisible) return;
             double height = sv.ActualHeight;
             if (height <= 0) return;
 
-            // Sin contenido desplazable no hay nada que hacer
+            // Sin contenido desplazable no hay nada que hacer (pero no fallar:
+            // el contenido puede crecer al reordenar).
             if (sv.ExtentHeight <= sv.ViewportHeight + 0.5) return;
 
-            double y = _cursor.Y;
+            // GetCursorPos devuelve píxeles de pantalla y PointFromScreen los
+            // convierte a coordenadas del visual (ya compensa el DPI).
+            // Funciona durante DoDragDrop, a diferencia de Mouse.GetPosition
+            // que WPF congela en el bucle OLE.
+            System.Windows.Point local;
+            try
+            {
+                local = sv.PointFromScreen(new System.Windows.Point(screenPt.X, screenPt.Y));
+            }
+            catch
+            {
+                return; // el elemento no tiene ventana (o se está cerrando)
+            }
+
+            double y = local.Y;
             int direction;
             double intensity; // 0..1: qué tan profundo está el cursor dentro de la zona de borde
 
@@ -132,8 +230,9 @@ namespace PautaDinamicaApp.Services
                 return; // el cursor está en la zona segura: no se scrollea
             }
 
-            // Aceleración: 1..4 pasos por tick según la proximidad al borde
-            int steps = 1 + (int)(intensity * 3.0);
+            // Aceleración suave: 1..2 pasos por tick según la proximidad al borde.
+            // Pegado al borde scrollea el doble de rápido que en la orilla de la zona.
+            int steps = 1 + (int)(intensity * (MaxStepsPerTick - 1));
             for (int i = 0; i < steps; i++)
             {
                 if (direction < 0) sv.LineUp();
@@ -198,14 +297,36 @@ namespace PautaDinamicaApp.Services
         {
             try
             {
-                if (nCode >= 0 && (int)wParam == WmMouseWheel && s_active != null)
+                var active = s_active;
+                if (nCode >= 0 && active != null)
                 {
-                    var info = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
-                    int delta = (short)(info.mouseData >> 16);
-                    if (delta != 0 && s_active.HandleWheel(info.pt, delta))
+                    int msg = (int)wParam;
+                    if (msg == WmMouseWheel)
                     {
-                        // Consumido: evita doble scroll si WPF también lo procesara
-                        return (IntPtr)1;
+                        var info = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+                        int delta = (short)(info.mouseData >> 16);
+                        if (delta != 0 && active.HandleWheel(info.pt, delta))
+                        {
+                            // Consumido: evita doble scroll si WPF también lo procesara
+                            return (IntPtr)1;
+                        }
+                    }
+                    else if (msg == WmMouseMove)
+                    {
+                        // Motor del auto-scroll: cada movimiento del ratón hace
+                        // scroll síncrono si el cursor está en la zona de borde.
+                        // El hook se ejecuta fuera del bucle modal de OLE, así que
+                        // esto SÍ avanza durante DoDragDrop.
+                        var info = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+                        active.AutoScrollFromHook(info.pt);
+                    }
+                    else if (msg == WmLButtonUp)
+                    {
+                        // Red de seguridad: si el DoDragDrop terminó sin pasar por
+                        // el finally (p.ej. drop en otra app), soltar el hook para
+                        // no dejarlo instalado para siempre.
+                        var info = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+                        active.AutoScrollFromHook(info.pt);
                     }
                 }
             }
@@ -245,26 +366,33 @@ namespace PautaDinamicaApp.Services
             int notches = Math.Max(1, Math.Abs(delta) / 120);
             int linesPerNotch = (int)SystemParameters.WheelScrollLines; // -1 = desplazar una página
 
-            sv.Dispatcher.BeginInvoke(new Action(() =>
+            // Síncrono (Invoke): el Dispatcher está dentro del bucle modal de
+            // OLE durante DoDragDrop; BeginInvoke se encolaría y el scroll
+            // manual jamás se vería hasta soltar el botón.
+            try
             {
-                if (!sv.IsVisible) return;
+                sv.Dispatcher.Invoke(new Action(() =>
+                {
+                    if (!sv.IsVisible) return;
 
-                if (linesPerNotch < 0)
-                {
-                    for (int n = 0; n < notches; n++)
+                    if (linesPerNotch < 0)
                     {
-                        if (up) sv.PageUp(); else sv.PageDown();
+                        for (int n = 0; n < notches; n++)
+                        {
+                            if (up) sv.PageUp(); else sv.PageDown();
+                        }
                     }
-                }
-                else
-                {
-                    int steps = notches * Math.Max(1, linesPerNotch);
-                    for (int i = 0; i < steps; i++)
+                    else
                     {
-                        if (up) sv.LineUp(); else sv.LineDown();
+                        int steps = notches * Math.Max(1, linesPerNotch);
+                        for (int i = 0; i < steps; i++)
+                        {
+                            if (up) sv.LineUp(); else sv.LineDown();
+                        }
                     }
-                }
-            }), DispatcherPriority.Input);
+                }), DispatcherPriority.Input);
+            }
+            catch { /* dispatcher ocupado/cerrándose */ }
 
             return true;
         }
@@ -325,5 +453,9 @@ namespace PautaDinamicaApp.Services
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string? lpModuleName);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetCursorPos(out POINT lpPoint);
     }
 }

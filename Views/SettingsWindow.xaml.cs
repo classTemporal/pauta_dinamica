@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Runtime.InteropServices;
+using PautaDinamicaApp.Services;
 
 namespace PautaDinamicaApp.Views
 {
@@ -105,11 +106,22 @@ namespace PautaDinamicaApp.Views
                         System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
                         _draggedItem.GiveFeedback += feedbackHandler;
 
+                        DragScrollHelper.Current.BeginDrag(EmailRulesList);
                         try { System.Windows.DragDrop.DoDragDrop(_draggedItem, dragData, System.Windows.DragDropEffects.Move); }
-                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; DragScrollHelper.Current.Stop(); }
                     }
                 }
             }
+        }
+
+        private void EmailRulesList_DragOver(object sender, System.Windows.DragEventArgs e)
+        {
+            if (!_isDraggingNow) return;
+            if (sender is FrameworkElement listBox)
+            {
+                DragScrollHelper.Current.Update(e, listBox);
+            }
+            e.Handled = true;
         }
 
         private void EmailRulesList_Drop(object sender, System.Windows.DragEventArgs e)

@@ -315,6 +315,7 @@
                               AllowDrop="True"
                               DragEnter="DashboardScrollViewer_DragEnter"
                               DragOver="DashboardScrollViewer_DragOver"
+                              DragLeave="DashboardScrollViewer_DragLeave"
                               Drop="DashboardScrollViewer_Drop">
                     <ItemsControl x:Name="DashboardItemsControl" ItemsSource="{Binding GroupedFields}"
                                   AllowDrop="True"

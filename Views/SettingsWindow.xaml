@@ -463,6 +463,7 @@
                                                  PreviewMouseLeftButtonDown="EmailRulesList_PreviewMouseLeftButtonDown"
                                                  PreviewMouseLeftButtonUp="EmailRulesList_PreviewMouseLeftButtonUp"
                                                  MouseMove="EmailRulesList_MouseMove"
+                                                 DragOver="EmailRulesList_DragOver"
                                                  Drop="EmailRulesList_Drop"
                                                  Height="250">
                                             <ListBox.ItemContainerStyle>

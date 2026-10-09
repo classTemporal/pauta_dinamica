@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using PautaDinamicaApp.ViewModels;
+using PautaDinamicaApp.Services;
 using DragEventArgs = System.Windows.DragEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 
@@ -17,8 +18,6 @@ namespace PautaDinamicaApp
         private System.Windows.Point _dashboardDragStartPoint;
         private ContentPresenter? _dashboardDraggedItem;
         private bool _isDashboardDraggingNow;
-        private ScrollViewer? _dashboardScrollViewer;
-        private DispatcherTimer? _dashboardAutoScrollTimer;
 
         public MainWindow()
         {
@@ -34,48 +33,7 @@ namespace PautaDinamicaApp
             };
         }
 
-        // --- Auto-scroll helpers (Dashboard) ---
-
-        private void StartDashboardAutoScroll()
-        {
-            _dashboardScrollViewer = DashboardScrollViewer;
-            if (_dashboardScrollViewer == null) return;
-
-            _dashboardAutoScrollTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(15) };
-            _dashboardAutoScrollTimer.Tick -= DashboardAutoScrollTimer_Tick;
-            _dashboardAutoScrollTimer.Tick += DashboardAutoScrollTimer_Tick;
-            _dashboardAutoScrollTimer.Start();
-        }
-
-        private void StopDashboardAutoScroll()
-        {
-            if (_dashboardAutoScrollTimer != null)
-            {
-                _dashboardAutoScrollTimer.Stop();
-                _dashboardAutoScrollTimer.Tick -= DashboardAutoScrollTimer_Tick;
-                _dashboardAutoScrollTimer = null;
-            }
-            _dashboardScrollViewer = null;
-        }
-
-        private void DashboardAutoScrollTimer_Tick(object? sender, EventArgs e)
-        {
-            if (_dashboardScrollViewer == null) return;
-            var sv = _dashboardScrollViewer;
-
-            System.Windows.Point cursor = Mouse.GetPosition(sv);
-            double height = sv.ActualHeight;
-            const double edgeThreshold = 40.0;
-
-            if (cursor.Y < edgeThreshold)
-            {
-                sv.LineUp();
-            }
-            else if (cursor.Y > height - edgeThreshold)
-            {
-                sv.LineDown();
-            }
-        }
+        // --- Dashboard ItemsControl handlers ---
 
         private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
@@ -89,8 +47,6 @@ namespace PautaDinamicaApp
             }
             return null;
         }
-
-        // --- Dashboard ItemsControl handlers ---
 
         private void DashboardItemsControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -127,12 +83,13 @@ namespace PautaDinamicaApp
 
                         try
                         {
+                            DragScrollHelper.Current.BeginDrag(DashboardScrollViewer);
                             System.Windows.DragDrop.DoDragDrop(_dashboardDraggedItem, dragData, System.Windows.DragDropEffects.Move);
                         }
                         finally
                         {
                             _isDashboardDraggingNow = false;
-                            StopDashboardAutoScroll();
+                            DragScrollHelper.Current.Stop();
                             _dashboardDraggedItem = null;
                         }
                     }
@@ -153,8 +110,16 @@ namespace PautaDinamicaApp
             if (e.Data.GetDataPresent("DynamicFieldVM"))
             {
                 e.Effects = System.Windows.DragDropEffects.Move;
-                StartDashboardAutoScroll();
+                DragScrollHelper.Current.Update(e, DashboardScrollViewer);
             }
+            e.Handled = true;
+        }
+
+        private void DashboardScrollViewer_DragLeave(object sender, DragEventArgs e)
+        {
+            // Si el cursor sale del área sin soltar, frenar el auto-scroll
+            // (el hook de la rueda sigue activo hasta soltar el botón).
+            DragScrollHelper.Current.PauseAutoScroll();
             e.Handled = true;
         }
 
@@ -165,7 +130,7 @@ namespace PautaDinamicaApp
             var droppedField = e.Data.GetData("DynamicFieldVM") as DynamicFieldVM;
             if (droppedField == null) return;
 
-            StopDashboardAutoScroll();
+            DragScrollHelper.Current.Stop();
 
             if (DataContext is not MainViewModel vm) return;
 

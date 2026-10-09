@@ -157,6 +157,7 @@
                                      PreviewMouseLeftButtonUp="TemplatesList_PreviewMouseLeftButtonUp"
                                      PreviewMouseWheel="TemplatesList_PreviewMouseWheel"
                                      MouseMove="TemplatesList_MouseMove"
+                                     DragOver="TemplatesList_DragOver"
                                      Drop="TemplatesList_Drop">
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">

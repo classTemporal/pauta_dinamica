@@ -145,6 +145,7 @@
                   PreviewMouseLeftButtonUp="TemplatesList_PreviewMouseLeftButtonUp"
                   MouseMove="TemplatesList_MouseMove"
                   PreviewMouseDoubleClick="TemplatesList_PreviewMouseDoubleClick"
+                  DragOver="TemplatesList_DragOver"
                   Drop="TemplatesList_Drop"
                   ToolTip="Doble clic para insertar directamente">
             <ListBox.ItemContainerStyle>
