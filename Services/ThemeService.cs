@@ -99,11 +99,29 @@ namespace PautaDinamicaApp.Services
         {
             if (window == null) return;
 
-            IntPtr hwnd = new WindowInteropHelper(window).EnsureHandle();
-            int useImmersiveDarkMode = theme == AppTheme.Dark ? 1 : 0;
+            try
+            {
+                // IMPORTANTE: nunca usar EnsureHandle() aquí. Forzaría la creación del HWND en
+                // mitad de la carga del BAML (p. ej. si se invoca desde el evento Loaded) y a
+                // partir de ahí WPF prohíbe cambiar propiedades de ventana como
+                // AllowsTransparency o WindowStyle, provocando al arrancar:
+                //   "No se puede cambiar AllowsTransparency después de mostrarse un elemento
+                //    Window o de haber llamado a WindowInteropHelper.EnsureHandle".
+                // Leemos el handle que ya exista; si la ventana todavía no lo tiene, se omite
+                // aquí y se vuelve a aplicar con la pasada diferida del arranque (ver App.xaml.cs).
+                IntPtr hwnd = new WindowInteropHelper(window).Handle;
+                if (hwnd == IntPtr.Zero) return;
 
-            if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useImmersiveDarkMode, sizeof(int)) != 0)
-                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref useImmersiveDarkMode, sizeof(int));
+                int useImmersiveDarkMode = theme == AppTheme.Dark ? 1 : 0;
+
+                if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useImmersiveDarkMode, sizeof(int)) != 0)
+                    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref useImmersiveDarkMode, sizeof(int));
+            }
+            catch
+            {
+                // El tema de la barra de título es cosmético: nunca debe impedir el arranque
+                // de la aplicación ni el cierre de una ventana.
+            }
         }
 
         public static AppTheme GetSystemTheme()

@@ -181,7 +181,7 @@ namespace PautaDinamicaApp.ViewModels
                 // Build available categories excluding "No categorizado" (internal default, not user-editable)
                 var newAvailable = new List<string>();
                 var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Todas", "No categorizado" };
-                var persistedCategories = _storageService.LoadTemplateCategories().OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
+                var persistedCategories = _storageService.LoadTemplateCategories(_pautaId).OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
                 foreach (var c in persistedCategories)
                     if (!string.IsNullOrWhiteSpace(c) && !c.Equals("No categorizado", StringComparison.OrdinalIgnoreCase) && seen.Add(c))
                         newAvailable.Add(c);
@@ -325,7 +325,7 @@ namespace PautaDinamicaApp.ViewModels
             var models = _storageService.LoadTemplatesForPauta(_pautaId);
             _allTemplates = new ObservableCollection<TemplateItemVM>(models.Select(m => new TemplateItemVM(m)));
 
-            IsCategorizedMode = models.Any(t => !string.IsNullOrWhiteSpace(t.Category)) || _storageService.LoadTemplateCategories().Any();
+            IsCategorizedMode = models.Any(t => !string.IsNullOrWhiteSpace(t.Category)) || _storageService.LoadTemplateCategories(_pautaId).Any();
 
             // ApplyCategoryFilter rebuilds AvailableCategories + filters Templates
             ApplyCategoryFilter();
@@ -535,7 +535,7 @@ namespace PautaDinamicaApp.ViewModels
             }
 
             // Check for duplicate in file + AvailableCategories
-            var fileCategories = _storageService.LoadTemplateCategories();
+            var fileCategories = _storageService.LoadTemplateCategories(_pautaId);
             if (fileCategories.Any(c => c.Equals(name, StringComparison.OrdinalIgnoreCase)))
             {
                 MessageBoxHelper.Show("La categoría \"" + name + "\" ya existe.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -547,9 +547,9 @@ namespace PautaDinamicaApp.ViewModels
                 return;
             }
 
-            // Persist to template_categories.json
+            // Persist to the pauta's category list (template_categories_{pautaId}.json)
             fileCategories.Add(name);
-            _storageService.SaveTemplateCategories(fileCategories);
+            _storageService.SaveTemplateCategories(fileCategories, _pautaId);
 
             // Refresh lists WITHOUT re-reading templates from disk (LoadTemplates would
             // discard in-memory templates added but not yet saved via "Aplicar").
@@ -578,9 +578,9 @@ namespace PautaDinamicaApp.ViewModels
                 return;
 
             // Remove from categories file
-            var categories = _storageService.LoadTemplateCategories();
+            var categories = _storageService.LoadTemplateCategories(_pautaId);
             categories.RemoveAll(c => c.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
-            _storageService.SaveTemplateCategories(categories);
+            _storageService.SaveTemplateCategories(categories, _pautaId);
 
             // Remove templates with this category
             var toRemove = _allTemplates.Where(t => string.Equals(t.Model.Category, categoryName, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -612,9 +612,9 @@ namespace PautaDinamicaApp.ViewModels
                 return;
 
             // Remove from categories file
-            var categories = _storageService.LoadTemplateCategories();
+            var categories = _storageService.LoadTemplateCategories(_pautaId);
             categories.RemoveAll(c => c.Equals(catName, StringComparison.OrdinalIgnoreCase));
-            _storageService.SaveTemplateCategories(categories);
+            _storageService.SaveTemplateCategories(categories, _pautaId);
 
             // Remove templates with this category
             var toRemove = _allTemplates.Where(t => string.Equals(t.Model.Category, catName, StringComparison.OrdinalIgnoreCase)).ToList();

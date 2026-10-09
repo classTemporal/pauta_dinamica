@@ -105,13 +105,13 @@
                                     <!-- Mensajes emergentes no críticos -->
                                     <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,20,0,0">
                                     <StackPanel>
-                                    <CheckBox IsChecked="{Binding ShowNonCriticalMessages}" Margin="0,0,0,5">
+                                    <CheckBox IsChecked="{Binding DisableNonCriticalMessages}" Margin="0,0,0,5">
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="Mostrar mensajes emergentes no críticos" 
+                                                <TextBlock Text="Desactivar mensajes emergentes no críticos"
                                                            FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <TextBlock Text="Desactiva avisos como '¿Desea abrir la carpeta?' o 'Plantillas aplicadas correctamente' pero mantiene siempre los mensajes críticos (errores, respaldos, advertencias estructurales)."
+                                            <TextBlock Text="Al activar esta opción se silencian avisos como '¿Desea abrir la carpeta?' o 'Plantillas aplicadas correctamente'. Los mensajes críticos (errores, respaldos, advertencias estructurales y validaciones) se mantienen siempre."
                                                        FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                                         </StackPanel>
                                     </CheckBox>

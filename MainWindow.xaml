@@ -18,6 +18,7 @@
             <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <conv:GridLengthConverter x:Key="GridLengthConverter"/>
             <conv:StringSwitchConverter x:Key="StringSwitchConverter"/>
+            <conv:SubtractWidthConverter x:Key="SubtractWidthConverter"/>
 
             <Style x:Key="FilterButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
                 <Setter Property="Height" Value="28"/>
@@ -311,7 +312,7 @@
                             Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 </StackPanel>
 
-                <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto"
+                <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto" Padding="0,0,0,5"
                               AllowDrop="True"
                               DragEnter="DashboardScrollViewer_DragEnter"
                               DragOver="DashboardScrollViewer_DragOver"
@@ -336,12 +337,14 @@
                                 <Setter Property="Margin" Value="10,5"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding Type}" Value="Separator">
-                                        <Setter Property="Width" Value="{Binding RelativeSource={RelativeSource AncestorType=ItemsPresenter}, Path=ActualWidth}"/>
+                                        <Setter Property="Width" Value="{Binding RelativeSource={RelativeSource AncestorType=ItemsPresenter}, Path=ActualWidth, Converter={StaticResource SubtractWidthConverter}, ConverterParameter=20}"/>
                                         <Setter Property="Margin" Value="10,15,10,5"/>
                                     </DataTrigger>
+                                    <!-- El texto largo ocupa todo el ancho disponible, restando sus márgenes
+                                         laterales para que no quede pegado a los bordes del panel. -->
                                     <DataTrigger Binding="{Binding Type}" Value="TextArea">
-                                        <Setter Property="Width" Value="{Binding RelativeSource={RelativeSource AncestorType=ItemsPresenter}, Path=ActualWidth}"/>
-                                        <Setter Property="Margin" Value="0,5"/>
+                                        <Setter Property="Width" Value="{Binding RelativeSource={RelativeSource AncestorType=ItemsPresenter}, Path=ActualWidth, Converter={StaticResource SubtractWidthConverter}, ConverterParameter=20}"/>
+                                        <Setter Property="Margin" Value="10,5"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>

@@ -31,6 +31,35 @@ namespace PautaDinamicaApp.Services
             _templateCategoriesPath = Path.Combine(_basePath, "template_categories.json");
 
             EnsureDefaultPautaExists();
+            MigrateTemplateCategoriesToPautas();
+        }
+
+        /// <summary>
+        /// Migración única de categorías de plantillas: antes eran globales (template_categories.json)
+        /// y ahora son exclusivas de cada pauta (template_categories_{pautaId}.json).
+        /// Copia el contenido legacy a todas las pautas existentes que aún no tengan archivo propio
+        /// y elimina el archivo global, de modo que las pautas creadas después arrancan sin categorías.
+        /// Es idempotente: si el archivo legacy ya no existe, no hace nada.
+        /// </summary>
+        private void MigrateTemplateCategoriesToPautas()
+        {
+            if (!File.Exists(_templateCategoriesPath)) return;
+
+            try
+            {
+                var legacy = LoadTemplateCategories(null); // null = archivo legacy global
+                if (legacy.Any())
+                {
+                    foreach (var pauta in LoadPautas())
+                    {
+                        if (File.Exists(GetTemplateCategoriesPath(pauta.Id))) continue;
+                        SaveTemplateCategories(legacy, pauta.Id);
+                    }
+                }
+
+                File.Delete(_templateCategoriesPath);
+            }
+            catch { /* Una migración fallida no debe impedir el arranque de la app */ }
         }
 
         public AppSettings LoadSettings()
@@ -146,6 +175,8 @@ namespace PautaDinamicaApp.Services
             {
                 if (File.Exists(GetConfigPath(pautaId))) File.Delete(GetConfigPath(pautaId));
                 if (File.Exists(GetDataPath(pautaId))) File.Delete(GetDataPath(pautaId));
+                // Las categorías de plantillas son exclusivas de cada pauta: se eliminan con ella.
+                if (File.Exists(GetTemplateCategoriesPath(pautaId))) File.Delete(GetTemplateCategoriesPath(pautaId));
             }
             catch { }
         }
@@ -228,25 +259,35 @@ namespace PautaDinamicaApp.Services
             return all.Where(t => t.PautaId == pautaId).ToList();
         }
 
-        // --- TEMPLATE CATEGORIES (template_categories.json) ---
+        // --- TEMPLATE CATEGORIES (una por pauta: template_categories_{pautaId}.json) ---
 
-        public List<string> LoadTemplateCategories()
+        private string GetTemplateCategoriesPath(string? pautaId)
         {
-            if (!File.Exists(_templateCategoriesPath)) return new List<string>();
+            if (string.IsNullOrEmpty(pautaId)) return _templateCategoriesPath;
+            return Path.Combine(_basePath, $"template_categories_{pautaId}.json");
+        }
+
+        /// <summary>
+        /// Categorías de plantillas de una pauta concreta (exclusivas de esa pauta).
+        /// </summary>
+        public List<string> LoadTemplateCategories(string? pautaId)
+        {
+            string path = GetTemplateCategoriesPath(pautaId);
+            if (!File.Exists(path)) return new List<string>();
             try
             {
-                string json = File.ReadAllText(_templateCategoriesPath);
+                string json = File.ReadAllText(path);
                 return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
             }
             catch { return new List<string>(); }
         }
 
-        public void SaveTemplateCategories(List<string> categories)
+        public void SaveTemplateCategories(List<string> categories, string? pautaId)
         {
             try
             {
                 string json = JsonSerializer.Serialize(categories, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_templateCategoriesPath, json);
+                File.WriteAllText(GetTemplateCategoriesPath(pautaId), json);
             }
             catch { }
         }

@@ -147,7 +147,7 @@ namespace PautaDinamicaApp.Views
             _availableCategories.Add("No categorizado");
 
             // Load from persisted categories ("No categorizado" stays pinned 2nd — never duplicated)
-            var persisted = _storageService.LoadTemplateCategories();
+            var persisted = _storageService.LoadTemplateCategories(_pautaId);
             foreach (var c in persisted.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
             {
                 if (!string.IsNullOrWhiteSpace(c)

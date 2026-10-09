@@ -260,6 +260,27 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     Settings.ShowNonCriticalMessages = value;
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisableNonCriticalMessages));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Vista invertida de ShowNonCriticalMessages para la UI: la casilla se presenta como
+        /// "Desactivar mensajes emergentes no críticos" y debe quedar SIN marcar por defecto
+        /// (es decir, los mensajes no críticos se muestran salvo que el usuario los desactive).
+        /// </summary>
+        public bool DisableNonCriticalMessages
+        {
+            get => !Settings.ShowNonCriticalMessages;
+            set
+            {
+                bool newValue = !value;
+                if (Settings.ShowNonCriticalMessages != newValue)
+                {
+                    Settings.ShowNonCriticalMessages = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ShowNonCriticalMessages));
                 }
             }
         }
