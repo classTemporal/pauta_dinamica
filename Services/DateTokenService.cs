@@ -134,6 +134,76 @@ namespace PautaDinamicaApp.Services
             => Format(RangoRange(config), format ?? config?.Format ?? DynamicDateFormat.RangeWithAl);
 
         /// <summary>
+        /// Token parametrizado <c>[Rango:...]</c>: rango autocontenido, sin depender de la
+        /// configuración de la pauta. Permite varios rangos distintos en el mismo correo.
+        /// Formatos: <c>[Rango:7d]</c> (últimos N días), <c>[Rango:Sab]</c> (una semana desde
+        /// ese día), <c>[Rango:Sab-Vie]</c> (entre dos días, compatible), <c>[Rango:2026-10-03_2026-10-09]</c>.
+        /// </summary>
+        /// <exception cref="FormatException">Si el parámetro no tiene un formato reconocido.</exception>
+        public string RangoParam(string param)
+        {
+            string p = (param ?? "").Trim();
+
+            var mDays = System.Text.RegularExpressions.Regex.Match(p, @"^(\d+)\s*d?$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (mDays.Success && int.TryParse(mDays.Groups[1].Value, out int n))
+                return Format(Ventana(Today, n));
+
+            var mFixed = System.Text.RegularExpressions.Regex.Match(p,
+                @"^(\d{4}-\d{2}-\d{2})\s*[_-]\s*(\d{4}-\d{2}-\d{2})$");
+            if (mFixed.Success
+                && DateTime.TryParse(mFixed.Groups[1].Value, out DateTime from)
+                && DateTime.TryParse(mFixed.Groups[2].Value, out DateTime to))
+                return Format(new DateRange(from.Date, to.Date));
+
+            var mWeek = System.Text.RegularExpressions.Regex.Match(p, @"^([a-záé]+)\s*[-–]\s*([a-záé]+)$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (mWeek.Success)
+                return Format(VentanaSemanal(Today, ParseDayEs(mWeek.Groups[1].Value), ParseDayEs(mWeek.Groups[2].Value)));
+
+            // Un solo día: una semana desde ese día.
+            var mDay = System.Text.RegularExpressions.Regex.Match(p, @"^([a-záé]+)$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (mDay.Success)
+            {
+                DayOfWeek start = ParseDayEs(mDay.Groups[1].Value);
+                return Format(VentanaSemanal(Today, start, (DayOfWeek)(((int)start + 6) % 7)));
+            }
+
+            throw new FormatException($"Parámetro de rango no reconocido: '{param}'. Use [Rango:7d], [Rango:Sab], [Rango:Sab-Vie] o [Rango:2026-10-03_2026-10-09].");
+        }
+
+        /// <summary>Abreviatura o nombre de día en español a <see cref="DayOfWeek"/>.</summary>
+        /// <exception cref="FormatException">Si no se reconoce el día.</exception>
+        public static DayOfWeek ParseDayEs(string day)
+        {
+            return day.Trim().ToLowerInvariant() switch
+            {
+                "dom" or "domingo" => DayOfWeek.Sunday,
+                "lun" or "lunes" => DayOfWeek.Monday,
+                "mar" or "martes" => DayOfWeek.Tuesday,
+                "mie" or "miércoles" or "miercoles" => DayOfWeek.Wednesday,
+                "jue" or "jueves" => DayOfWeek.Thursday,
+                "vie" or "viernes" => DayOfWeek.Friday,
+                "sab" or "sábado" or "sabado" => DayOfWeek.Saturday,
+                _ => throw new FormatException($"Día no reconocido: '{day}'.")
+            };
+        }
+
+        /// <summary>Abreviatura en español de un día (<c>Sab</c>, <c>Vie</c>...).</summary>
+        public static string DayAbbrev(DayOfWeek day) => day switch
+        {
+            DayOfWeek.Sunday => "Dom",
+            DayOfWeek.Monday => "Lun",
+            DayOfWeek.Tuesday => "Mar",
+            DayOfWeek.Wednesday => "Mie",
+            DayOfWeek.Thursday => "Jue",
+            DayOfWeek.Friday => "Vie",
+            DayOfWeek.Saturday => "Sab",
+            _ => day.ToString()
+        };
+
+        /// <summary>
         /// Ventana de <paramref name="days"/> días terminando hoy (incluido).
         /// </summary>
         private static DateRange Ventana(DateTime today, int days)
@@ -209,7 +279,29 @@ namespace PautaDinamicaApp.Services
 
             string result = text;
 
+            // Parametrizados primero: [Rango:7d], [Rango:Sab-Vie]... Si uno no se
+            // entiende se deja tal cual en lugar de romper el envío.
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"\[Rango:([^\]]+)\]",
+                m =>
+                {
+                    try { return RangoParam(m.Groups[1].Value); }
+                    catch (FormatException) { return m.Value; }
+                },
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
             if (Contains(result, "[Rango]")) result = Replace(result, "[Rango]", Rango(config));
+            // [Semana:Lun]: una semana desde el día indicado.
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"\[Semana:([^\]]+)\]",
+                m =>
+                {
+                    try
+                    {
+                        DayOfWeek start = ParseDayEs(m.Groups[1].Value);
+                        return Format(VentanaSemanal(Today, start, (DayOfWeek)(((int)start + 6) % 7)));
+                    }
+                    catch (FormatException) { return m.Value; }
+                },
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             if (Contains(result, "[Semana]")) result = Replace(result, "[Semana]", Semana(config?.Format ?? DynamicDateFormat.RangeWithAl));
             if (Contains(result, "[Mes]")) result = Replace(result, "[Mes]", Mes(config?.Format ?? DynamicDateFormat.RangeWithAl));
             if (Contains(result, "[Año]") || Contains(result, "[Anio]"))

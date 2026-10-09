@@ -55,8 +55,8 @@ namespace PautaDinamicaApp.Models
     /// </summary>
     public class DynamicDateConfig
     {
-        /// <summary>Modo de cálculo del rango. Por defecto, últimos 7 días.</summary>
-        public DynamicRangeMode Mode { get; set; } = DynamicRangeMode.Week;
+        /// <summary>Modo de cálculo del rango. Por defecto, entre dos días de la semana.</summary>
+        public DynamicRangeMode Mode { get; set; } = DynamicRangeMode.Weekday;
 
         /// <summary>
         /// Tamaño de la ventana en días cuando <see cref="Mode"/> es <see cref="DynamicRangeMode.Week"/>.

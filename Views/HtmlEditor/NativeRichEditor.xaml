@@ -9,7 +9,7 @@
             <Setter Property="Height" Value="30"/>
             <Setter Property="Padding" Value="6,0"/>
             <Setter Property="Margin" Value="1,0"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12"/>
         </Style>
         <Style x:Key="ToolLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
@@ -28,56 +28,83 @@
         <Border Grid.Row="0" Background="{DynamicResource BackgroundBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0"
                 CornerRadius="6,6,0,0" Padding="4">
-            <WrapPanel>
+            <WrapPanel VerticalAlignment="Center">
                 <Button x:Name="BoldBtn" Style="{StaticResource ToolButton}" Content="B" FontWeight="Bold" ToolTip="Negrita" Click="BoldBtn_Click"/>
                 <Button x:Name="ItalicBtn" Style="{StaticResource ToolButton}" Content="I" FontStyle="Italic" ToolTip="Cursiva" Click="ItalicBtn_Click"/>
                 <Button x:Name="UnderlineBtn" Style="{StaticResource ToolButton}" ToolTip="Subrayado" Click="UnderlineBtn_Click">
                     <TextBlock Text="U" TextDecorations="Underline" Foreground="{DynamicResource TextBrush}"/>
                 </Button>
                 <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
-                <Button Style="{StaticResource ToolButton}" Content="A" Foreground="#dc3545" ToolTip="Rojo" Click="ColorBtn_Click" Tag="#dc3545"/>
-                <Button Style="{StaticResource ToolButton}" Content="A" Foreground="#28a745" ToolTip="Verde" Click="ColorBtn_Click" Tag="#28a745"/>
-                <Button Style="{StaticResource ToolButton}" Content="A" Foreground="#0078D4" ToolTip="Azul" Click="ColorBtn_Click" Tag="#0078D4"/>
-                <Button Style="{StaticResource ToolButton}" Content="A" Foreground="{DynamicResource TextBrush}" ToolTip="Automático" Click="ColorBtn_Click" Tag="#000000"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Texto:"/>
+                <Button Style="{StaticResource ToolButton}" Content="🎨 Color fuente..." ToolTip="Elegir color de texto" Click="TextColorPicker_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="A−" ToolTip="Reducir tamaño de letra" Click="FontShrink_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="A+" ToolTip="Aumentar tamaño de letra" Click="FontGrow_Click"/>
                 <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
                 <Button Style="{StaticResource ToolButton}" Content="•" ToolTip="Viñetas" Click="BulletsBtn_Click"/>
                 <Button Style="{StaticResource ToolButton}" Content="1." ToolTip="Numerada" Click="NumbersBtn_Click"/>
                 <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
-                <Button Style="{StaticResource ToolButton}" Content="🔗" ToolTip="Insertar enlace" Click="LinkBtn_Click"/>
-                <Button Style="{StaticResource ToolButton}" Content="🖼" ToolTip="Insertar imagen" Click="ImageBtn_Click"/>
-                <Button Style="{StaticResource ToolButton}" Content="−" ToolTip="Reducir imagen seleccionada" Click="ImageShrinkBtn_Click"/>
-                <Button Style="{StaticResource ToolButton}" Content="+" ToolTip="Ampliar imagen seleccionada" Click="ImageGrowBtn_Click"/>
-                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <Button Style="{StaticResource ToolButton}" Content="🔗 Enlace" ToolTip="Insertar enlace" Click="LinkBtn_Click"/>
                 <Button Style="{StaticResource ToolButton}" Content="✕" ToolTip="Quitar formato" Click="ClearBtn_Click"/>
             </WrapPanel>
         </Border>
         <Border Grid.Row="1" Background="{DynamicResource BackgroundBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,0" Padding="4">
-            <WrapPanel>
+            <WrapPanel VerticalAlignment="Center">
                 <TextBlock Style="{StaticResource ToolLabel}" Text="Tabla:"/>
                 <Button Style="{StaticResource ToolButton}" Content="2×2" ToolTip="Insertar tabla de 2×2" Click="TableBtn_Click" Tag="2,2"/>
                 <Button Style="{StaticResource ToolButton}" Content="3×2" ToolTip="Insertar tabla de 3×2" Click="TableBtn_Click" Tag="3,2"/>
                 <Button Style="{StaticResource ToolButton}" Content="3×3" ToolTip="Insertar tabla de 3×3" Click="TableBtn_Click" Tag="3,3"/>
-                <Button Style="{StaticResource ToolButton}" Content="4×3" ToolTip="Insertar tabla de 4×3" Click="TableBtn_Click" Tag="4,3"/>
+                <Button Style="{StaticResource ToolButton}" Content="↓ Salir" ToolTip="Salir de la tabla (escribir debajo)" Click="ExitTable_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="🗑 Tabla" ToolTip="Eliminar la tabla actual" Click="DeleteTable_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="+Fila" ToolTip="Insertar fila debajo" Click="AddRow_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="−Fila" ToolTip="Eliminar fila" Click="DelRow_Click"/>
                 <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
-                <TextBlock Style="{StaticResource ToolLabel}" Text="Imagen:"/>
-                <ComboBox x:Name="ImageSizeBox" Width="110" Height="30" ToolTip="Tamaño al insertar imágenes"
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Fondo celda:"/>
+                <Button Style="{StaticResource ToolButton}" Content="🎨 Fondo..." ToolTip="Elegir fondo de celda..." Click="CellBgPicker_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="Sin fondo" ToolTip="Quitar fondo de celda" Click="CellBgClear_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Ancho col:"/>
+                <Button Style="{StaticResource ToolButton}" Content="−" ToolTip="Reducir ancho de columna" Click="ColShrink_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="+" ToolTip="Aumentar ancho de columna" Click="ColGrow_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Alto fila:"/>
+                <Button Style="{StaticResource ToolButton}" Content="−" ToolTip="Reducir alto de fila" Click="RowShrink_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="+" ToolTip="Aumentar alto de fila" Click="RowGrow_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <Button Style="{StaticResource ToolButton}" Content="🖼 Insertar imagen..." ToolTip="Insertar imagen" Click="ImageBtn_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Tamaño imagen:"/>
+                <ComboBox x:Name="ImageSizeBox" Width="120" Height="30" ToolTip="Tamaño al insertar imágenes"
                           SelectionChanged="ImageSizeBox_SelectionChanged">
                     <ComboBoxItem Content="Original" Tag="0" IsSelected="True"/>
                     <ComboBoxItem Content="Pequeña (200)" Tag="200"/>
                     <ComboBoxItem Content="Mediana (400)" Tag="400"/>
                     <ComboBoxItem Content="Grande (600)" Tag="600"/>
                 </ComboBox>
+                <Button Style="{StaticResource ToolButton}" Content="Imagen −" ToolTip="Reducir imagen" Click="ImageShrinkBtn_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="Imagen +" ToolTip="Ampliar imagen" Click="ImageGrowBtn_Click"/>
             </WrapPanel>
         </Border>
-        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}"
+        <Border Grid.Row="2" Background="White"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1"
                 CornerRadius="0,0,6,6" MinHeight="250">
             <Grid>
                 <RichTextBox x:Name="EditorBox" MinHeight="250" Height="350"
                              VerticalScrollBarVisibility="Auto"
-                             Background="Transparent" Foreground="{DynamicResource TextBrush}"
-                             TextChanged="EditorBox_TextChanged" LostFocus="EditorBox_LostFocus"/>
+                             Background="White" Foreground="Black"
+                             CaretBrush="Black"
+                             PreviewKeyDown="EditorBox_PreviewKeyDown"
+                             TextChanged="EditorBox_TextChanged" LostFocus="EditorBox_LostFocus">
+                    <RichTextBox.ContextMenu>
+                        <ContextMenu Opened="TableMenu_Opened">
+                            <MenuItem Header="Fondo de celda..." Click="CellBgPicker_Click" x:Name="CellBgMenu"/>
+                            <MenuItem Header="Ancho de columna: reducir" Click="ColShrink_Click" x:Name="ColWidthMenu"/>
+                            <MenuItem Header="Ancho de columna: aumentar" Click="ColGrow_Click"/>
+                            <MenuItem Header="Alto de fila: reducir" Click="RowShrink_Click" x:Name="RowHeightMenu"/>
+                            <MenuItem Header="Alto de fila: aumentar" Click="RowGrow_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Insertar fila debajo" Click="AddRow_Click" x:Name="AddRowMenu"/>
+                            <MenuItem Header="Eliminar fila" Click="DelRow_Click" x:Name="DelRowMenu"/>
+                        </ContextMenu>
+                    </RichTextBox.ContextMenu>
+                </RichTextBox>
                 <Thumb Width="18" Height="18" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                        Cursor="SizeNWSE" DragDelta="EditorThumb_DragDelta" Opacity="0.6">
                     <Thumb.Template>

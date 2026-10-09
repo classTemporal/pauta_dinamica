@@ -397,21 +397,41 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <TextBlock Text="Asunto:" Style="{StaticResource LabelStyle}" FontSize="12"/>
-                                <TextBox Text="{Binding SelectedPauta.EmailSubjectTemplate}" Margin="0,0,0,10" Height="35" VerticalContentAlignment="Center"/>
+                                <TextBlock Text="Asunto: (acepta [Etiquetas] y [Fecha])" Style="{StaticResource LabelStyle}" FontSize="12"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="EmailSubjectTextBox" Text="{Binding SelectedPauta.EmailSubjectTemplate}" Height="42" Padding="10,0" VerticalContentAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="🏷 Campo" Click="InsertSubjectField_Click"
+                                            Style="{StaticResource GhostButton}" Height="42" Padding="10,0" Margin="6,0,0,0"
+                                            ToolTip="Insertar campo en el asunto"/>
+                                    <Button Grid.Column="2" Content="📅 Fecha" Click="InsertSubjectDate_Click"
+                                            Style="{StaticResource GhostButton}" Height="42" Padding="10,0" Margin="6,0,0,0"
+                                            ToolTip="Insertar fecha en el asunto"/>
+                                </Grid>
 
                                 <TextBlock Text="Cuerpo:" Style="{StaticResource LabelStyle}" FontSize="12"/>
 
                                 <!-- Botones de inserción de marcadores dinámicos -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                    <Button Content="🏷️ Agregar campo" Click="InsertFieldButton_Click"
-                                            Style="{StaticResource GhostButton}" Height="30" Margin="0,0,6,0"/>
-                                    <Button Content="📅 Agregar fecha" Click="InsertDateButton_Click"
-                                            Style="{StaticResource GhostButton}" Height="30"/>
-                                    <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" FontSize="11"
-                                               Foreground="{DynamicResource SecondaryTextBrush}"
-                                               Text="Inserta [Etiqueta] o [Fecha]; se resuelven al enviar."/>
-                                </StackPanel>
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="8,6" Margin="0,0,0,6">
+                                    <WrapPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Insertar:" VerticalAlignment="Center" FontSize="11"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,6,0"/>
+                                        <Button Content="🏷 Campo" Click="InsertFieldButton_Click"
+                                                Style="{StaticResource GhostButton}" Height="30" Padding="10,0" Margin="0,0,6,0"
+                                                ToolTip="Insertar campo en el cuerpo"/>
+                                        <Button Content="📅 Fecha" Click="InsertDateButton_Click"
+                                                Style="{StaticResource GhostButton}" Height="30" Padding="10,0"
+                                                ToolTip="Insertar fecha en el cuerpo"/>
+                                        <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" FontSize="11"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                                   Text="Los marcadores [Etiqueta] y [Fecha] se resuelven al enviar."/>
+                                    </WrapPanel>
+                                </Border>
 
                                 <Grid Margin="0,0,0,20">
                                     <!-- MAILTO: cuerpo en texto plano -->
@@ -463,7 +483,7 @@
                                 </Grid>
                                 <Separator Background="{DynamicResource BorderBrush}" Margin="0,5,0,20"/>
 
-                                <TextBlock Text="Correos Adicionales por Condición" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,20,0,5"/>
+                                <TextBlock Text="Correos Adicionales por Condición" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,20,0,8" Padding="0,0,0,3" LineHeight="24"/>
                                 <TextBlock Text="Envíe un correo extra cuando un campo tenga un valor específico (ej: Calificación = 0% → correo de 'Detractor alto riesgo'). Por defecto se pide confirmación agrupada antes de enviar; marca la casilla en la regla para abrir el correo directamente sin preguntar."
                                            FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15" TextWrapping="Wrap"/>
 
@@ -534,10 +554,33 @@
                                                             <TextBox Text="{Binding ToTemplate, UpdateSourceTrigger=PropertyChanged}" Height="38" VerticalContentAlignment="Center"/>
                                                             <TextBlock Text="CC:" Style="{StaticResource LabelStyle}" FontSize="11" Margin="0,8,0,3"/>
                                                             <TextBox Text="{Binding CcTemplate, UpdateSourceTrigger=PropertyChanged}" Height="38" VerticalContentAlignment="Center"/>
-                                                            <TextBlock Text="Asunto:" Style="{StaticResource LabelStyle}" FontSize="11" Margin="0,8,0,3"/>
-                                                            <TextBox Text="{Binding SubjectTemplate, UpdateSourceTrigger=PropertyChanged}" Height="38" VerticalContentAlignment="Center"/>
+                                                            <TextBlock Text="Asunto: (acepta [Etiquetas] y [Fecha])" Style="{StaticResource LabelStyle}" FontSize="11" Margin="0,8,0,3"/>
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBox Text="{Binding SubjectTemplate, UpdateSourceTrigger=PropertyChanged}" Height="40" MinHeight="40" VerticalContentAlignment="Center" Padding="10,0" Tag="RuleSubjectBox"/>
+                                                                <Button Grid.Column="1" Content="🏷" Click="RuleSubjectField_Click" FontSize="16"
+                                                                        Style="{StaticResource GhostButton}" Height="40" MinHeight="40" Width="44" Margin="6,0,0,0"
+                                                                        VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0,2,0,4"
+                                                                        ToolTip="Insertar campo en el asunto"/>
+                                                                <Button Grid.Column="2" Content="📅" Click="RuleSubjectDate_Click" FontSize="16"
+                                                                        Style="{StaticResource GhostButton}" Height="40" MinHeight="40" Width="44" Margin="6,0,0,0"
+                                                                        VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0,2,0,4"
+                                                                        ToolTip="Insertar fecha en el asunto"/>
+                                                            </Grid>
                                                             <TextBlock Text="Cuerpo (acepta [Etiquetas] y [Fecha]):" Style="{StaticResource LabelStyle}" FontSize="11" Margin="0,8,0,3"/>
-                                                            <TextBox x:Name="RulePlainBox" Text="{Binding BodyTemplate, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" Height="200" MinHeight="150" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top">
+                                                            <WrapPanel Margin="0,0,0,6">
+                                                                <Button Content="🏷 Campo" Click="RuleBodyField_Click"
+                                                                        Style="{StaticResource GhostButton}" Height="30" Padding="10,0" Margin="0,0,6,0"
+                                                                        ToolTip="Insertar campo en el cuerpo"/>
+                                                                <Button Content="📅 Fecha" Click="RuleBodyDate_Click"
+                                                                        Style="{StaticResource GhostButton}" Height="30" Padding="10,0"
+                                                                        ToolTip="Insertar fecha en el cuerpo"/>
+                                                            </WrapPanel>
+                                                            <TextBox x:Name="RulePlainBox" Tag="RuleBodyBox" Text="{Binding BodyTemplate, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" Height="200" MinHeight="150" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top">
                                                                 <TextBox.Style>
                                                                     <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                                                                         <Setter Property="Visibility" Value="Visible"/>
@@ -628,6 +671,7 @@
                                                 <Style TargetType="ListBoxItem">
                                                     <Setter Property="Padding" Value="0"/>
                                                     <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                                     <Setter Property="Template">
                                                         <Setter.Value>

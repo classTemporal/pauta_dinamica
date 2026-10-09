@@ -26,6 +26,10 @@ namespace PautaDinamicaApp.Views
         public DynamicDateConfig? ResultingConfig { get; private set; }
 
         private readonly DynamicDateConfig _initial;
+        private DateTime _fromDate;
+        private DateTime _toDate;
+
+        private string? _selectedSimple;
 
         public DateTokenPickerPopup(DynamicDateConfig? current = null)
         {
@@ -33,8 +37,25 @@ namespace PautaDinamicaApp.Views
 
             _initial = current ?? new DynamicDateConfig();
 
-            // Días de la semana en español, con el valor del enum en el Tag.
+            // Domingo y sábado primero, luego el resto de la semana.
             var dayNames = new (DayOfWeek Day, string Name)[]
+            {
+                (DayOfWeek.Sunday, "Domingo"),
+                (DayOfWeek.Saturday, "Sábado"),
+                (DayOfWeek.Monday, "Lunes"),
+                (DayOfWeek.Tuesday, "Martes"),
+                (DayOfWeek.Wednesday, "Miércoles"),
+                (DayOfWeek.Thursday, "Jueves"),
+                (DayOfWeek.Friday, "Viernes"),
+            };
+
+            foreach (var d in dayNames)
+            {
+                FromDayCombo.Items.Add(new ComboBoxItem { Content = d.Name, Tag = d.Day });
+            }
+
+            // Día inicial de [Semana]: de lunes a domingo.
+            foreach (var d in new (DayOfWeek Day, string Name)[]
             {
                 (DayOfWeek.Monday, "Lunes"),
                 (DayOfWeek.Tuesday, "Martes"),
@@ -42,28 +63,27 @@ namespace PautaDinamicaApp.Views
                 (DayOfWeek.Thursday, "Jueves"),
                 (DayOfWeek.Friday, "Viernes"),
                 (DayOfWeek.Saturday, "Sábado"),
-                (DayOfWeek.Sunday, "Domingo")
-            };
-
-            foreach (var d in dayNames)
+                (DayOfWeek.Sunday, "Domingo"),
+            })
             {
-                FromDayCombo.Items.Add(new ComboBoxItem { Content = d.Name, Tag = d.Day });
-                ToDayCombo.Items.Add(new ComboBoxItem { Content = d.Name, Tag = d.Day });
+                SemStartCombo.Items.Add(new ComboBoxItem { Content = d.Name, Tag = d.Day });
             }
+            SemStartCombo.SelectedIndex = 0;
 
             ModeCombo.SelectedIndex = _initial.Mode switch
             {
-                DynamicRangeMode.Fixed => 1,
-                DynamicRangeMode.Weekday => 2,
+                DynamicRangeMode.Week => 1,
+                DynamicRangeMode.Fixed => 2,
                 _ => 0
             };
 
             DaysBox.Text = _initial.Days.ToString(CultureInfo.InvariantCulture);
-            FromDate.SelectedDate = _initial.FromDate ?? DateTime.Today.AddDays(-6);
-            ToDate.SelectedDate = _initial.ToDate ?? DateTime.Today;
+            _fromDate = _initial.FromDate ?? DateTime.Today.AddDays(-6);
+            _toDate = _initial.ToDate ?? DateTime.Today;
+            FromDateBox.Text = _fromDate.ToString("dd/MM/yyyy");
+            ToDateBox.Text = _toDate.ToString("dd/MM/yyyy");
 
             SelectDay(FromDayCombo, _initial.FromDay);
-            SelectDay(ToDayCombo, _initial.ToDay);
 
             FormatCombo.SelectedIndex = _initial.Format switch
             {
@@ -98,16 +118,118 @@ namespace PautaDinamicaApp.Views
         {
             if ((sender as FrameworkElement)?.Tag is not string token || token.Length == 0) return;
 
-            SelectedToken = "[" + token + "]";
+            // Solo selecciona; la inserción la hace el botón Insertar.
+            // [Semana] despliega su día inicial.
+            _selectedSimple = token;
+            RangeBorder.Visibility = Visibility.Collapsed;
+            RangeToggleBtn.Content = "⚙ Rango personalizado...";
+            SemanaPanel.Visibility = token == "Semana" ? Visibility.Visible : Visibility.Collapsed;
+            RefreshTokenSelection();
+        }
+
+        private void ToggleRange_Click(object sender, RoutedEventArgs e)
+        {
+            bool show = RangeBorder.Visibility != Visibility.Visible;
+            RangeBorder.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            RangeToggleBtn.Content = show ? "⚙ Rango personalizado (ocultar)" : "⚙ Rango personalizado...";
+            if (show)
+            {
+                _selectedSimple = null;
+                RefreshTokenSelection();
+                SemanaPanel.Visibility = Visibility.Collapsed;
+                UpdatePreview();
+            }
+            InsertBtn.Content = "Insertar";
+        }
+
+        private void InsertBtn_Click(object sender, RoutedEventArgs e)
+        {
+            // Rango abierto: inserta el token del modo actual (autodetectado),
+            // autocontenido para poder usar varios distintos en el mismo correo.
+            if (RangeBorder.Visibility == Visibility.Visible)
+            {
+                SelectedToken = BuildParamToken();
+                ResultingConfig = null;
+                DialogResult = true;
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_selectedSimple))
+            {
+                System.Windows.MessageBox.Show("Seleccione una opción de fecha o abra el rango personalizado.",
+                    "Insertar fecha", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // [Semana] con día inicial: token autocontenido [Semana:Lun].
+            if (_selectedSimple == "Semana")
+            {
+                var start = (SemStartCombo.SelectedItem as ComboBoxItem)?.Tag is DayOfWeek d ? d : DayOfWeek.Monday;
+                SelectedToken = $"[Semana:{DateTokenService.DayAbbrev(start)}]";
+                ResultingConfig = null;
+                DialogResult = true;
+                return;
+            }
+
+            SelectedToken = "[" + _selectedSimple + "]";
             ResultingConfig = BuildConfig();
             DialogResult = true;
         }
 
-        private void InsertRange_Click(object sender, RoutedEventArgs e)
+        private string BuildParamToken()
         {
-            SelectedToken = "[Rango]";
-            ResultingConfig = BuildConfig();
-            DialogResult = true;
+            switch (TagOf(ModeCombo))
+            {
+                case "Fixed": return $"[Rango:{_fromDate:yyyy-MM-dd}_{_toDate:yyyy-MM-dd}]";
+
+                case "Weekday":
+                    return $"[Rango:{DateTokenService.DayAbbrev(DayOf(FromDayCombo))}]";
+
+                default:
+                    int days = int.TryParse(DaysBox.Text, NumberStyles.Integer,
+                        CultureInfo.InvariantCulture, out int d) ? d : 7;
+                    return $"[Rango:{days}d]";
+            }
+        }
+
+        private void PickFromDate_Click(object sender, RoutedEventArgs e)
+        {
+            if (PickCalendarDate(FromDateBox.Text) is DateTime d)
+            {
+                _fromDate = d;
+                FromDateBox.Text = d.ToString("dd/MM/yyyy");
+                UpdatePreview();
+            }
+        }
+
+        private void PickToDate_Click(object sender, RoutedEventArgs e)
+        {
+            if (PickCalendarDate(ToDateBox.Text) is DateTime d)
+            {
+                _toDate = d;
+                ToDateBox.Text = d.ToString("dd/MM/yyyy");
+                UpdatePreview();
+            }
+        }
+
+        private DateTime? PickCalendarDate(string current)
+        {
+            var win = new DateSelectorWindow(current) { Owner = this };
+            if (win.ShowDialog() != true) return null;
+            if (win.SelectedValue == "TODAY") return DateTime.Today;
+            if (DateTime.TryParse(win.SelectedValue, out DateTime d)) return d.Date;
+            return null;
+        }
+
+        private void RefreshTokenSelection()
+        {
+            var accent = TryFindResource("AccentBrush") as System.Windows.Media.Brush;            var normal = TryFindResource("BorderBrush") as System.Windows.Media.Brush;
+            foreach (var btn in new[] { HoyBtn, SemanaBtn, MesBtn, AnoBtn })
+            {
+                bool selected = (btn.Tag as string) == _selectedSimple;
+                btn.BorderBrush = selected ? accent : normal;
+                btn.BorderThickness = new Thickness(selected ? 2 : 1);
+            }
         }
 
         private void Config_Changed(object sender, RoutedEventArgs e) => UpdatePreview();
@@ -125,6 +247,7 @@ namespace PautaDinamicaApp.Views
             {
                 var service = new DateTokenService();
                 PreviewText.Text = service.Rango(BuildConfig());
+                RangeTitle.Text = "Rango personalizado " + BuildParamToken();
             }
             catch (Exception ex)
             {
@@ -140,14 +263,15 @@ namespace PautaDinamicaApp.Views
             {
                 case "Fixed":
                     config.Mode = DynamicRangeMode.Fixed;
-                    config.FromDate = FromDate.SelectedDate ?? DateTime.Today.AddDays(-6);
-                    config.ToDate = ToDate.SelectedDate ?? DateTime.Today;
+                    config.FromDate = _fromDate;
+                    config.ToDate = _toDate;
                     break;
 
                 case "Weekday":
                     config.Mode = DynamicRangeMode.Weekday;
                     config.FromDay = DayOf(FromDayCombo);
-                    config.ToDay = DayOf(ToDayCombo);
+                    // Una semana desde el día elegido.
+                    config.ToDay = (DayOfWeek)(((int)config.FromDay + 6) % 7);
                     break;
 
                 default:

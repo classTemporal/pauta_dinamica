@@ -145,6 +145,110 @@ namespace PautaDinamicaApp.Views
             InsertAtCaret(EmailBodyTextBox, picked.Value.Token);
         }
 
+        private void InsertSubjectField_Click(object sender, RoutedEventArgs e)
+        {
+            string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);
+            if (!string.IsNullOrEmpty(placeholder)) InsertAtCaret(EmailSubjectTextBox, placeholder);
+        }
+
+        private void InsertSubjectDate_Click(object sender, RoutedEventArgs e)
+        {
+            var picked = Views.DateTokenPickerPopup.Pick(CurrentDynamicDates(), this);
+            if (picked == null) return;
+
+            var vm = DataContext as ViewModels.SettingsViewModel;
+            if (picked.Value.Config != null && vm?.SelectedPauta != null)
+                vm.SelectedPauta.DynamicDates = picked.Value.Config;
+
+            InsertAtCaret(EmailSubjectTextBox, picked.Value.Token);
+        }
+
+        private System.Windows.Controls.TextBox? FindRuleSubjectBox(DependencyObject start)
+        {
+            DependencyObject? cur = start;
+            while (cur != null && cur is not System.Windows.Controls.Border)
+                cur = System.Windows.Media.VisualTreeHelper.GetParent(cur);
+            if (cur == null) return null;
+            foreach (var box in FindVisualChildren<System.Windows.Controls.TextBox>(cur))
+                if ((box.Tag as string) == "RuleSubjectBox") return box;
+            return null;
+        }
+
+        private void RuleSubjectField_Click(object sender, RoutedEventArgs e)
+        {
+            var box = FindRuleSubjectBox((DependencyObject)sender);
+            if (box == null) return;
+            string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);
+            if (!string.IsNullOrEmpty(placeholder)) InsertAtCaret(box, placeholder);
+        }
+
+        private void RuleSubjectDate_Click(object sender, RoutedEventArgs e)
+        {
+            var box = FindRuleSubjectBox((DependencyObject)sender);
+            if (box == null) return;
+            var picked = Views.DateTokenPickerPopup.Pick(CurrentDynamicDates(), this);
+            if (picked == null) return;
+
+            var vm = DataContext as ViewModels.SettingsViewModel;
+            if (picked.Value.Config != null && vm?.SelectedPauta != null)
+                vm.SelectedPauta.DynamicDates = picked.Value.Config;
+
+            InsertAtCaret(box, picked.Value.Token);
+        }
+
+        private System.Windows.DependencyObject? FindRuleCard(System.Windows.DependencyObject start)
+        {
+            System.Windows.DependencyObject? cur = start;
+            while (cur != null && cur is not System.Windows.Controls.Border)
+                cur = System.Windows.Media.VisualTreeHelper.GetParent(cur);
+            return cur;
+        }
+
+        private void RuleBodyField_Click(object sender, RoutedEventArgs e)
+        {
+            var card = FindRuleCard((System.Windows.DependencyObject)sender);
+            if (card == null) return;
+            string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);
+            if (string.IsNullOrEmpty(placeholder)) return;
+            foreach (var ed in FindVisualChildren<HtmlEditor.NativeRichEditor>(card))
+                if (ed.Visibility == System.Windows.Visibility.Visible)
+                {
+                    ed.InsertTextAtCaret(placeholder);
+                    return;
+                }
+            foreach (var box in FindVisualChildren<System.Windows.Controls.TextBox>(card))
+                if ((box.Tag as string) == "RuleBodyBox")
+                {
+                    InsertAtCaret(box, placeholder);
+                    return;
+                }
+        }
+
+        private void RuleBodyDate_Click(object sender, RoutedEventArgs e)
+        {
+            var card = FindRuleCard((System.Windows.DependencyObject)sender);
+            if (card == null) return;
+            var picked = Views.DateTokenPickerPopup.Pick(CurrentDynamicDates(), this);
+            if (picked == null) return;
+
+            var vm = DataContext as ViewModels.SettingsViewModel;
+            if (picked.Value.Config != null && vm?.SelectedPauta != null)
+                vm.SelectedPauta.DynamicDates = picked.Value.Config;
+
+            foreach (var ed in FindVisualChildren<HtmlEditor.NativeRichEditor>(card))
+                if (ed.Visibility == System.Windows.Visibility.Visible)
+                {
+                    ed.InsertTextAtCaret(picked.Value.Token);
+                    return;
+                }
+            foreach (var box in FindVisualChildren<System.Windows.Controls.TextBox>(card))
+                if ((box.Tag as string) == "RuleBodyBox")
+                {
+                    InsertAtCaret(box, picked.Value.Token);
+                    return;
+                }
+        }
+
         // --- Drag & Drop Implementation ---
 
         private void EmailRulesList_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
