@@ -855,7 +855,7 @@ namespace PautaDinamicaApp.ViewModels
                         {
                             // Formato antiguo: Solo lista de campos
                             var importedFields = JsonSerializer.Deserialize<ObservableCollection<FieldDefinition>>(json);
-                            if (importedFields != null && MessageBoxHelper.ShowNonCritical("El archivo solo contiene el diseño de campos. ¿Reemplazar diseño actual?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                            if (importedFields != null && MessageBoxHelper.Show("El archivo solo contiene el diseño de campos. ¿Reemplazar diseño actual?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                             {
                                 Fields = importedFields;
                                 foreach (var f in Fields) f.EnsureDefaultOptions();
@@ -867,7 +867,7 @@ namespace PautaDinamicaApp.ViewModels
                         {
                             // Formato nuevo: Paquete completo
                             var package = JsonSerializer.Deserialize<PautaFullExportPackage>(json);
-                            if (package != null && MessageBoxHelper.ShowNonCritical("El archivo contiene una configuración COMPLETA (Metadatos, Estructura, PDF, Excel). ¿Reemplazar configuración actual?", "Confirmar Importación Completa", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                            if (package != null && MessageBoxHelper.Show("El archivo contiene una configuración COMPLETA (Metadatos, Estructura, PDF, Excel). ¿Reemplazar configuración actual?", "Confirmar Importación Completa", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                             {
                                 // 1. Campos
                                 Fields = new ObservableCollection<FieldDefinition>(package.Fields);
@@ -876,6 +876,8 @@ namespace PautaDinamicaApp.ViewModels
                                 // 2. Metadatos (Copiar propiedades al objeto actual para no romper referencias de UI)
                                 var m = package.Metadata;
                                 var ep = EditingPauta;
+                                if (!string.IsNullOrWhiteSpace(m.Name))
+                                    ep.Name = m.Name;
                                 ep.HelpContent = m.HelpContent;
                                 ep.EmailMethod = m.EmailMethod;
                                 ep.EmailToTemplate = m.EmailToTemplate;
@@ -987,35 +989,9 @@ namespace PautaDinamicaApp.ViewModels
 
         private void AddPauta()
         {
-            // Card 39: Launch the pauta creation wizard instead of creating an empty pauta
-            var wizardVm = new CreatePautaWizardViewModel();
-            var wizardWin = new Views.CreatePautaWizardWindow { DataContext = wizardVm, Owner = System.Windows.Application.Current.MainWindow };
-            
-            wizardVm.OnWizardCompleted += (s, e) =>
-            {
-                if (wizardVm.CreatedPauta != null)
-                {
-                    // The pauta was already saved to disk by the wizard; just add to in-memory list
-                    Pautas.Insert(0, wizardVm.CreatedPauta);
-                    EditingPauta = wizardVm.CreatedPauta;
-                    WasDatabaseModified = true;
-
-                    // Load the configuration into memory for the new pauta
-                    var config = _storageService.LoadConfiguration(wizardVm.CreatedPauta.Id).OrderBy(f => f.Order).ToList();
-                    _unsavedConfigs.Remove(wizardVm.CreatedPauta.Id);
-                    _unsavedConfigs[wizardVm.CreatedPauta.Id] = config;
-
-                    wizardWin.DialogResult = true;
-                    wizardWin.Close();
-                }
-            };
-            wizardVm.OnWizardCanceled += (s, e) =>
-            {
-                wizardWin.DialogResult = false;
-                wizardWin.Close();
-            };
-
-            wizardWin.ShowDialog();
+            var newPauta = new PautaSchema { Name = "Nueva Pauta " + (Pautas.Count + 1) };
+            Pautas.Add(newPauta);
+            EditingPauta = newPauta;
         }
 
         private void RenamePauta(PautaSchema? pauta)
