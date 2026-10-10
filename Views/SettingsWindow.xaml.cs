@@ -33,6 +33,20 @@ namespace PautaDinamicaApp.Views
 
         [StructLayout(LayoutKind.Sequential)]
         private struct POINT { public int X; public int Y; }
+
+        /// <summary>Abre los enlaces de "Sobre esta aplicación" en el navegador.</summary>
+        private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("no se pudo abrir el enlace: " + ex.Message);
+            }
+            e.Handled = true;
+        }
         public SettingsWindow()
         {
             InitializeComponent();

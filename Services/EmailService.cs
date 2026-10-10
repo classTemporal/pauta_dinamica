@@ -31,11 +31,12 @@ namespace PautaDinamicaApp.Services
 
         /// <summary>
         /// Resuelve los tokens de fecha dinámica de una plantilla.
-        /// Si la pauta no tiene activadas las fechas dinámicas devuelve el texto sin cambios,
-        /// de modo que el comportamiento existente no se altera.
+        /// Siempre activos: si el texto trae [Hoy], [Semana], [Mes], [Año] o [Rango]
+        /// (y sus variantes), se resuelven con la fecha del sistema al enviar.
+        /// Sin tokens, el texto vuelve intacto.
         /// </summary>
         private string ResolveDynamicDates(string? text, PautaSchema pauta)
-            => _dates.ResolveTokens(text, pauta.DynamicDates, pauta.UseDynamicDates);
+            => _dates.ResolveTokens(text, pauta.DynamicDates, true);
 
         /// <summary>
         /// Resuelve los placeholders de una plantilla de correo.
@@ -113,9 +114,11 @@ namespace PautaDinamicaApp.Services
         /// </summary>
         /// <param name="silent">Si es true no se muestra un aviso por destinatario vacío
         /// (útil en envíos múltiples, donde el resumen final informa los fallos).</param>
-        public bool SendEmail(AppSettings globalSettings, PautaSchema? pauta, AuditEntry entry, List<FieldDefinition> fields, string? pdfPath = null, bool silent = false)
+        /// <param name="failReason">Motivo del fallo cuando devuelve false (null si tuvo éxito).</param>
+        public bool SendEmail(AppSettings globalSettings, PautaSchema? pauta, AuditEntry entry, List<FieldDefinition> fields, string? pdfPath, bool silent, out string? failReason)
         {
-            if (pauta == null) return false;
+            failReason = null;
+            if (pauta == null) { failReason = "sin pauta"; return false; }
 
             string to = "";
             bool directoryFound = false;
@@ -157,7 +160,7 @@ namespace PautaDinamicaApp.Services
                 encodeValues: useHtml);
 
             // Tokens de fecha dinámica ([Hoy], [Semana], [Mes], [Año], [Rango]).
-            // Se aplican al final, después de los campos, y solo si la pauta los activó.
+            // Se aplican al final, después de los campos. Sin tokens, el texto queda intacto.
             // El resultado ya viene codificado cuando es HTML, así que se inserta tal cual.
             body = InsertDynamicDates(body, pauta);
 
@@ -167,6 +170,7 @@ namespace PautaDinamicaApp.Services
             to = (to ?? "").Trim();
             if (string.IsNullOrWhiteSpace(to))
             {
+                failReason = "sin destinatario (To vacío)";
                 if (!silent)
                 {
                     MessageBoxHelper.Show(
@@ -186,10 +190,10 @@ namespace PautaDinamicaApp.Services
 
             if (method == EmailMethod.Outlook)
             {
-                return SendViaOutlook(to, cc, subject, body, attachments);
+                return SendViaOutlook(to, cc, subject, body, attachments, silent, out failReason);
             }
 
-            return SendViaMailto(to, cc, subject, body);
+            return SendViaMailto(to, cc, subject, body, silent, out failReason);
         }
 
         /// <summary>
@@ -198,9 +202,11 @@ namespace PautaDinamicaApp.Services
         /// método de envío y adjuntos igual que el correo principal.
         /// Devuelve true si el correo fue entregado al cliente de forma exitosa.
         /// </summary>
-        public bool SendConditionalEmail(AppSettings globalSettings, PautaSchema? pauta, ConditionalEmailRule rule, AuditEntry entry, List<FieldDefinition> fields, string? pdfPath = null, bool silent = false)
+        /// <param name="failReason">Motivo del fallo cuando devuelve false (null si tuvo éxito).</param>
+        public bool SendConditionalEmail(AppSettings globalSettings, PautaSchema? pauta, ConditionalEmailRule rule, AuditEntry entry, List<FieldDefinition> fields, string? pdfPath, bool silent, out string? failReason)
         {
-            if (pauta == null || rule == null) return false;
+            failReason = null;
+            if (pauta == null || rule == null) { failReason = "sin pauta o regla"; return false; }
 
             string to = "";
             bool directoryFound = false;
@@ -250,6 +256,7 @@ namespace PautaDinamicaApp.Services
             to = (to ?? "").Trim();
             if (string.IsNullOrWhiteSpace(to))
             {
+                failReason = $"sin destinatario (To vacío, regla '{rule.Name}')";
                 if (!silent)
                 {
                     MessageBoxHelper.Show(
@@ -269,10 +276,10 @@ namespace PautaDinamicaApp.Services
 
             if (method == EmailMethod.Outlook)
             {
-                return SendViaOutlook(to, cc, subject, body, attachments);
+                return SendViaOutlook(to, cc, subject, body, attachments, silent, out failReason);
             }
 
-            return SendViaMailto(to, cc, subject, body);
+            return SendViaMailto(to, cc, subject, body, silent, out failReason);
         }
 
         /// <summary>
@@ -315,8 +322,9 @@ namespace PautaDinamicaApp.Services
             return attachments;
         }
 
-        private bool SendViaMailto(string to, string cc, string subject, string body)
+        private bool SendViaMailto(string to, string cc, string subject, string body, bool silent, out string? failReason)
         {
+            failReason = null;
             // RFC 6068: line breaks inside mailto body must be CRLF encoded as %0D%0A.
             // Uri.EscapeDataString maps '\n' -> '%0A' which some clients ignore, so we
             // normalize newlines to CRLF before encoding to preserve paragraphs.
@@ -330,6 +338,10 @@ namespace PautaDinamicaApp.Services
             const int mailtoLimit = 2000;
             if (url.Length > mailtoLimit)
             {
+                failReason = $"mailto supera el límite ({url.Length} caracteres)";
+                // En lote no se pregunta por cada correo: se acumula el fallo en el resumen.
+                if (silent) return false;
+
                 // Some Windows shells silently drop mailto URLs over 2000 chars. Warn the
                 // user but still attempt — truncated bodies may still be useful.
                 var warn = MessageBoxHelper.Show(
@@ -339,6 +351,7 @@ namespace PautaDinamicaApp.Services
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning, true);
                 if (warn == System.Windows.MessageBoxResult.No) return false;
+                failReason = null; // El usuario aceptó intentarlo de todos modos.
             }
 
             try
@@ -348,7 +361,10 @@ namespace PautaDinamicaApp.Services
             }
             catch (Exception ex)
             {
-                MessageBoxHelper.Show("No se pudo abrir el cliente de correo predeterminado: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                failReason = "mailto: " + ex.Message;
+                // En lote no se espamea un diálogo por cada fallo: va al resumen final.
+                if (!silent)
+                    MessageBoxHelper.Show("No se pudo abrir el cliente de correo predeterminado: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -387,8 +403,9 @@ namespace PautaDinamicaApp.Services
             return _outlookApp!;
         }
 
-        private bool SendViaOutlook(string to, string cc, string subject, string body, List<string> attachmentPaths)
+        private bool SendViaOutlook(string to, string cc, string subject, string body, List<string> attachmentPaths, bool silent, out string? failReason)
         {
+            failReason = null;
             try
             {
                 dynamic mailItem = GetOutlookApp().CreateItem(0); // 0 = olMailItem
@@ -459,7 +476,10 @@ namespace PautaDinamicaApp.Services
             }
             catch (Exception ex)
             {
-                MessageBoxHelper.Show("Error al usar Outlook Interop: " + ex.Message + "\n\nIntente usar el método 'mailto' en la configuración general.", "Error correo", MessageBoxButton.OK, MessageBoxImage.Error);
+                failReason = "Outlook: " + ex.Message;
+                // En lote no se espamea un diálogo por cada fallo: va al resumen final.
+                if (!silent)
+                    MessageBoxHelper.Show("Error al usar Outlook Interop: " + ex.Message + "\n\nIntente usar el método 'mailto' en la configuración general.", "Error correo", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -477,7 +497,6 @@ namespace PautaDinamicaApp.Services
         private string InsertDynamicDates(string body, PautaSchema pauta)
         {
             if (string.IsNullOrEmpty(body)) return body;
-            if (!pauta.UseDynamicDates) return body;
 
             bool isHtml = IsHtml(body);
             string resolved = ResolveDynamicDates(body, pauta);

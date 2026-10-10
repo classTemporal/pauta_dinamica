@@ -49,8 +49,7 @@ namespace PautaDinamicaApp.Models
     /// </para>
     ///
     /// <para>
-    /// Es totalmente opcional: si <c>PautaSchema.UseDynamicDates</c> es <c>false</c> los tokens
-    /// de fecha dinámica no se resuelven y el comportamiento existente no cambia.
+    /// Los tokens se resuelven siempre al enviar; sin tokens en el texto, todo queda intacto.
     /// </para>
     /// </summary>
     public class DynamicDateConfig

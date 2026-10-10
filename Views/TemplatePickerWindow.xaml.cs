@@ -356,7 +356,7 @@ namespace PautaDinamicaApp.Views
         private void DeleteSelected_Click(object sender, RoutedEventArgs e)
         {
             var selected = _allTemplates.Where(t => t.IsSelected).ToList();
-            if (selected.Any() && MessageBoxHelper.ShowNonCritical($"¿Eliminar {selected.Count} plantillas?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (selected.Any() && MessageBoxHelper.Show($"¿Eliminar {selected.Count} plantillas?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 foreach (var t in selected) _allTemplates.Remove(t);
                 LoadCategories();

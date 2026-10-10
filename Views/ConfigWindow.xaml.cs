@@ -136,7 +136,7 @@ namespace PautaDinamicaApp
 
                 if (vm.IsSaveSuccessful)
                 {
-                    MessageBoxHelper.ShowNonCritical("Cambios aplicados correctamente.", "Éxito");
+                    MessageBoxHelper.Show("Cambios aplicados correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
         }

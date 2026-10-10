@@ -471,7 +471,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ResetExportConfig()
         {
-            if (MessageBoxHelper.ShowNonCritical("¿Restablecer el orden y nombres de exportación a los valores por defecto?", "Confirmar", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            if (MessageBoxHelper.Show("¿Restablecer el orden y nombres de exportación a los valores por defecto?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) != MessageBoxResult.Yes) return;
 
             var validFields = Fields.Where(f => f.Type != FieldType.Separator).OrderBy(f => f.Order).ToList();
             var newConfig = new ObservableCollection<ExportColumnConfig>();
@@ -494,7 +494,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void ResetPdfConfig()
         {
-            if (MessageBoxHelper.ShowNonCritical("¿Restablecer el orden y nombres del PDF a los valores por defecto?", "Confirmar", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            if (MessageBoxHelper.Show("¿Restablecer el orden y nombres del PDF a los valores por defecto?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) != MessageBoxResult.Yes) return;
 
             var validFields = Fields.OrderBy(f => f.Order).ToList();
             var newConfig = new ObservableCollection<ExportColumnConfig>();
@@ -704,7 +704,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void RemoveField(FieldDefinition? field)
         {
-            if (field != null && MessageBoxHelper.ShowNonCritical($"¿Eliminar campo [{field.Label}]?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (field != null && MessageBoxHelper.Show($"¿Eliminar campo [{field.Label}]?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 Fields.Remove(field);
                 var exportItem = ExportColumns.FirstOrDefault(x => x.FieldId == field.Id);
@@ -982,7 +982,7 @@ namespace PautaDinamicaApp.ViewModels
         private void DeleteSelected()
         {
             var selected = Fields.Where(f => f.IsSelected).ToList();
-            if (selected.Any() && MessageBoxHelper.ShowNonCritical($"¿Eliminar {selected.Count} campos?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (selected.Any() && MessageBoxHelper.Show($"¿Eliminar {selected.Count} campos?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 foreach (var f in selected)
                 {
@@ -1421,7 +1421,7 @@ namespace PautaDinamicaApp.ViewModels
             _storageService.SavePautas(Pautas.ToList());
             IsSaveSuccessful = true;
             WasDatabaseModified = true;
-            MessageBoxHelper.ShowNonCritical("Cambios guardados con éxito.", "Éxito");
+            MessageBoxHelper.Show("Cambios guardados con éxito.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ExportToExcelInternal(string filePath, List<AuditEntry> records, List<FieldDefinition> rawFields, List<ExportColumnConfig> exportConfig)
@@ -1687,7 +1687,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (EditingPauta != null && rule != null)
             {
-                if (MessageBoxHelper.ShowNonCritical("¿Eliminar esta regla de reemplazo PDF?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.Show("¿Eliminar esta regla de reemplazo PDF?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
                 {
                     EditingPauta.PdfReplacementRules.Remove(rule);
                 }
@@ -1700,7 +1700,7 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = EditingPauta.PdfReplacementRules.Where(r => r.IsSelected).ToList();
             if (toRemove.Count == 0) return;
 
-            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar las {toRemove.Count} reglas PDF seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show($"¿Eliminar las {toRemove.Count} reglas PDF seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 foreach (var r in toRemove) EditingPauta.PdfReplacementRules.Remove(r);
             }

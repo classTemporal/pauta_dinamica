@@ -117,9 +117,9 @@ namespace PautaDinamicaApp.Models
         private DynamicDateConfig _dynamicDates = new();
 
         /// <summary>
-        /// Activa la resolución de los tokens de fecha dinámica ([Hoy], [Semana], [Mes],
-        /// [Año], [Rango]) en las plantillas de esta pauta.
-        /// Por defecto está desactivado, de modo que el comportamiento existente no cambia.
+        /// Se conserva por compatibilidad con pautas guardadas. La resolución de fechas
+        /// dinámicas ahora siempre está activa al enviar: si el texto trae tokens,
+        /// se resuelven; si no, el texto queda intacto.
         /// </summary>
         public bool UseDynamicDates { get => _useDynamicDates; set => SetProperty(ref _useDynamicDates, value); }
 

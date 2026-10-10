@@ -47,10 +47,29 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand UnlockAdminSettingsCommand { get; }
         public ICommand PickAccentColorCommand { get; }
         public ICommand OpenHelpCommand { get; }
-        public ICommand SwitchUserCommand { get; }
         public ICommand LogoutCommand { get; }
 
         public UserModel? CurrentUser => SessionService.CurrentUser;
+
+        /// <summary>
+        /// Versión de la aplicación (del ensamblado, ej: "2.1.0").
+        /// Se muestra en la tarjeta "Sobre esta aplicación".
+        /// </summary>
+        public string AppVersion
+        {
+            get
+            {
+                try
+                {
+                    var v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                    return v == null ? "" : $"{v.Major}.{v.Minor}.{v.Build}";
+                }
+                catch
+                {
+                    return "";
+                }
+            }
+        }
         public string AdminPassword { get => _adminPassword; set => SetProperty(ref _adminPassword, value); }
         public bool IsAdminSettingsUnlocked { get => _isAdminSettingsUnlocked; set => SetProperty(ref _isAdminSettingsUnlocked, value); }
 
@@ -419,7 +438,6 @@ namespace PautaDinamicaApp.ViewModels
             OpenEmailDirectoryFromWarningCommand = new RelayCommand(_ => OpenEmailDirectory());
             OpenTemplateManagementCommand = new RelayCommand(_ => OpenTemplateManagement());
             OpenHelpCommand = new RelayCommand(_ => OpenHelp());
-            SwitchUserCommand = new RelayCommand(_ => SwitchUser());
             LogoutCommand = new RelayCommand(_ => Logout());
             UnlockAdminSettingsCommand = new RelayCommand(_ => UnlockAdminSettings());
 
@@ -582,7 +600,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (SelectedPauta != null && rule != null)
             {
-                if (MessageBoxHelper.ShowNonCritical("¿Eliminar esta regla?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.Show("¿Eliminar esta regla?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
                 {
                     SelectedPauta.EmailReplacementRules.Remove(rule);
                 }
@@ -595,7 +613,7 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = SelectedPauta.EmailReplacementRules.Where(r => r.IsSelected).ToList();
             if (toRemove.Count == 0) return;
 
-            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar las {toRemove.Count} reglas seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show($"¿Eliminar las {toRemove.Count} reglas seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 foreach (var r in toRemove) SelectedPauta.EmailReplacementRules.Remove(r);
             }
@@ -623,7 +641,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (SelectedPauta != null && rule != null)
             {
-                if (MessageBoxHelper.ShowNonCritical("¿Eliminar este correo adicional?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.Show("¿Eliminar este correo adicional?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
                 {
                     SelectedPauta.ConditionalEmailRules.Remove(rule);
                 }
@@ -636,7 +654,7 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = SelectedPauta.ConditionalEmailRules.Where(r => r.IsSelected).ToList();
             if (toRemove.Count == 0) return;
 
-            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar los {toRemove.Count} correos adicionales seleccionados?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show($"¿Eliminar los {toRemove.Count} correos adicionales seleccionados?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 foreach (var r in toRemove) SelectedPauta.ConditionalEmailRules.Remove(r);
             }
@@ -902,13 +920,13 @@ namespace PautaDinamicaApp.ViewModels
 
             if (close)
             {
-                MessageBoxHelper.ShowNonCritical("Configuración guardada correctamente.", "Éxito");
+                MessageBoxHelper.Show("Configuración guardada correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                 IsSaved = true;
                 RequestClose?.Invoke();
             }
             else
             {
-                MessageBoxHelper.ShowNonCritical("Cambios aplicados correctamente.", "Éxito");
+                MessageBoxHelper.Show("Cambios aplicados correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -1005,49 +1023,36 @@ namespace PautaDinamicaApp.ViewModels
             win.ShowDialog();
         }
 
-        private void SwitchUser()
-        {
-            var session = new SessionService();
-            session.Logout();
-
-            var loginWin = new Views.LoginWindow();
-            loginWin.Show();
-
-            foreach (Window window in System.Windows.Application.Current.Windows)
-            {
-                if (window is Views.SettingsWindow)
-                {
-                    window.Close();
-                    break;
-                }
-            }
-        }
-
         private void Logout()
         {
-            var session = new SessionService();
-            session.Logout();
+            new SessionService().Logout();
 
+            var app = System.Windows.Application.Current;
+            // Ventanas abiertas (principal + este diálogo de configuración).
+            var openWindows = app.Windows.OfType<Window>().ToList();
+
+            // El login pasa a ser la ventana principal ANTES de cerrar lo demás:
+            // así cerrar el MainWindow viejo no apaga la app
+            // (ShutdownMode.OnMainWindowClose) y el login nace fuera del loop modal
+            // del diálogo, que era lo que lo dejaba transparente y mal renderizado.
             var loginWin = new Views.LoginWindow();
-            loginWin.Show();
+            app.MainWindow = loginWin;
 
-            foreach (Window window in System.Windows.Application.Current.Windows)
+            foreach (var window in openWindows)
             {
-                if (window is Views.SettingsWindow)
-                {
-                    window.Close();
-                    break;
-                }
+                try { window.Close(); }
+                catch { /* seguir con las demás */ }
             }
+
+            // Igual que al arrancar: login modeless; al ingresar se abre un
+            // MainWindow fresco y este login se cierra solo.
+            loginWin.Show();
         }
 
         private static string BuildGeneralHelpContent()
         {
             var content = new System.Text.StringBuilder();
             content.AppendLine("# 📘 Documentación del Sistema");
-            content.AppendLine("");
-            content.AppendLine("**Versión:** 2.1.0");
-            content.AppendLine("**Creador:** Angel Gustavo Pacheco Manzanero");
             content.AppendLine("");
             content.AppendLine("### 🚀 Resumen del Sistema");
             content.AppendLine("Pauta Dinámica es una herramienta avanzada diseñada para la **Auditoría de Calidad** y el **Control de Procesos**. Su objetivo principal es permitir la creación de formularios 100% dinámicos, eliminando la dependencia de hojas de cálculo estáticas y automatizando la generación de reportes y envío de métricas.");
@@ -1081,14 +1086,9 @@ namespace PautaDinamicaApp.ViewModels
             content.AppendLine("- Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en **CONFIG. GENERAL > Rutas**.");
             content.AppendLine("");
             content.AppendLine("---");
-            content.AppendLine("");
-            content.AppendLine("## 🔗 Enlaces del Desarrollador");
-            content.AppendLine("");
-            content.AppendLine("- **LinkedIn:** [Angel Temporal Pacheco](https://www.linkedin.com/in/angel-temporal-pacheco/)");
-            content.AppendLine("- **GitHub:** [classTemporal](https://github.com/classTemporal)");
-            content.AppendLine("");
-            content.AppendLine("---");
             content.AppendLine("*Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.*");
+            content.AppendLine("");
+            content.AppendLine("Ver la versión y los datos del desarrollador en **Config. General > Sistema > Sobre esta aplicación**.");
             return content.ToString();
         }
     }

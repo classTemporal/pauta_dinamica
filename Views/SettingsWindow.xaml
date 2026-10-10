@@ -873,14 +873,33 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- Sobre esta aplicación -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                                <StackPanel>
+                                    <TextBlock Text="ℹ️ Sobre esta aplicación" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Pauta Dinámica" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,2,0,10">
+                                        <Run Text="Versión "/><Run Text="{Binding AppVersion, Mode=OneWay}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="Desarrollada por Angel Gustavo Pacheco Manzanero" FontSize="12" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0">
+                                            <Hyperlink NavigateUri="https://www.linkedin.com/in/angel-temporal-pacheco/" RequestNavigate="Hyperlink_RequestNavigate">LinkedIn</Hyperlink>
+                                        </TextBlock>
+                                        <TextBlock Text="•" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock FontSize="12" VerticalAlignment="Center">
+                                            <Hyperlink NavigateUri="https://github.com/classTemporal" RequestNavigate="Hyperlink_RequestNavigate">GitHub</Hyperlink>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Usuario actual -->
                             <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
                                 <StackPanel>
                                     <TextBlock Text="👤 Usuario Actual" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}"/>
                                     <TextBlock Text="Sesión activa:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,5"/>
-                                    <TextBlock Text="{Binding CurrentUser.Username}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15"/>
-                                    <Button Content="🔄 Cambiar Usuario" Command="{Binding SwitchUserCommand}" 
-                                            Style="{StaticResource SecondaryButton}" Height="40" Width="180" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="{Binding CurrentUser.Username}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
                                 </StackPanel>
                             </Border>
 

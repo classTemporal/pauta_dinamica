@@ -393,7 +393,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (template != null)
             {
-                if (MessageBoxHelper.ShowNonCritical("¿Eliminar esta plantilla?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.Show("¿Eliminar esta plantilla?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question, true) == MessageBoxResult.Yes)
                 {
                     if (_editingTemplate == template) CancelEdit();
                     _allTemplates.Remove(template);
@@ -407,7 +407,7 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = Templates.Where(t => t.IsSelected).ToList();
             if (!toRemove.Any()) return;
 
-            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar {toRemove.Count} plantillas seleccionadas?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show($"¿Eliminar {toRemove.Count} plantillas seleccionadas?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 foreach (var t in toRemove) _allTemplates.Remove(t);
                 ApplyCategoryFilter();
@@ -574,7 +574,7 @@ namespace PautaDinamicaApp.ViewModels
                 return;
             }
 
-            if (MessageBoxHelper.ShowNonCritical("¿Eliminar la categoría \"" + categoryName + "\" y todas sus plantillas?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show("¿Eliminar la categoría \"" + categoryName + "\" y todas sus plantillas?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) != MessageBoxResult.Yes)
                 return;
 
             // Remove from categories file
@@ -608,7 +608,7 @@ namespace PautaDinamicaApp.ViewModels
                 return;
             }
 
-            if (MessageBoxHelper.ShowNonCritical("¿Eliminar la categoría \"" + catName + "\" y todas sus plantillas?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show("¿Eliminar la categoría \"" + catName + "\" y todas sus plantillas?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) != MessageBoxResult.Yes)
                 return;
 
             // Remove from categories file

@@ -1152,39 +1152,26 @@ namespace PautaDinamicaApp.ViewModels
                         if (worksheet == null) return;
 
                         var rows = worksheet.RowsUsed().Skip(1);
-                        var headerRow = worksheet.Row(1);
-                        var headers = headerRow.CellsUsed().ToDictionary(c => c.Address.ColumnNumber, c => c.Value.ToString().Trim());
+
+                        // Cabeceras por posición (1..última usada): así también se detectan
+                        // columnas sin cabecera en lugar de saltarlas en silencio.
+                        int lastCol = worksheet.LastColumnUsed()?.ColumnNumber() ?? 0;
+                        var headers = new List<string?>();
+                        for (int c = 1; c <= lastCol; c++)
+                            headers.Add(worksheet.Row(1).Cell(c).Value.ToString());
 
                         // --- MAPEO DE COLUMNAS A IDs ---
-                        var columnMap = new Dictionary<int, string>(); // ColumnIndex -> FieldId
-                        int timestampColIndex = -1;
-                        int durationColIndex = -1;
-
-                        var exportConfig = CurrentPauta?.ExportConfig ?? new List<ExportColumnConfig>();
-
-                        foreach (var h in headers)
-                        {
-                            string headerText = h.Value;
-
-                            // 1. Checar campos sistema
-                            if (headerText.Equals("Fecha de evaluación", StringComparison.OrdinalIgnoreCase)) { timestampColIndex = h.Key; continue; }
-                            if (headerText.Equals("Duración (min)", StringComparison.OrdinalIgnoreCase)) { durationColIndex = h.Key; continue; }
-
-                            // 2. Checar configuración de exportación (Header Personalizado)
-                            var configMatch = exportConfig.FirstOrDefault(c => string.Equals(c.CustomHeader, headerText, StringComparison.OrdinalIgnoreCase));
-                            if (configMatch != null)
-                            {
-                                columnMap[h.Key] = configMatch.FieldId;
-                                continue;
-                            }
-
-                            // 3. Checar Labels de campos actuales (Nombre original)
-                            var fieldMatch = CurrentFields.FirstOrDefault(f => string.Equals(f.Label, headerText, StringComparison.OrdinalIgnoreCase));
-                            if (fieldMatch != null)
-                            {
-                                columnMap[h.Key] = fieldMatch.Id;
-                            }
-                        }
+                        // Acepta cabeceras de cualquier preset (CustomHeader / OriginalLabel),
+                        // de la config legacy y de las etiquetas actuales: lo exportado con
+                        // un encabezado personalizado debe poder reimportarse.
+                        var mapResult = ExcelImportMapper.MapColumns(
+                            headers,
+                            CurrentPauta?.ExportPresets,
+                            CurrentPauta?.ExportConfig,
+                            CurrentFields.Select(f => (f.Id, f.Label)));
+                        var columnMap = mapResult.ColumnMap; // ColumnIndex -> FieldId
+                        int timestampColIndex = mapResult.TimestampColumn;
+                        int durationColIndex = mapResult.DurationColumn;
 
                         if (columnMap.Count == 0 && timestampColIndex == -1)
                         {
@@ -1266,7 +1253,11 @@ namespace PautaDinamicaApp.ViewModels
                         }
 
                         if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
-                        MessageBoxHelper.ShowNonCritical($"Importación completada. Se importaron {importedCount} registros.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                        string importMsg = $"Importación completada. Se importaron {importedCount} registros.";
+                        var ignored = mapResult.Skipped.Concat(mapResult.Conflicts).ToList();
+                        if (ignored.Any())
+                            importMsg += $"\n\nColumnas ignoradas ({ignored.Count}):\n- " + string.Join("\n- ", ignored);
+                        MessageBoxHelper.ShowNonCritical(importMsg, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                         RefreshCalculations();
                     }
                 }
@@ -1401,7 +1392,9 @@ namespace PautaDinamicaApp.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBoxHelper.Show($"Error al generar PDF: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // En lote silencioso no se espamea un diálogo por envío: el resumen informa.
+                if (!silent)
+                    MessageBoxHelper.Show($"Error al generar PDF: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return null;
             }
         }
@@ -1547,6 +1540,12 @@ namespace PautaDinamicaApp.ViewModels
                 CurrentPauta.DynamicDates = diskPauta.DynamicDates ?? new DynamicDateConfig();
                 CurrentPauta.EmailReplacementRules = diskPauta.EmailReplacementRules;
                 CurrentPauta.ConditionalEmailRules = diskPauta.ConditionalEmailRules;
+                // Adjuntos y exclusión: también se editan en Config. General y deben
+                // estar vigentes al enviar sin reiniciar la app.
+                CurrentPauta.AttachPdfToEmail = diskPauta.AttachPdfToEmail;
+                CurrentPauta.ExcludedAttachmentFieldIds = diskPauta.ExcludedAttachmentFieldIds ?? new List<string>();
+                CurrentPauta.ExcludeByFieldId = diskPauta.ExcludeByFieldId;
+                CurrentPauta.ExcludeByFieldValue = diskPauta.ExcludeByFieldValue;
             }
             catch
             {
@@ -2078,6 +2077,14 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
 
+            // Al editar un registro existente se sobrescribe: confirmación crítica
+            // (nunca suprimible por "desactivar mensajes no críticos").
+            if (SelectedRecord != null)
+            {
+                var editRes = MessageBoxHelper.Show("¿Guardar los cambios en este registro?", "Confirmar edición", MessageBoxButton.YesNo, MessageBoxImage.Question, true);
+                if (editRes != MessageBoxResult.Yes) return;
+            }
+
             var entry = SelectedRecord ?? new AuditEntry();
             foreach (var field in CurrentFields.Where(f => f.Type != FieldType.Separator))
             {
@@ -2116,7 +2123,7 @@ namespace PautaDinamicaApp.ViewModels
         private void DeleteRecord(AuditEntry? entry)
         {
             if (entry == null) return;
-            if (MessageBoxHelper.ShowNonCritical("¿Eliminar registro?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show("¿Eliminar registro?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 Records.Remove(entry);
                 if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
@@ -2154,11 +2161,40 @@ namespace PautaDinamicaApp.ViewModels
             else GenerateBatchPdfs(selected);
         }
 
+        private bool _isSendingEmails;
+
+        /// <summary>
+        /// Garantiza que la bandera de envío en curso se libere en todas las salidas
+        /// (fin, return o excepción): evita envíos traslapados que pelean por el COM de Outlook.
+        /// </summary>
+        private sealed class SendingGuard : IDisposable
+        {
+            private readonly MainViewModel _vm;
+            public SendingGuard(MainViewModel vm) { _vm = vm; _vm._isSendingEmails = true; }
+            public void Dispose() => _vm._isSendingEmails = false;
+        }
+
+        /// <summary>Identifica un registro en el resumen (agente o fecha/hora).</summary>
+        private string DescribeEntryForReport(AuditEntry entry)
+        {
+            if (CurrentPauta != null && !string.IsNullOrWhiteSpace(CurrentPauta.EmailNameFieldId)
+                && entry.Values.TryGetValue(CurrentPauta.EmailNameFieldId, out var nameVal) && nameVal != null
+                && !string.IsNullOrWhiteSpace(nameVal.ToString()))
+                return nameVal.ToString()!.Trim();
+            return entry.Timestamp.ToString("dd/MM/yyyy HH:mm");
+        }
+
         private async void SendEmails(AuditEntry? singleEntry = null)
         {
             if (CurrentPauta == null)
             {
                 MessageBoxHelper.Show("No hay una pauta activa.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (_isSendingEmails)
+            {
+                MessageBoxHelper.Show("Ya hay un envío en curso. Espere a que termine antes de iniciar otro.", "Envío en curso", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -2276,14 +2312,20 @@ namespace PautaDinamicaApp.ViewModels
 
             if (toProcess.Count > 1)
             {
-                var confirm = MessageBoxHelper.ShowNonCritical($"Se prepararán {toProcess.Count} correos individuales. ¿Continuar?", "Confirmar Envío", MessageBoxButton.YesNo);
+                var confirm = MessageBoxHelper.Show($"Se prepararán {toProcess.Count} correos individuales. ¿Continuar?", "Confirmar Envío", MessageBoxButton.YesNo, MessageBoxImage.Question, true);
                 if (confirm == MessageBoxResult.No) return;
             }
 
+            // A partir de aquí el envío queda protegido contra reentradas.
+            using var sendGuard = new SendingGuard(this);
+
+            bool batch = toProcess.Count > 1;
             int count = 0;
             int failedCount = 0;
             int conditionalCount = 0;
             int conditionalFailedCount = 0;
+            int sentWithoutPdf = 0;
+            var failureDetails = new List<string>();
             var generatedPdfs = new List<string>();
             var entryPdfPaths = new Dictionary<AuditEntry, string?>();
             var activeConditionalRules = (CurrentPauta.ConditionalEmailRules ?? new System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule>())
@@ -2299,13 +2341,22 @@ namespace PautaDinamicaApp.ViewModels
                     string? pdfPath = GeneratePdfCommon(new List<AuditEntry> { entry }, silent: true);
                     if (!string.IsNullOrEmpty(pdfPath)) generatedPdfs.Add(pdfPath);
                     entryPdfPaths[entry] = pdfPath;
+                    bool pdfMissing = string.IsNullOrEmpty(pdfPath);
 
                     // El EmailService ahora maneja la herencia internamente.
                     // En lotes (silent) no se muestra un aviso por cada registro fallido;
-                    // el resumen final informa cuántos no se pudieron procesar.
-                    bool sent = _emailService.SendEmail(globalSettings, CurrentPauta, entry, fieldDefinitions, pdfPath, silent: toProcess.Count > 1);
-                    if (sent) count++;
-                    else failedCount++;
+                    // el resumen final informa quiénes fallaron y por qué.
+                    bool sent = _emailService.SendEmail(globalSettings, CurrentPauta, entry, fieldDefinitions, pdfPath, silent: batch, out string? reason);
+                    if (sent)
+                    {
+                        count++;
+                        if (pdfMissing) sentWithoutPdf++;
+                    }
+                    else
+                    {
+                        failedCount++;
+                        failureDetails.Add($"• {DescribeEntryForReport(entry)}: {reason ?? "no se pudo entregar"}");
+                    }
 
                     // Evaluar reglas de correos adicionales condicionales.
                     // Las Auto se abren de inmediato; las Ask se acumulan para una
@@ -2319,9 +2370,13 @@ namespace PautaDinamicaApp.ViewModels
 
                         if (rule.Mode == ConditionalEmailMode.Auto)
                         {
-                            bool condSent = _emailService.SendConditionalEmail(globalSettings, CurrentPauta, rule, entry, fieldDefinitions, pdfPath, silent: toProcess.Count > 1);
+                            bool condSent = _emailService.SendConditionalEmail(globalSettings, CurrentPauta, rule, entry, fieldDefinitions, pdfPath, silent: batch, out string? condReason);
                             if (condSent) conditionalCount++;
-                            else conditionalFailedCount++;
+                            else
+                            {
+                                conditionalFailedCount++;
+                                failureDetails.Add($"• adicional '{rule.Name}' ({DescribeEntryForReport(entry)}): {condReason ?? "no se pudo entregar"}");
+                            }
                         }
                         else
                         {
@@ -2343,7 +2398,10 @@ namespace PautaDinamicaApp.ViewModels
                 catch (Exception ex)
                 {
                     failedCount++;
-                    MessageBoxHelper.Show($"Error al enviar el correo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    if (batch)
+                        failureDetails.Add($"• {DescribeEntryForReport(entry)}: {ex.Message}");
+                    else
+                        MessageBoxHelper.Show($"Error al enviar el correo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
 
@@ -2368,11 +2426,16 @@ namespace PautaDinamicaApp.ViewModels
                     try
                     {
                         entryPdfPaths.TryGetValue(entry, out string? pdfPath);
-                        bool condSent = _emailService.SendConditionalEmail(globalSettings, CurrentPauta, rule, entry, fieldDefinitions, pdfPath, silent: false);
+                        bool askBatch = matched.Count > 1;
+                        bool condSent = _emailService.SendConditionalEmail(globalSettings, CurrentPauta, rule, entry, fieldDefinitions, pdfPath, silent: askBatch, out string? askReason);
                         if (condSent) conditionalCount++;
-                        else conditionalFailedCount++;
+                        else
+                        {
+                            conditionalFailedCount++;
+                            failureDetails.Add($"• adicional '{rule.Name}' ({DescribeEntryForReport(entry)}): {askReason ?? "no se pudo entregar"}");
+                        }
 
-                        if (matched.Count > 1)
+                        if (askBatch)
                         {
                             await System.Threading.Tasks.Task.Delay(800);
                         }
@@ -2380,7 +2443,10 @@ namespace PautaDinamicaApp.ViewModels
                     catch (Exception ex)
                     {
                         conditionalFailedCount++;
-                        MessageBoxHelper.Show($"Error al enviar el correo adicional '{rule.Name}': {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        if (matched.Count > 1)
+                            failureDetails.Add($"• adicional '{rule.Name}' ({DescribeEntryForReport(entry)}): {ex.Message}");
+                        else
+                            MessageBoxHelper.Show($"Error al enviar el correo adicional '{rule.Name}': {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -2399,6 +2465,19 @@ namespace PautaDinamicaApp.ViewModels
                     {
                         msg += $" ⚠️ {conditionalFailedCount} no se pudieron procesar (destinatario vacío).";
                     }
+                }
+
+                if (failureDetails.Any())
+                {
+                    int shown = Math.Min(8, failureDetails.Count);
+                    msg += "\n\n❌ Detalle de fallos:\n" + string.Join("\n", failureDetails.Take(shown));
+                    if (failureDetails.Count > shown)
+                        msg += $"\n...y {failureDetails.Count - shown} más.";
+                }
+
+                if (sentWithoutPdf > 0)
+                {
+                    msg += $"\n\n⚠️ {sentWithoutPdf} correo(s) se abrieron sin el PDF adjunto (no se pudo generar).";
                 }
 
                 // Determinar el método efectivo para el aviso de adjuntos
@@ -2442,7 +2521,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             var selected = Records.Where(r => r.IsSelected).ToList();
             if (!selected.Any()) return;
-            if (MessageBoxHelper.ShowNonCritical($"¿Eliminar {selected.Count}?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show($"¿Eliminar {selected.Count}?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 bool wasEditingDeleted = SelectedRecord != null && selected.Contains(SelectedRecord);
                 foreach (var rec in selected) Records.Remove(rec);

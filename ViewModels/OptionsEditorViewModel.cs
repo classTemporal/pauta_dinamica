@@ -686,8 +686,8 @@ namespace PautaDinamicaApp.ViewModels
 
                         if (newOptions.Any())
                         {
-                            var result = MessageBoxHelper.ShowNonCritical($"Se encontraron {newOptions.Count} nuevas opciones. ¿Desea agregarlas?",
-                                "Importar Opciones", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                            var result = MessageBoxHelper.Show($"Se encontraron {newOptions.Count} nuevas opciones. ¿Desea agregarlas?",
+                                "Importar Opciones", MessageBoxButton.YesNo, MessageBoxImage.Question, true);
 
                             if (result == MessageBoxResult.Yes)
                             {
