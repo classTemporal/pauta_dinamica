@@ -413,20 +413,7 @@
                                             ToolTip="Insertar fecha en el asunto"/>
                                 </Grid>
 
-                                <Grid Margin="0,0,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Cuerpo:" Style="{StaticResource LabelStyle}" FontSize="12" VerticalAlignment="Center"/>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding AttachmentSummary}" VerticalAlignment="Center" Margin="0,0,8,0"
-                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap"/>
-                                        <Button Content="📎 Adjuntos" Command="{Binding ConfigureAttachmentsCommand}"
-                                                Style="{StaticResource GhostButton}" Height="30" Padding="10,0"
-                                                ToolTip="Elegir qué adjuntos se envían con este correo principal (PDF y campos de adjunto)"/>
-                                    </StackPanel>
-                                </Grid>
+                                <TextBlock Text="Cuerpo:" Style="{StaticResource LabelStyle}" FontSize="12"/>
 
                                 <!-- Botones de inserción de marcadores dinámicos -->
                                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
@@ -446,7 +433,7 @@
                                     </WrapPanel>
                                 </Border>
 
-                                <Grid Margin="0,0,0,20">
+                                <Grid Margin="0,0,0,0">
                                     <!-- MAILTO: cuerpo en texto plano -->
                                     <TextBox x:Name="EmailBodyTextBox"
                                              Text="{Binding SelectedPauta.EmailBodyTemplate}"
@@ -494,6 +481,13 @@
                                         </Thumb.Template>
                                     </Thumb>
                                 </Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,20">
+                                    <Button Content="📎 Elegir archivos a enviar" Command="{Binding ConfigureAttachmentsCommand}"
+                                            Style="{StaticResource GhostButton}" Height="30" Padding="10,0"
+                                            ToolTip="Elige qué archivos (PDF del reporte y campos de adjunto) se envían con este correo principal"/>
+                                    <TextBlock Text="{Binding AttachmentSummary}" VerticalAlignment="Center" Margin="10,0,0,0"
+                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
                                 <Separator Background="{DynamicResource BorderBrush}" Margin="0,5,0,20"/>
 
                                 <TextBlock Text="Correos Adicionales por Condición" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,20,0,8" Padding="0,0,0,3" LineHeight="24"/>
@@ -618,11 +612,11 @@
                                                                 </editor:NativeRichEditor.Style>
                                                             </editor:NativeRichEditor>
                                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,0">
-                                                                <Button Content="📎 Adjuntos"
+                                                                <Button Content="📎 Elegir archivos a enviar"
                                                                         Command="{Binding Data.ConfigureRuleAttachmentsCommand, Source={StaticResource Proxy}}"
                                                                         CommandParameter="{Binding}"
                                                                         Style="{StaticResource GhostButton}" Height="30" Padding="10,0"
-                                                                        ToolTip="Elegir qué adjuntos se envían con este correo adicional (PDF y campos de adjunto). Solo afecta a este correo."/>
+                                                                        ToolTip="Elige qué archivos (PDF del reporte y campos de adjunto) se envían con este correo adicional. Solo afecta a este correo."/>
                                                                 <TextBlock Text="{Binding AttachmentSummary}" VerticalAlignment="Center" Margin="10,0,0,0"
                                                                            FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap"/>
                                                             </StackPanel>
