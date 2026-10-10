@@ -921,6 +921,19 @@ namespace PautaDinamicaApp.ViewModels
             foreach (Match match in matches)
             {
                 string tag = match.Groups[1].Value;
+
+                // Los tokens de fecha dinámica ([Hoy], [Semana], [Semana:Sab], [Mes],
+                // [Año], [Rango], [Rango:7d]...) no son campos: se validan aparte.
+                if (TryMatchDynamicDateTag(tag, out string? dateError))
+                {
+                    if (dateError != null)
+                    {
+                        error = $"{dateError} (campo {context})";
+                        return false;
+                    }
+                    continue;
+                }
+
                 if (!validLabels.Contains(tag))
                 {
                     error = $"La etiqueta '[{tag}]' en el campo {context} no corresponde a ningún campo existente.";
@@ -928,6 +941,60 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
             return true;
+        }
+
+        /// <summary>
+        /// Determina si una etiqueta es un token de fecha dinámica.
+        /// Devuelve <c>true</c> si lo es (válido o no); <paramref name="error"/> describe
+        /// el problema cuando parece un token pero está mal formado (ej: día inválido
+        /// en <c>[Semana:X]</c> o parámetro no reconocido en <c>[Rango:...]</c>).
+        /// </summary>
+        private static bool TryMatchDynamicDateTag(string tag, out string? error)
+        {
+            error = null;
+            string t = (tag ?? "").Trim();
+
+            if (t.Equals("Hoy", StringComparison.OrdinalIgnoreCase) ||
+                t.Equals("Semana", StringComparison.OrdinalIgnoreCase) ||
+                t.Equals("Mes", StringComparison.OrdinalIgnoreCase) ||
+                t.Equals("Año", StringComparison.OrdinalIgnoreCase) ||
+                t.Equals("Anio", StringComparison.OrdinalIgnoreCase) ||
+                t.Equals("Rango", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (t.StartsWith("Semana:", StringComparison.OrdinalIgnoreCase))
+            {
+                string day = t.Substring("Semana:".Length).Trim();
+                try
+                {
+                    DateTokenService.ParseDayEs(day);
+                    return true;
+                }
+                catch (FormatException)
+                {
+                    error = $"El día '{day}' no es válido. Use Lun, Mar, Mie, Jue, Vie, Sab o Dom (ej: [Semana:Sab])";
+                    return true;
+                }
+            }
+
+            if (t.StartsWith("Rango:", StringComparison.OrdinalIgnoreCase))
+            {
+                string param = t.Substring("Rango:".Length);
+                try
+                {
+                    new DateTokenService().RangoParam(param);
+                    return true;
+                }
+                catch (FormatException ex)
+                {
+                    error = ex.Message;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void OpenHelp()
