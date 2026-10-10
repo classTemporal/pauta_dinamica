@@ -6,7 +6,7 @@ using WMedia = System.Windows.Media;
 
 namespace PautaDinamicaApp.Views.HtmlEditor
 {
-    public partial class NativeRichEditor : System.Windows.Controls.UserControl
+    public partial class NativeRichEditor : System.Windows.Controls.UserControl, IHtmlEditor
     {
         private bool _syncing;
         private bool _dirty;
@@ -67,6 +67,20 @@ namespace PautaDinamicaApp.Views.HtmlEditor
             EditorBox.CaretPosition.InsertTextInRun(text);
             EditorBox.Focus();
             Flush();
+        }
+
+        /// <inheritdoc/>
+        public System.Threading.Tasks.Task FlushAsync()
+        {
+            Flush();
+            return System.Threading.Tasks.Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public System.Threading.Tasks.Task InsertTextAtCaretAsync(string text)
+        {
+            InsertTextAtCaret(text);
+            return System.Threading.Tasks.Task.CompletedTask;
         }
 
         private void EditorBox_TextChanged(object s, WControls.TextChangedEventArgs e)

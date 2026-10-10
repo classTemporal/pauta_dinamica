@@ -99,6 +99,17 @@
                                               Margin="5,0,0,0" 
                                               VerticalAlignment="Center" 
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+
+                            <TextBox x:Name="PART_EditableTextBox"
+                                     Grid.Column="0"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Foreground="{TemplateBinding Foreground}"
+                                     FontSize="{TemplateBinding FontSize}"
+                                     IsReadOnly="{TemplateBinding IsReadOnly}"
+                                     Visibility="Collapsed" />
                             
                             <Path x:Name="Arrow" 
                                   Grid.Column="1" 
@@ -123,6 +134,10 @@
                         </Trigger>
                         <Trigger Property="IsDropDownOpen" Value="true">
                             <Setter TargetName="Arrow" Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEditable" Value="true">
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

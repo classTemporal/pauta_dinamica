@@ -164,6 +164,17 @@
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
 
+                        <!-- Caja de texto para combos editables (IsEditable). Sin ella el Text no se muestra. -->
+                        <TextBox x:Name="PART_EditableTextBox"
+                                 Margin="{TemplateBinding Padding}"
+                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Foreground="{TemplateBinding Foreground}"
+                                 FontSize="{TemplateBinding FontSize}"
+                                 IsReadOnly="{TemplateBinding IsReadOnly}"
+                                 Visibility="Collapsed" />
+
                         <Popup x:Name="Popup"
                                Placement="Bottom"
                                IsOpen="{TemplateBinding IsDropDownOpen}"
@@ -194,6 +205,10 @@
                         <Trigger Property="IsFocused" Value="True">
                             <Setter TargetName="ToggleButton" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             <Setter TargetName="ToggleButton" Property="BorderThickness" Value="1.5"/>
+                        </Trigger>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed"/>
                         </Trigger>
                         <DataTrigger Binding="{Binding IsValid, FallbackValue=True}" Value="False">
                             <Setter TargetName="ToggleButton" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>

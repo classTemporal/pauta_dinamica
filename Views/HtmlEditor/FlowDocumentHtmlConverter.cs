@@ -198,7 +198,10 @@ namespace PautaDinamicaApp.Views.HtmlEditor
         {
             int totalW = TableTotalWidth(table);
             string tableBg = BrushToHex((table.Background as SolidColorBrush)?.Color);
-            sb.Append("<table border=\"1\" cellpadding=\"4\" cellspacing=\"0\"");
+            // El borde se preserva como está en el documento: las tablas pegadas sin
+            // bordes (ej: firmas) no deben volver con bordes al guardar/recargar.
+            bool bordered = TableHasVisibleBorders(table);
+            sb.Append($"<table border=\"{(bordered ? "1" : "0")}\" cellpadding=\"4\" cellspacing=\"0\"");
             if (totalW > 0) sb.Append($" width=\"{totalW}\"");
             if (!string.IsNullOrEmpty(tableBg)) sb.Append($" bgcolor=\"{tableBg}\"");
             sb.Append(">");
@@ -220,15 +223,16 @@ namespace PautaDinamicaApp.Views.HtmlEditor
                     foreach (TableCell cell in row.Cells)
                     {
                         int colIdx = row.Cells.IndexOf(cell);
-                        int cellW = ColumnWidth(table, colIdx);
+                        string cellW = ColumnWidthAttr(table, colIdx);
+                        bool widthPx = !string.IsNullOrEmpty(cellW) && !cellW.EndsWith("*");
                         string cellBg = BrushToHex((cell.Background as SolidColorBrush)?.Color);
                         sb.Append(header ? "<th" : "<td");
-                        if (cellW > 0) sb.Append($" width=\"{cellW}\"");
+                        if (!string.IsNullOrEmpty(cellW)) sb.Append($" width=\"{cellW}\"");
                         if (!string.IsNullOrEmpty(cellBg)) sb.Append($" bgcolor=\"{cellBg}\"");
-                        if (cellW > 0 || !string.IsNullOrEmpty(cellBg))
+                        if (widthPx || !string.IsNullOrEmpty(cellBg))
                         {
                             sb.Append(" style=\"");
-                            if (cellW > 0) sb.Append($"width:{cellW}px;");
+                            if (widthPx) sb.Append($"width:{cellW}px;");
                             if (!string.IsNullOrEmpty(cellBg)) sb.Append($"background-color:{cellBg};");
                             sb.Append("\"");
                         }
@@ -247,6 +251,20 @@ namespace PautaDinamicaApp.Views.HtmlEditor
         private static string? BrushToHex(Color? c)
             => c == null ? null : $"#{c.Value.R:X2}{c.Value.G:X2}{c.Value.B:X2}";
 
+        /// <summary>Indica si la tabla muestra bordes (propios o en alguna celda).</summary>
+        private static bool TableHasVisibleBorders(Table table)
+        {
+            if (IsThicknessVisible(table.BorderThickness)) return true;
+            foreach (TableRowGroup group in table.RowGroups)
+                foreach (TableRow row in group.Rows)
+                    foreach (TableCell cell in row.Cells)
+                        if (IsThicknessVisible(cell.BorderThickness)) return true;
+            return false;
+        }
+
+        private static bool IsThicknessVisible(Thickness t)
+            => t.Left > 0.01 || t.Top > 0.01 || t.Right > 0.01 || t.Bottom > 0.01;
+
         private static int TableTotalWidth(Table table)
         {
             int total = 0;
@@ -255,9 +273,19 @@ namespace PautaDinamicaApp.Views.HtmlEditor
             return total;
         }
 
-        private static int ColumnWidth(Table table, int idx)
-            => (idx >= 0 && idx < table.Columns.Count && table.Columns[idx].Width.IsAbsolute)
-                ? (int)table.Columns[idx].Width.Value : 0;
+        /// <summary>
+        /// Ancho de columna para el HTML: píxeles ("200") si es absoluto,
+        /// proporción ("2*") si es estrella, vacío si es automático.
+        /// </summary>
+        private static string ColumnWidthAttr(Table table, int idx)
+        {
+            if (idx < 0 || idx >= table.Columns.Count) return "";
+            var w = table.Columns[idx].Width;
+            if (w.IsAbsolute) return ((int)w.Value).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (w.IsStar && w.Value > 0)
+                return w.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "*";
+            return "";
+        }
 
         private static int RowHeight(TableRow row)
             => row.Tag is int h ? h : (row.Tag is string s && int.TryParse(s, out int v) ? v : 0);
@@ -342,6 +370,17 @@ namespace PautaDinamicaApp.Views.HtmlEditor
                         if (link.NavigateUri != null) sb.Append("</a>");
                         break;
 
+                    case Span span:
+                        // Word/Outlook envuelven el texto pegado en Span (a veces con
+                        // formato propio): sin este caso todo ese texto se perdía al
+                        // guardar/enviar, quedando solo la estructura de las tablas.
+                        // Va después de Bold/Italic/Underline/Hyperlink porque todos
+                        // derivan de Span.
+                        AppendSpanOpen(span, sb);
+                        SerializeInlines(span.Inlines, sb);
+                        AppendSpanClose(span, sb);
+                        break;
+
                     case LineBreak:
                         sb.Append("<br/>");
                         break;
@@ -360,6 +399,58 @@ namespace PautaDinamicaApp.Views.HtmlEditor
             }
         }
 
+        /// <summary>Abre las etiquetas de formato propio de un Span (misma regla que los Run).</summary>
+        private static void AppendSpanOpen(Span span, StringBuilder sb)
+        {
+            var solid = span.Foreground as SolidColorBrush;
+            bool colored = solid != null && !IsThemeDefault(solid.Color);
+
+            object localSize = span.ReadLocalValue(TextElement.FontSizeProperty);
+            bool sized = localSize is double fs && !double.IsNaN(fs) && fs > 0;
+
+            if ((colored && solid != null) || sized)
+            {
+                sb.Append("<span style=\"");
+                if (colored && solid != null)
+                    sb.Append("color:#")
+                      .Append(solid.Color.R.ToString("X2"))
+                      .Append(solid.Color.G.ToString("X2"))
+                      .Append(solid.Color.B.ToString("X2"))
+                      .Append(';');
+                if (sized)
+                    sb.Append("font-size:").Append(((double)localSize).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)).Append("px;");
+                sb.Append("\">");
+            }
+
+            if (span.FontWeight == FontWeights.Bold) sb.Append("<b>");
+            if (span.FontStyle == FontStyles.Italic) sb.Append("<i>");
+            if (HasUnderline(span)) sb.Append("<u>");
+            if (HasStrikethrough(span)) sb.Append("<strike>");
+        }
+
+        /// <summary>Cierra, en orden inverso, las etiquetas abiertas por <see cref="AppendSpanOpen"/>.</summary>
+        private static void AppendSpanClose(Span span, StringBuilder sb)
+        {
+            var solid = span.Foreground as SolidColorBrush;
+            bool colored = solid != null && !IsThemeDefault(solid.Color);
+            object localSize = span.ReadLocalValue(TextElement.FontSizeProperty);
+            bool sized = localSize is double fs && !double.IsNaN(fs) && fs > 0;
+
+            if (HasStrikethrough(span)) sb.Append("</strike>");
+            if (HasUnderline(span)) sb.Append("</u>");
+            if (span.FontStyle == FontStyles.Italic) sb.Append("</i>");
+            if (span.FontWeight == FontWeights.Bold) sb.Append("</b>");
+            if ((colored && solid != null) || sized) sb.Append("</span>");
+        }
+
+        private static bool HasUnderline(Inline element)
+            => element.TextDecorations != null
+               && element.TextDecorations.Contains(TextDecorations.Underline[0]);
+
+        private static bool HasStrikethrough(Inline element)
+            => element.TextDecorations != null
+               && element.TextDecorations.Contains(TextDecorations.Strikethrough[0]);
+
         private static bool IsThemeDefault(Color c)
         {
             bool black = c.R < 40 && c.G < 40 && c.B < 40;
@@ -369,9 +460,23 @@ namespace PautaDinamicaApp.Views.HtmlEditor
 
         private static string ImageWidthAttr(UIElement element)
         {
-            if (element is System.Windows.Controls.Image img
-                && !double.IsNaN(img.Width) && img.Width > 0)
-                return $" width=\"{(int)img.Width}\" style=\"width:{(int)img.Width}px;height:auto;\"";
+            if (element is System.Windows.Controls.Image img)
+            {
+                // Ancho explícito (imagen insertada con tamaño elegido).
+                if (!double.IsNaN(img.Width) && img.Width > 0)
+                    return $" width=\"{(int)img.Width}\" style=\"width:{(int)img.Width}px;height:auto;\"";
+                // Sin ancho explícito (imagen pegada): usar su tamaño natural en DIPs
+                // para que al recargar no se encoja ni la recorte una columna vecina.
+                try
+                {
+                    if (img.Source is BitmapImage bmp && bmp.PixelWidth > 0 && bmp.Width > 0)
+                    {
+                        int w = (int)bmp.Width;
+                        return $" width=\"{w}\" style=\"width:{w}px;height:auto;\"";
+                    }
+                }
+                catch (Exception) { /* tamaño no disponible: sin atributo */ }
+            }
             return string.Empty;
         }
 
@@ -436,6 +541,9 @@ namespace PautaDinamicaApp.Views.HtmlEditor
             private TableRowGroup? _rowGroup;
             private TableRow? _row;
             private TableCell? _cell;
+            // La tabla en curso muestra bordes (atributo border del <table>).
+            // Ausente = con bordes, para no cambiar las plantillas ya guardadas.
+            private bool _tableBordered = true;
 
             // Evita que un mismo párrafo se inserte dos veces (p.ej. el de un <li>,
             // que el handler ya colgó del ListItem al abrirlo).
@@ -561,6 +669,8 @@ namespace PautaDinamicaApp.Views.HtmlEditor
                 FlushPara();
                 _table = new Table();
                 _table.CellSpacing = 0;
+                string? border = GetAttr(m, "border");
+                _tableBordered = string.IsNullOrWhiteSpace(border) || border.Trim() != "0";
                 string? bg = GetAttr(m, "bgcolor") ?? ParseBgFromStyle(GetAttr(m, "style") ?? "");
                 if (!string.IsNullOrWhiteSpace(bg))
                     _table.Background = ParseColor(bg, null);
@@ -589,6 +699,7 @@ namespace PautaDinamicaApp.Views.HtmlEditor
                 _table = null;
                 _rowGroup = null;
                 _row = null;
+                _tableBordered = true;
             }
 
             /// <summary>Lee un atributo por nombre (sin distinguir mayúsculas) de una etiqueta.</summary>
@@ -618,6 +729,27 @@ namespace PautaDinamicaApp.Views.HtmlEditor
             {
                 var m = Regex.Match(style, @"(?:^|;)\s*background(?:-color)?\s*:\s*([^;]+)", RegexOptions.IgnoreCase);
                 return m.Success ? m.Groups[1].Value.Trim() : null;
+            }
+
+            /// <summary>
+            /// Lee un ancho de columna/celda del HTML: píxeles ("200", "200px") o
+            /// proporción ("2*", formato propio para no perder columnas estrella).
+            /// Null si está vacío o no se reconoce.
+            /// </summary>
+            private static GridLength? ParseColumnWidth(string? value)
+            {
+                if (string.IsNullOrWhiteSpace(value)) return null;
+                string v = value.Trim();
+                if (v.EndsWith("*"))
+                {
+                    string num = v.Substring(0, v.Length - 1).Trim();
+                    if (double.TryParse(num, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double star) && star > 0)
+                        return new GridLength(star, GridUnitType.Star);
+                    return null;
+                }
+                if (int.TryParse(v.TrimEnd('p', 'x'), out int px) && px > 0)
+                    return new GridLength(px);
+                return null;
             }
 
             private static double ParseFontSize(string? style)
@@ -772,9 +904,9 @@ namespace PautaDinamicaApp.Views.HtmlEditor
                     case "col":
                         if (_table != null && !closing)
                         {
-                            string? cw = GetAttr(m, "width");
-                            if (!string.IsNullOrWhiteSpace(cw) && int.TryParse(cw.Trim().TrimEnd('p', 'x'), out int colw) && colw > 0)
-                                _table.Columns.Add(new TableColumn { Width = new GridLength(colw) });
+                            GridLength? colWidth = ParseColumnWidth(GetAttr(m, "width"));
+                            if (colWidth != null)
+                                _table.Columns.Add(new TableColumn { Width = colWidth.Value });
                         }
                         break;
 
@@ -791,19 +923,24 @@ namespace PautaDinamicaApp.Views.HtmlEditor
                             else
                             {
                                 _cell = new TableCell();
-                                _cell.BorderBrush = System.Windows.Media.Brushes.Gray;
-                                _cell.BorderThickness = new Thickness(1);
+                                // Los bordes solo si la tabla los trae (border="1" o ausente);
+                                // una tabla pegada sin bordes debe seguir sin bordes.
+                                if (_tableBordered)
+                                {
+                                    _cell.BorderBrush = System.Windows.Media.Brushes.Gray;
+                                    _cell.BorderThickness = new Thickness(1);
+                                }
                                 _cell.Padding = new Thickness(4);
                                 string? cbg = GetAttr(m, "bgcolor") ?? ParseBgFromStyle(GetAttr(m, "style") ?? "");
                                 if (!string.IsNullOrWhiteSpace(cbg))
                                     _cell.Background = ParseColor(cbg, null);
-                                string? cwd = GetAttr(m, "width");
-                                if (!string.IsNullOrWhiteSpace(cwd) && int.TryParse(cwd.Trim().TrimEnd('p', 'x'), out int cellw) && cellw > 0 && _table != null)
+                                GridLength? cellWidth = ParseColumnWidth(GetAttr(m, "width"));
+                                if (cellWidth != null && _table != null)
                                 {
                                     int idx = _row.Cells.Count;
                                     while (_table.Columns.Count <= idx)
                                         _table.Columns.Add(new TableColumn());
-                                    _table.Columns[idx].Width = new GridLength(cellw);
+                                    _table.Columns[idx].Width = cellWidth.Value;
                                 }
                                 _row.Cells.Add(_cell);
                                 _para = new Paragraph();

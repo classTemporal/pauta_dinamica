@@ -1,0 +1,143 @@
+<UserControl x:Class="PautaDinamicaApp.Views.HtmlEditor.WebView2HtmlEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             Background="{DynamicResource CardBackgroundBrush}"
+             Foreground="{DynamicResource TextBrush}">
+    <UserControl.Resources>
+        <!-- Mismos estilos que el editor nativo para verse idéntico -->
+        <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">
+            <Setter Property="MinWidth" Value="32"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style x:Key="TableToolButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="9,0"/>
+            <Setter Property="Margin" Value="3,1"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style x:Key="DangerToolButton" TargetType="Button" BasedOn="{StaticResource DangerButton}">
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Margin" Value="8,1,3,1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="ToolLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="8,0,2,0"/>
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{DynamicResource BackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0"
+                CornerRadius="6,6,0,0" Padding="4">
+            <WrapPanel VerticalAlignment="Center">
+                <Button Style="{StaticResource ToolButton}" Content="B" FontWeight="Bold" ToolTip="Negrita" Click="Bold_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="I" FontStyle="Italic" ToolTip="Cursiva" Click="Italic_Click"/>
+                <Button Style="{StaticResource ToolButton}" ToolTip="Subrayado" Click="Underline_Click">
+                    <TextBlock Text="U" TextDecorations="Underline" Foreground="{DynamicResource TextBrush}"/>
+                </Button>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Texto:"/>
+                <Button Style="{StaticResource ToolButton}" Content="🎨 Color fuente..." ToolTip="Elegir color de texto" Click="ForeColor_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="A−" ToolTip="Reducir tamaño de letra" Click="FontDown_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="A+" ToolTip="Aumentar tamaño de letra" Click="FontUp_Click"/>
+                <ComboBox x:Name="FontFamilyBox" Width="150" Height="30" Margin="4,0" FontSize="12"
+                          ToolTip="Tipo de fuente (del sistema)" SelectionChanged="FontFamilyBox_SelectionChanged"/>
+                <ComboBox x:Name="FontSizeBox" Width="62" Height="30" Margin="0,0" FontSize="12" IsEditable="False"
+                          ToolTip="Tamaño de fuente en puntos" SelectionChanged="FontSizeBox_SelectionChanged"
+                          DropDownOpened="FontSizeBox_DropDownOpened" DropDownClosed="FontSizeBox_DropDownClosed"
+                          GotFocus="FontSizeBox_GotFocus" KeyDown="FontSizeBox_KeyDown"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <Button Style="{StaticResource ToolButton}" Content="•" ToolTip="Viñetas" Click="Bullets_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="1." ToolTip="Numerada" Click="Numbers_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <Button Style="{StaticResource ToolButton}" Content="🔗 Enlace" ToolTip="Insertar enlace" Click="Link_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="✕" ToolTip="Quitar formato" Click="ClearFormat_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Interlineado:"/>
+                <Button Style="{StaticResource ToolButton}" Content="1.0" ToolTip="Interlineado sencillo" Click="LineSingle_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="1.5" ToolTip="Interlineado medio" Click="LineMiddle_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="2.0" ToolTip="Interlineado doble" Click="LineDouble_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="Otro…" ToolTip="Interlineado personalizado (0.5 a 3)" Click="LineCustom_Click"/>
+            </WrapPanel>
+        </Border>
+        <Border Grid.Row="1" Background="{DynamicResource BackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,0" Padding="4">
+            <WrapPanel VerticalAlignment="Center">
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Tabla:"/>
+                <Button Style="{StaticResource TableToolButton}" Content="2×2" ToolTip="Insertar tabla de 2×2" Click="Table2x2_Click"/>
+                <Button Style="{StaticResource TableToolButton}" Content="3×2" ToolTip="Insertar tabla de 3×2" Click="Table3x2_Click"/>
+                <Button Style="{StaticResource TableToolButton}" Content="3×3" ToolTip="Insertar tabla de 3×3" Click="Table3x3_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Fila:"/>
+                <Button Style="{StaticResource TableToolButton}" Content="+Fila" ToolTip="Insertar fila debajo" Click="AddRow_Click"/>
+                <Button Style="{StaticResource TableToolButton}" Content="−Fila" ToolTip="Eliminar fila actual" Click="DelRow_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Columna:"/>
+                <Button Style="{StaticResource TableToolButton}" Content="+Col" ToolTip="Insertar columna a la derecha" Click="AddCol_Click"/>
+                <Button Style="{StaticResource TableToolButton}" Content="−Col" ToolTip="Eliminar columna actual" Click="DelCol_Click"/>
+                <Button Style="{StaticResource TableToolButton}" Content="↓ Salir" ToolTip="Salir de la tabla (escribir debajo)" Click="ExitTable_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Ancho col:"/>
+                <Button Style="{StaticResource TableToolButton}" Content="−" ToolTip="Angostar columna actual" Click="ColShrink_Click"/>
+                <Button Style="{StaticResource TableToolButton}" Content="+" ToolTip="Ensanchar columna actual" Click="ColGrow_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Alto fila:"/>
+                <Button Style="{StaticResource TableToolButton}" Content="−" ToolTip="Reducir alto de la fila actual" Click="RowShrink_Click"/>
+                <Button Style="{StaticResource TableToolButton}" Content="+" ToolTip="Aumentar alto de la fila actual" Click="RowGrow_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Borde tabla:"/>
+                <ComboBox x:Name="TableBorderBox" Width="105" Height="30" Margin="4,0" FontSize="12"
+                          ToolTip="Tipo de borde de la tabla actual" SelectionChanged="TableBorderBox_SelectionChanged"
+                          DropDownOpened="TableBorderBox_DropDownOpened"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Grosor:"/>
+                <Button Style="{StaticResource TableToolButton}" Content="−" ToolTip="Adelgazar borde de la tabla (1 a 8 px)" Click="BorderThin_Click"/>
+                <Button Style="{StaticResource TableToolButton}" Content="+" ToolTip="Engrosar borde de la tabla (1 a 8 px)" Click="BorderThick_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <Button Style="{StaticResource DangerToolButton}" Content="🗑 Eliminar tabla" ToolTip="Eliminar la tabla actual (esta acción no se puede deshacer)" Click="DeleteTable_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Fondo celda:"/>
+                <Button Style="{StaticResource TableToolButton}" Content="🎨 Fondo…" ToolTip="Color de fondo de la celda actual" Click="CellBg_Click"/>
+                <Button Style="{StaticResource TableToolButton}" Content="Sin fondo" ToolTip="Quitar fondo de la celda actual" Click="CellBgClear_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+                <Button Style="{StaticResource TableToolButton}" Content="🖼 Insertar imagen…" ToolTip="Insertar imagen desde archivo (se incrusta en el correo)" Click="InsertImage_Click"/>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Tamaño imagen:"/>
+                <Button Style="{StaticResource TableToolButton}" Content="Imagen −" ToolTip="Reducir imagen seleccionada (clic en la imagen primero)" Click="ImageShrink_Click"/>
+                <Button Style="{StaticResource TableToolButton}" Content="Imagen +" ToolTip="Agrandar imagen seleccionada (clic en la imagen primero)" Click="ImageGrow_Click"/>
+            </WrapPanel>
+        </Border>
+
+        <Border Grid.Row="2" x:Name="EditorArea" Height="500" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0" CornerRadius="6,6,0,0" Background="White">
+            <wv2:WebView2 x:Name="Web" />
+        </Border>
+        <!-- Tirador FUERA del área web: sobre el HWND de WebView2 ningún control WPF
+             recibe el mouse (airspace), por eso el grip anterior no respondía. -->
+        <Border Grid.Row="3" Background="{DynamicResource BackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1"
+                CornerRadius="0,0,6,6" Padding="0,1,6,3">
+            <Thumb Width="22" Height="14" HorizontalAlignment="Right" Cursor="SizeNS"
+                   DragDelta="EditorThumb_DragDelta" Opacity="0.8" ToolTip="Arrastrar para cambiar la altura">
+                <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Background="Transparent">
+                            <Path Data="M2,12 L16,12 M4,8 L14,8 M7,4 L11,4" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Thumb.Template>
+            </Thumb>
+        </Border>
+    </Grid>
+</UserControl>

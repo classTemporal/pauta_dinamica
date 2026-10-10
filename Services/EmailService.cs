@@ -109,6 +109,31 @@ namespace PautaDinamicaApp.Services
         }
 
         /// <summary>
+        /// Resuelve el destinatario (To) para un registro sin enviar nada.
+        /// Misma lógica que <see cref="SendEmail"/> y <see cref="SendConditionalEmail"/>:
+        /// Directorio de Contactos por detección automática, con respaldo en la plantilla "Para".
+        /// </summary>
+        /// <param name="toTemplateOverride">Plantilla "Para" propia de la regla adicional;
+        /// null para usar la del correo principal.</param>
+        /// <returns>Destinatario resuelto (vacío si no se pudo determinar).</returns>
+        public string ResolveRecipient(PautaSchema? pauta, string? toTemplateOverride, AuditEntry entry, List<FieldDefinition> fields)
+        {
+            if (pauta == null) return "";
+            if (pauta.UseAutomatedRecipient && !string.IsNullOrWhiteSpace(pauta.EmailNameFieldId))
+            {
+                if (entry.Values.TryGetValue(pauta.EmailNameFieldId, out var nameVal) && nameVal != null)
+                {
+                    string nameText = nameVal.ToString()?.Trim() ?? "";
+                    var contact = pauta.RecipientContacts?.FirstOrDefault(c => string.Equals(c.Name?.Trim(), nameText, StringComparison.OrdinalIgnoreCase));
+                    if (contact != null && !string.IsNullOrWhiteSpace(contact.Email))
+                        return contact.Email.Trim();
+                }
+            }
+            string template = string.IsNullOrWhiteSpace(toTemplateOverride) ? pauta.EmailToTemplate : toTemplateOverride;
+            return (ProcessTemplate(template, entry, fields, pauta.EmailReplacementRules) ?? "").Trim();
+        }
+
+        /// <summary>
         /// Prepara y abre el correo en el cliente configurado (Outlook o mailto).
         /// Devuelve true si el correo fue entregado al cliente de forma exitosa.
         /// </summary>

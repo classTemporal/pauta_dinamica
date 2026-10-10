@@ -2176,6 +2176,62 @@ namespace PautaDinamicaApp.ViewModels
             return entry.Timestamp.ToString("dd/MM/yyyy HH:mm");
         }
 
+        /// <summary>
+        /// Agentes de los registros a procesar cuyo correo principal no se puede resolver
+        /// (ni por Directorio ni por plantilla "Para"). Vacío = todo enviable.
+        /// </summary>
+        private List<string> FindMissingPrincipalRecipients(List<AuditEntry> entries, List<FieldDefinition> fields)
+        {
+            var missing = new List<string>();
+            if (CurrentPauta == null) return missing;
+            foreach (var entry in entries)
+            {
+                if (string.IsNullOrWhiteSpace(_emailService.ResolveRecipient(CurrentPauta, null, entry, fields)))
+                    missing.Add(DescribeEntryForReport(entry));
+            }
+            return missing;
+        }
+
+        /// <summary>
+        /// Agentes sin destinatario resoluble para las reglas adicionales en modo Auto que
+        /// aplican a los registros a procesar. Se valida ANTES del envío para poder pausar.
+        /// </summary>
+        private List<string> FindMissingAutoAdditionalRecipients(List<AuditEntry> entries, List<FieldDefinition> fields, List<ConditionalEmailRule> rules)
+        {
+            var missing = new List<string>();
+            if (CurrentPauta == null) return missing;
+            foreach (var rule in rules.Where(r => r.Mode == ConditionalEmailMode.Auto))
+            {
+                foreach (var entry in entries)
+                {
+                    bool matches;
+                    try { matches = rule.Matches(entry.Values); }
+                    catch { matches = false; }
+                    if (!matches) continue;
+                    string toTemplate = string.IsNullOrWhiteSpace(rule.ToTemplate) ? null : rule.ToTemplate;
+                    if (string.IsNullOrWhiteSpace(_emailService.ResolveRecipient(CurrentPauta, toTemplate, entry, fields)))
+                        missing.Add($"{DescribeEntryForReport(entry)} (adicional '{rule.Name}')");
+                }
+            }
+            return missing;
+        }
+
+        /// <summary>
+        /// Separa los registros coincidentes de una regla adicional según tengan o no
+        /// destinatario resoluble (Directorio o plantilla "Para" propia/heredada).
+        /// </summary>
+        private void PartitionByConditionalRecipient(ConditionalEmailRule rule, List<AuditEntry> entries, List<FieldDefinition> fields, List<AuditEntry> sendable, List<AuditEntry> unresolvable)
+        {
+            string toTemplate = string.IsNullOrWhiteSpace(rule.ToTemplate) ? null : rule.ToTemplate;
+            foreach (var entry in entries)
+            {
+                if (CurrentPauta != null && !string.IsNullOrWhiteSpace(_emailService.ResolveRecipient(CurrentPauta, toTemplate, entry, fields)))
+                    sendable.Add(entry);
+                else
+                    unresolvable.Add(entry);
+            }
+        }
+
         private async void SendEmails(AuditEntry? singleEntry = null)
         {
             if (CurrentPauta == null)
@@ -2241,65 +2297,51 @@ namespace PautaDinamicaApp.ViewModels
             var globalSettings = _storageService.LoadSettings();
             var fieldDefinitions = _storageService.LoadConfiguration(CurrentPauta.Id);
 
-            // --- VALIDACIÓN DE CORREOS FALTANTES (Card 31) ---
-            // Si el envío es automático (UseAutomatedRecipient) y hay agentes sin correo asociado,
-            // mostrar un mensaje con opción de ir al directorio de contactos. Se re-valida en bucle
-            // cada vez que el usuario regresa del Directorio de Contactos con datos recién guardados.
-            while (CurrentPauta.UseAutomatedRecipient && !string.IsNullOrEmpty(CurrentPauta.EmailNameFieldId))
+            var activeConditionalRules = (CurrentPauta.ConditionalEmailRules ?? new System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule>())
+                .Where(r => r != null && !string.IsNullOrWhiteSpace(r.TriggerFieldId) && !string.IsNullOrWhiteSpace(r.TriggerValue))
+                .ToList();
+
+            // --- VALIDACIÓN DE CORREOS FALTANTES (principal + adicionales Auto) ---
+            // El envío se PAUSA hasta que el usuario agregue los correos faltantes en el
+            // Directorio de Contactos; al regresar se revalida en bucle con los datos
+            // recién guardados. Botones:
+            //   Sí = abrir el Directorio para agregarlos (pausar y reintentar),
+            //   No = enviar de todas formas (los fallos salen en el resumen final),
+            //   Cancelar = no enviar nada.
+            while (true)
             {
-                var contacts = CurrentPauta.RecipientContacts ?? new List<RecipientContact>();
-                var missingEmailAgents = new List<string>();
+                var missingPrincipal = FindMissingPrincipalRecipients(toProcess, fieldDefinitions);
+                var missingAuto = FindMissingAutoAdditionalRecipients(toProcess, fieldDefinitions, activeConditionalRules);
 
-                foreach (var entry in toProcess)
+                if (!missingPrincipal.Any() && !missingAuto.Any()) break;
+
+                var msgParts = new List<string>();
+                if (missingPrincipal.Any())
+                    msgParts.Add("Sin correo para el envío principal:\n\n" + string.Join("\n", missingPrincipal.Distinct().Select(a => $"• {a}")));
+                if (missingAuto.Any())
+                    msgParts.Add("Sin correo para envíos adicionales automáticos:\n\n" + string.Join("\n", missingAuto.Distinct().Select(a => $"• {a}")));
+                string msg = "No se puede enviar porque a los siguientes agentes les falta correo electrónico asociado:\n\n" +
+                             string.Join("\n\n", msgParts) +
+                             "\n\n¿Desea abrir el Directorio de Contactos para agregarlos ahora?\n\n" +
+                             "Sí = abrir el Directorio (el envío se pausa y se reintenta al regresar)\n" +
+                             "No = enviar de todas formas\n" +
+                             "Cancelar = no enviar nada";
+
+                var result = MessageBoxHelper.Show(msg, "Correos Faltantes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, true);
+                if (result == MessageBoxResult.Yes)
                 {
-                    string nameText = "";
-                    if (entry.Values.TryGetValue(CurrentPauta.EmailNameFieldId, out var nameVal) && nameVal != null)
-                    {
-                        nameText = nameVal.ToString()?.Trim() ?? "";
-                    }
-
-                    if (string.IsNullOrWhiteSpace(nameText))
-                    {
-                        // Sin nombre en el campo de origen: solo puede usarse la plantilla "Para".
-                        // Si tampoco produce destinatario, el envío de este registro fallaría.
-                        string fallbackTo = _emailService.ProcessTemplate(CurrentPauta.EmailToTemplate, entry, fieldDefinitions, CurrentPauta.EmailReplacementRules);
-                        if (string.IsNullOrWhiteSpace(fallbackTo))
-                        {
-                            missingEmailAgents.Add($"Registro del {entry.Timestamp:dd/MM/yyyy HH:mm} (sin nombre y sin plantilla \"Para\")");
-                        }
-                        continue;
-                    }
-
-                    var contact = contacts.FirstOrDefault(c => string.Equals(c.Name?.Trim(), nameText, StringComparison.OrdinalIgnoreCase));
-                    if (contact == null || string.IsNullOrWhiteSpace(contact.Email))
-                    {
-                        missingEmailAgents.Add(nameText);
-                    }
+                    // Pausar: abrir el Directorio de Contactos y volver a validar con los
+                    // datos recién guardados (evita enviar con contactos obsoletos en memoria).
+                    var win = new Views.EmailDirectoryWindow { DataContext = new ViewModels.SettingsViewModel(CurrentPauta.Id), Owner = System.Windows.Application.Current.MainWindow };
+                    win.ShowDialog();
+                    RefreshEmailConfigFromDisk();
+                    globalSettings = _storageService.LoadSettings();
+                    fieldDefinitions = _storageService.LoadConfiguration(CurrentPauta.Id);
+                    continue;
                 }
 
-                if (!missingEmailAgents.Any()) break;
-
-                if (missingEmailAgents.Any())
-                {
-                    string agentList = string.Join("\n", missingEmailAgents.Distinct().Select(a => $"• {a}"));
-                    string msg = $"No se puede enviar el correo porque los siguientes agentes no tienen correo electrónico asociado:\n\n{agentList}\n\n" +
-                                 "Diríjase al Directorio de Contactos para completar los correos.";
-
-                    var result = MessageBoxHelper.Show(msg, "Correos Faltantes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, true);
-                    if (result == MessageBoxResult.Yes) break; // Enviar de todas formas
-
-                    if (result == MessageBoxResult.No)
-                    {
-                        // Abrir el Directorio de Contactos y volver a validar con los datos
-                        // recién guardados (evita enviar con contactos obsoletos en memoria).
-                        var win = new Views.EmailDirectoryWindow { DataContext = new ViewModels.SettingsViewModel(CurrentPauta.Id), Owner = System.Windows.Application.Current.MainWindow };
-                        win.ShowDialog();
-                        RefreshEmailConfigFromDisk();
-                        continue;
-                    }
-
-                    return; // Cancelar: bloquear envío
-                }
+                if (result == MessageBoxResult.No) break; // Enviar de todas formas
+                return; // Cancelar: bloquear envío
             }
 
             if (toProcess.Count > 1)
@@ -2320,9 +2362,6 @@ namespace PautaDinamicaApp.ViewModels
             var failureDetails = new List<string>();
             var generatedPdfs = new List<string>();
             var entryPdfPaths = new Dictionary<AuditEntry, string?>();
-            var activeConditionalRules = (CurrentPauta.ConditionalEmailRules ?? new System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule>())
-                .Where(r => r != null && !string.IsNullOrWhiteSpace(r.TriggerFieldId) && !string.IsNullOrWhiteSpace(r.TriggerValue))
-                .ToList();
             var askMatches = new Dictionary<ConditionalEmailRule, List<AuditEntry>>();
 
             foreach (var entry in toProcess)
@@ -2399,26 +2438,65 @@ namespace PautaDinamicaApp.ViewModels
 
             // Preguntas agrupadas por regla (modo Ask): un solo diálogo por regla con
             // todos los registros coincidentes, en vez de un diálogo por registro.
+            // Antes de preguntar, se pausa si a algún coincidente le falta destinatario:
+            // se abre el Directorio, se revalida y solo se pregunta por los que sí
+            // tienen correo (los demás se reportan como omitidos, no como diálogo extra).
             foreach (var kvp in askMatches)
             {
                 var rule = kvp.Key;
                 var matched = kvp.Value;
                 if (matched.Count == 0) continue;
 
+                var sendable = new List<AuditEntry>();
+                var unresolvable = new List<AuditEntry>();
+                PartitionByConditionalRecipient(rule, matched, fieldDefinitions, sendable, unresolvable);
+
+                while (unresolvable.Any())
+                {
+                    string names = string.Join("\n", unresolvable.Select(e => $"• {DescribeEntryForReport(e)}").Distinct());
+                    var dirRes = MessageBoxHelper.Show(
+                        $"El correo adicional '{rule.Name}' no se puede enviar porque los siguientes agentes no tienen correo asociado:\n\n{names}\n\n¿Desea abrir el Directorio de Contactos para agregarlos? (el envío adicional se pausa y se reintenta al regresar)",
+                        "Correos Faltantes (adicional)",
+                        MessageBoxButton.YesNoCancel,
+                        MessageBoxImage.Warning,
+                        true);
+                    if (dirRes == MessageBoxResult.Yes)
+                    {
+                        var win = new Views.EmailDirectoryWindow { DataContext = new ViewModels.SettingsViewModel(CurrentPauta.Id), Owner = System.Windows.Application.Current.MainWindow };
+                        win.ShowDialog();
+                        RefreshEmailConfigFromDisk();
+                        globalSettings = _storageService.LoadSettings();
+                        fieldDefinitions = _storageService.LoadConfiguration(CurrentPauta.Id);
+                        sendable.Clear();
+                        unresolvable.Clear();
+                        PartitionByConditionalRecipient(rule, matched, fieldDefinitions, sendable, unresolvable);
+                        continue;
+                    }
+                    break; // No = seguir solo con los que sí tienen; Cancelar = omitir la regla
+                }
+
+                if (unresolvable.Any())
+                {
+                    conditionalFailedCount += unresolvable.Count;
+                    foreach (var entry in unresolvable)
+                        failureDetails.Add($"• adicional '{rule.Name}' ({DescribeEntryForReport(entry)}): omitido, sin destinatario (To vacío)");
+                }
+                if (!sendable.Any()) continue;
+
                 string triggerLabel = fieldDefinitions.FirstOrDefault(f => f.Id == rule.TriggerFieldId)?.Label ?? "campo";
                 var askRes = MessageBoxHelper.Show(
-                    $"{matched.Count} registro(s) coinciden con '{rule.Name}' ({triggerLabel} = '{rule.TriggerValue}').\n\n¿Desea enviar también esos {matched.Count} correo(s) adicional(es)?",
+                    $"{sendable.Count} registro(s) coinciden con '{rule.Name}' ({triggerLabel} = '{rule.TriggerValue}').\n\n¿Desea enviar también esos {sendable.Count} correo(s) adicional(es)?",
                     "Correo adicional",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
                 if (askRes != MessageBoxResult.Yes) continue;
 
-                foreach (var entry in matched)
+                foreach (var entry in sendable)
                 {
                     try
                     {
                         entryPdfPaths.TryGetValue(entry, out string? pdfPath);
-                        bool askBatch = matched.Count > 1;
+                        bool askBatch = sendable.Count > 1;
                         bool condSent = _emailService.SendConditionalEmail(globalSettings, CurrentPauta, rule, entry, fieldDefinitions, pdfPath, silent: askBatch, out string? askReason);
                         if (condSent) conditionalCount++;
                         else
@@ -2435,7 +2513,7 @@ namespace PautaDinamicaApp.ViewModels
                     catch (Exception ex)
                     {
                         conditionalFailedCount++;
-                        if (matched.Count > 1)
+                        if (sendable.Count > 1)
                             failureDetails.Add($"• adicional '{rule.Name}' ({DescribeEntryForReport(entry)}): {ex.Message}");
                         else
                             MessageBoxHelper.Show($"Error al enviar el correo adicional '{rule.Name}': {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);

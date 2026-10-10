@@ -94,12 +94,12 @@ namespace PautaDinamicaApp.Views
         /// </summary>
         public async System.Threading.Tasks.Task FlushHtmlBodyAsync()
         {
-            foreach (var ed in FindVisualChildren<HtmlEditor.NativeRichEditor>(this))
-                ed.Flush();
+            foreach (var ed in FindVisualChildren<HtmlEditor.IHtmlEditor>(this))
+                await ed.FlushAsync();
             await System.Threading.Tasks.Task.CompletedTask;
         }
 
-        private static System.Collections.Generic.IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+        private static System.Collections.Generic.IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : class
         {
             int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
             for (int i = 0; i < count; i++)
@@ -129,20 +129,20 @@ namespace PautaDinamicaApp.Views
             box.Focus();
         }
 
-        private void InsertFieldButton_Click(object sender, RoutedEventArgs e)
+        private async void InsertFieldButton_Click(object sender, RoutedEventArgs e)
         {
             string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);
             if (string.IsNullOrEmpty(placeholder)) return;
             if ((DataContext as ViewModels.SettingsViewModel)?.SelectedPauta?.EmailMethod
                 == Models.EmailMethod.Outlook)
             {
-                HtmlBodyEditor.InsertTextAtCaret(placeholder);
+                await HtmlBodyEditor.InsertTextAtCaretAsync(placeholder);
                 return;
             }
             InsertAtCaret(EmailBodyTextBox, placeholder);
         }
 
-        private void InsertDateButton_Click(object sender, RoutedEventArgs e)
+        private async void InsertDateButton_Click(object sender, RoutedEventArgs e)
         {
             var picked = Views.DateTokenPickerPopup.Pick(CurrentDynamicDates(), this);
             if (picked == null) return;
@@ -153,7 +153,7 @@ namespace PautaDinamicaApp.Views
 
             if (vm?.SelectedPauta?.EmailMethod == Models.EmailMethod.Outlook)
             {
-                HtmlBodyEditor.InsertTextAtCaret(picked.Value.Token);
+                await HtmlBodyEditor.InsertTextAtCaretAsync(picked.Value.Token);
                 return;
             }
             InsertAtCaret(EmailBodyTextBox, picked.Value.Token);
@@ -218,16 +218,16 @@ namespace PautaDinamicaApp.Views
             return cur;
         }
 
-        private void RuleBodyField_Click(object sender, RoutedEventArgs e)
+        private async void RuleBodyField_Click(object sender, RoutedEventArgs e)
         {
             var card = FindRuleCard((System.Windows.DependencyObject)sender);
             if (card == null) return;
             string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);
             if (string.IsNullOrEmpty(placeholder)) return;
-            foreach (var ed in FindVisualChildren<HtmlEditor.NativeRichEditor>(card))
+            foreach (var ed in FindVisualChildren<HtmlEditor.IHtmlEditor>(card))
                 if (ed.Visibility == System.Windows.Visibility.Visible)
                 {
-                    ed.InsertTextAtCaret(placeholder);
+                    await ed.InsertTextAtCaretAsync(placeholder);
                     return;
                 }
             foreach (var box in FindVisualChildren<System.Windows.Controls.TextBox>(card))
@@ -238,7 +238,7 @@ namespace PautaDinamicaApp.Views
                 }
         }
 
-        private void RuleBodyDate_Click(object sender, RoutedEventArgs e)
+        private async void RuleBodyDate_Click(object sender, RoutedEventArgs e)
         {
             var card = FindRuleCard((System.Windows.DependencyObject)sender);
             if (card == null) return;
@@ -249,10 +249,10 @@ namespace PautaDinamicaApp.Views
             if (picked.Value.Config != null && vm?.SelectedPauta != null)
                 vm.SelectedPauta.DynamicDates = picked.Value.Config;
 
-            foreach (var ed in FindVisualChildren<HtmlEditor.NativeRichEditor>(card))
+            foreach (var ed in FindVisualChildren<HtmlEditor.IHtmlEditor>(card))
                 if (ed.Visibility == System.Windows.Visibility.Visible)
                 {
-                    ed.InsertTextAtCaret(picked.Value.Token);
+                    await ed.InsertTextAtCaretAsync(picked.Value.Token);
                     return;
                 }
             foreach (var box in FindVisualChildren<System.Windows.Controls.TextBox>(card))

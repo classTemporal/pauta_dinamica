@@ -455,11 +455,11 @@
                                         </TextBox.Style>
                                     </TextBox>
 
-                                    <!-- OUTLOOK: cuerpo en HTML enriquecido (nativo) -->
-                                    <editor:NativeRichEditor x:Name="HtmlBodyEditor"
+                                    <!-- OUTLOOK: cuerpo en HTML enriquecido (WebView2 con respaldo nativo) -->
+                                    <editor:HybridHtmlEditor x:Name="HtmlBodyEditor"
                                              Html="{Binding SelectedPauta.EmailBodyHtmlTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                                        <editor:NativeRichEditor.Style>
-                                            <Style TargetType="editor:NativeRichEditor">
+                                        <editor:HybridHtmlEditor.Style>
+                                            <Style TargetType="editor:HybridHtmlEditor">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedPauta.EmailMethod}"
@@ -468,8 +468,8 @@
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </editor:NativeRichEditor.Style>
-                                    </editor:NativeRichEditor>
+                                        </editor:HybridHtmlEditor.Style>
+                                    </editor:HybridHtmlEditor>
 
                                     <Thumb Width="15" Height="15" HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE" DragDelta="EmailBody_DragDelta">
                                         <Thumb.Template>
@@ -599,9 +599,9 @@
                                                                     </Style>
                                                                 </TextBox.Style>
                                                             </TextBox>
-                                                            <editor:NativeRichEditor x:Name="RuleHtmlBox" Html="{Binding BodyHtmlTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                                                                <editor:NativeRichEditor.Style>
-                                                                    <Style TargetType="editor:NativeRichEditor">
+                                                            <editor:HybridHtmlEditor x:Name="RuleHtmlBox" Html="{Binding BodyHtmlTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                                                <editor:HybridHtmlEditor.Style>
+                                                                    <Style TargetType="editor:HybridHtmlEditor">
                                                                         <Setter Property="Visibility" Value="Collapsed"/>
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding Data.SelectedPauta.EmailMethod, Source={StaticResource Proxy}}" Value="Outlook">
@@ -609,8 +609,8 @@
                                                                             </DataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>
-                                                                </editor:NativeRichEditor.Style>
-                                                            </editor:NativeRichEditor>
+                                                                </editor:HybridHtmlEditor.Style>
+                                                            </editor:HybridHtmlEditor>
                                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,0">
                                                                 <Button Content="📎 Elegir archivos a enviar"
                                                                         Command="{Binding Data.ConfigureRuleAttachmentsCommand, Source={StaticResource Proxy}}"

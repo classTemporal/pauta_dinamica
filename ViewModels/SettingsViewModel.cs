@@ -425,8 +425,8 @@ namespace PautaDinamicaApp.ViewModels
             BrowseExcelPathCommand = new RelayCommand(_ => BrowseFolder(path => Settings.ExcelExportPath = path));
             BrowseJsonPathCommand = new RelayCommand(_ => BrowseFolder(path => Settings.JsonBackupPath = path));
             BrowsePdfPathCommand = new RelayCommand(_ => BrowseFolder(path => Settings.PdfReportPath = path));
-            SaveCommand = new RelayCommand(_ => SaveAndClose());
-            ApplyCommand = new RelayCommand(_ => SaveSettings(false));
+            SaveCommand = new RelayCommand(async _ => await SaveAndCloseAsync());
+            ApplyCommand = new RelayCommand(async _ => await SaveSettingsAsync(false));
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
             PickColorCommand = new RelayCommand(_ => PickColor());
             PickAccentColorCommand = new RelayCommand(_ => PickAccentColor());
@@ -822,18 +822,21 @@ namespace PautaDinamicaApp.ViewModels
 
         public bool IsSaved { get; private set; }
 
-        private void SaveAndClose()
+        private async System.Threading.Tasks.Task SaveAndCloseAsync()
         {
-            SaveSettings(true);
+            await SaveSettingsAsync(true);
         }
 
-        private void SaveSettings(bool close)
+        private async System.Threading.Tasks.Task SaveSettingsAsync(bool close)
         {
             // El editor HTML solo vuelca al modelo cuando cambia la pauta, así que hay
             // que forzarlo aquí o se pierde lo último tecleado en el cuerpo.
+            // Se espera con await (nunca .GetAwaiter().GetResult()): el flush del
+            // editor WebView2 es asíncrono y bloquear el hilo UI aquí lo dejaba
+            // colgado para siempre (deadlock).
             if (FlushRequested != null)
             {
-                try { FlushRequested().GetAwaiter().GetResult(); }
+                try { await FlushRequested(); }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine("flush del editor falló: " + ex.Message);
