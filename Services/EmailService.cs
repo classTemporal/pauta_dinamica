@@ -175,25 +175,9 @@ namespace PautaDinamicaApp.Services
                 return false;
             }
 
-            // Collect all attachments
-            var attachments = new List<string>();
-            if (!string.IsNullOrEmpty(pdfPath) && File.Exists(pdfPath)) attachments.Add(pdfPath);
-
-            if (fields != null)
-            {
-                foreach (var f in fields.Where(f => f.Type == FieldType.FileAttachment && f.AttachToEmail))
-                {
-                    if (entry.Values.TryGetValue(f.Id, out var val) && val != null)
-                    {
-                        string strVal = val.ToString() ?? "";
-                        var paths = strVal.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-                        foreach (var path in paths)
-                        {
-                            if (File.Exists(path)) attachments.Add(path);
-                        }
-                    }
-                }
-            }
+            // Adjuntos según la configuración de la pauta (PDF + campos elegidos).
+            // Aplica igual al correo principal y a los adicionales.
+            var attachments = CollectAttachments(pauta, entry, fields, pdfPath);
 
             EmailMethod method = pauta.EmailMethod;
 
@@ -271,14 +255,45 @@ namespace PautaDinamicaApp.Services
                 return false;
             }
 
-            // Mismos adjuntos que el correo principal: PDF generado + archivos adjuntos.
+            // Misma configuración de adjuntos que el correo principal: PDF + campos elegidos.
+            var attachments = CollectAttachments(pauta, entry, fields, pdfPath);
+
+            EmailMethod method = pauta.EmailMethod;
+
+            if (method == EmailMethod.Outlook)
+            {
+                return SendViaOutlook(to, cc, subject, body, attachments);
+            }
+
+            return SendViaMailto(to, cc, subject, body);
+        }
+
+        /// <summary>
+        /// Recolecta los archivos que acompañarán el correo según la configuración de la pauta.
+        ///
+        /// <para>
+        /// Se usa igual en el correo principal (<see cref="SendEmail"/>) y en los adicionales
+        /// (<see cref="SendConditionalEmail"/>): el PDF solo si <c>AttachPdfToEmail</c> está
+        /// activo, y cada campo de adjunto solo si su propio flag lo permite y su ID no está
+        /// en <c>ExcludedAttachmentFieldIds</c>. Por defecto (sin configuración) se envía todo,
+        /// que es el comportamiento histórico.
+        /// </para>
+        /// </summary>
+        private static List<string> CollectAttachments(PautaSchema pauta, AuditEntry entry, List<FieldDefinition> fields, string? pdfPath)
+        {
             var attachments = new List<string>();
-            if (!string.IsNullOrEmpty(pdfPath) && File.Exists(pdfPath)) attachments.Add(pdfPath);
+
+            if (pauta.AttachPdfToEmail && !string.IsNullOrEmpty(pdfPath) && File.Exists(pdfPath))
+                attachments.Add(pdfPath);
+
+            var excluded = pauta.ExcludedAttachmentFieldIds;
 
             if (fields != null)
             {
                 foreach (var f in fields.Where(f => f.Type == FieldType.FileAttachment && f.AttachToEmail))
                 {
+                    if (excluded != null && excluded.Contains(f.Id)) continue;
+
                     if (entry.Values.TryGetValue(f.Id, out var val) && val != null)
                     {
                         string strVal = val.ToString() ?? "";
@@ -291,14 +306,7 @@ namespace PautaDinamicaApp.Services
                 }
             }
 
-            EmailMethod method = pauta.EmailMethod;
-
-            if (method == EmailMethod.Outlook)
-            {
-                return SendViaOutlook(to, cc, subject, body, attachments);
-            }
-
-            return SendViaMailto(to, cc, subject, body);
+            return attachments;
         }
 
         private bool SendViaMailto(string to, string cc, string subject, string body)

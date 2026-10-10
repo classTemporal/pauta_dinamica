@@ -183,6 +183,27 @@ namespace PautaDinamicaApp.Models
         private System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule> _conditionalEmailRules = new();
         public System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule> ConditionalEmailRules { get => _conditionalEmailRules; set => SetProperty(ref _conditionalEmailRules, value); }
 
+        // --- Adjuntos del Correo (principal y adicionales) ---
+        // Configuración centralizada de qué archivos acompañan cada correo enviado.
+        // Solo aplica al método Outlook (mailto no admite adjuntos).
+        private bool _attachPdfToEmail = true;
+
+        /// <summary>
+        /// Incluir el PDF del reporte en los correos. Por defecto <c>true</c>
+        /// (comportamiento histórico: el PDF siempre se mandaba).
+        /// </summary>
+        public bool AttachPdfToEmail { get => _attachPdfToEmail; set => SetProperty(ref _attachPdfToEmail, value); }
+
+        private System.Collections.Generic.List<string> _excludedAttachmentFieldIds = new();
+
+        /// <summary>
+        /// IDs de campos de archivo adjunto que NO se enviarán con el correo.
+        /// Es una capa adicional a <c>FieldDefinition.AttachToEmail</c>: un campo solo se
+        /// adjunta si su propio flag lo permite Y su ID no está en esta lista.
+        /// Vacío = se envían todos (comportamiento histórico).
+        /// </summary>
+        public System.Collections.Generic.List<string> ExcludedAttachmentFieldIds { get => _excludedAttachmentFieldIds; set => SetProperty(ref _excludedAttachmentFieldIds, value); }
+
         // --- Reglas de Reemplazo para PDF ---
         private System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule> _pdfReplacementRules = new();
         public System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule> PdfReplacementRules { get => _pdfReplacementRules; set => SetProperty(ref _pdfReplacementRules, value); }

@@ -193,6 +193,39 @@ namespace PautaDinamicaApp.ViewModels
                 }
 
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(AttachmentSummary));
+            }
+        }
+
+        /// <summary>
+        /// Resumen corto de la configuración de adjuntos de la pauta seleccionada
+        /// (PDF + campos de adjunto que sí se enviarán). Se muestra junto al botón
+        /// "Configurar adjuntos" en la pestaña Correo.
+        /// </summary>
+        public string AttachmentSummary
+        {
+            get
+            {
+                if (SelectedPauta == null) return "";
+                var attachFields = CurrentPautaFields.Where(f => f.Type == FieldType.FileAttachment).ToList();
+                var excluded = SelectedPauta.ExcludedAttachmentFieldIds;
+                int sendable = attachFields.Count(f => f.AttachToEmail && (excluded == null || !excluded.Contains(f.Id)));
+                string pdf = SelectedPauta.AttachPdfToEmail ? "PDF: sí" : "PDF: no";
+                if (attachFields.Count == 0) return $"{pdf} · Sin campos de adjunto";
+                return $"{pdf} · Adjuntos: {sendable} de {attachFields.Count}";
+            }
+        }
+
+        private void ConfigureAttachments()
+        {
+            if (SelectedPauta == null) return;
+            var win = new Views.AttachmentConfigWindow(SelectedPauta, CurrentPautaFields)
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+            if (win.ShowDialog() == true)
+            {
+                OnPropertyChanged(nameof(AttachmentSummary));
             }
         }
 
@@ -302,6 +335,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand EditEmailRuleFieldsCommand { get; }
         public ICommand AddConditionalEmailRuleCommand { get; }
         public ICommand RemoveConditionalEmailRuleCommand { get; }
+        public ICommand ConfigureAttachmentsCommand { get; }
         public ICommand ToggleConditionalRuleMultiSelectCommand { get; }
         public ICommand DeleteSelectedConditionalRulesCommand { get; }
         public ICommand SelectAllConditionalRulesCommand { get; }
@@ -374,6 +408,7 @@ namespace PautaDinamicaApp.ViewModels
             });
 
             AddConditionalEmailRuleCommand = new RelayCommand(_ => AddConditionalEmailRule());
+            ConfigureAttachmentsCommand = new RelayCommand(_ => ConfigureAttachments());
             RemoveConditionalEmailRuleCommand = new RelayCommand(r => RemoveConditionalEmailRule(r as ConditionalEmailRule));
             DeleteSelectedConditionalRulesCommand = new RelayCommand(_ => DeleteSelectedConditionalRules());
             ToggleConditionalRuleMultiSelectCommand = new RelayCommand(_ =>
