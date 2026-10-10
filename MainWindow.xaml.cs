@@ -7,18 +7,11 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using PautaDinamicaApp.ViewModels;
-using PautaDinamicaApp.Services;
-using DragEventArgs = System.Windows.DragEventArgs;
-using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 
 namespace PautaDinamicaApp
 {
     public partial class MainWindow : Window
     {
-        private System.Windows.Point _dashboardDragStartPoint;
-        private ContentPresenter? _dashboardDraggedItem;
-        private bool _isDashboardDraggingNow;
-
         public MainWindow()
         {
             InitializeComponent();
@@ -39,6 +32,12 @@ namespace PautaDinamicaApp
                         }
                     };
                     RecordsGrid.PreviewMouseWheel += RecordsGrid_ForwardWheelToPage;
+                    // Encadenar la rueda: los ScrollViewers internos (TextBox
+                    // multilínea, tabla, etc.) tragan el evento aunque ya no
+                    // puedan avanzar; si el interno está en su límite, mueve
+                    // la página en su lugar.
+                    DashboardScrollViewer.PreviewMouseWheel += PageScrollViewer_PreviewMouseWheel;
+                    SinglePageRoot.PreviewMouseWheel += PageScrollViewer_PreviewMouseWheel;
                     ApplyDashboardLayoutMode();
                 }
             };
@@ -174,6 +173,58 @@ namespace PautaDinamicaApp
             // Si no está en el límite, se deja que la tabla haga scroll con normalidad.
         }
 
+        /// <summary>
+        /// Encadena el scroll de la página con los ScrollViewers internos.
+        /// El handler corre en túnel (antes que los internos): si bajo el cursor
+        /// hay un scroll interno que aún puede avanzar en esa dirección, se deja
+        /// pasar; si está en su límite (o no hay ninguno), se mueve la página y
+        /// se marca como manejado para que el interno no trague la rueda.
+        /// </summary>
+        private void PageScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is not ScrollViewer outer) return;
+            if (outer.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled) return;
+
+            // Dentro de un Popup abierto (desplegable de ComboBox, calendario):
+            // no interferir, ese contenido se desplaza solo.
+            DependencyObject? current = e.OriginalSource as DependencyObject;
+            while (current != null && current != outer)
+            {
+                if (current is System.Windows.Controls.Primitives.Popup) return;
+                if (current is ScrollViewer inner &&
+                    inner != outer &&
+                    inner.VerticalScrollBarVisibility != ScrollBarVisibility.Disabled)
+                {
+                    bool canScroll = e.Delta < 0
+                        ? inner.VerticalOffset < inner.ScrollableHeight - 0.5
+                        : inner.VerticalOffset > 0.5;
+                    if (canScroll) return; // el interno aún puede: dejarlo pasar
+                }
+                current = GetParentSafe(current);
+            }
+
+            e.Handled = true;
+            outer.ScrollToVerticalOffset(outer.VerticalOffset - e.Delta);
+        }
+
+        /// <summary>
+        /// Sube un nivel en el árbol. El origen del evento puede ser un elemento
+        /// de contenido (ej: Run del texto de un campo), que no es Visual y con
+        /// el que VisualTreeHelper.GetParent lanza InvalidOperationException:
+        /// esos se resuelven por el árbol lógico.
+        /// </summary>
+        private static DependencyObject? GetParentSafe(DependencyObject child)
+        {
+            if (child is Visual || child is System.Windows.Media.Media3D.Visual3D)
+            {
+                try { return VisualTreeHelper.GetParent(child); }
+                catch (InvalidOperationException) { return LogicalTreeHelper.GetParent(child); }
+            }
+            if (child is FrameworkContentElement fce && fce.Parent != null)
+                return fce.Parent;
+            return LogicalTreeHelper.GetParent(child);
+        }
+
         // --- Dashboard ItemsControl handlers ---
 
         private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
@@ -187,129 +238,6 @@ namespace PautaDinamicaApp
                 if (result != null) return result;
             }
             return null;
-        }
-
-        private void DashboardItemsControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            _dashboardDragStartPoint = e.GetPosition(null);
-            _dashboardDraggedItem = FindVisualChild<ContentPresenter>(e.OriginalSource as DependencyObject);
-            _isDashboardDraggingNow = false;
-
-            if (_dashboardDraggedItem != null)
-            {
-                e.Handled = true;
-            }
-        }
-
-        private void DashboardItemsControl_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            _dashboardDraggedItem = null;
-        }
-
-        private void DashboardItemsControl_PreviewMouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed && _dashboardDraggedItem != null)
-            {
-                System.Windows.Point mousePos = e.GetPosition(null);
-                Vector diff = _dashboardDragStartPoint - mousePos;
-
-                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
-                {
-                    _isDashboardDraggingNow = true;
-                    var field = _dashboardDraggedItem.DataContext as DynamicFieldVM;
-                    if (field != null)
-                    {
-                        System.Windows.DataObject dragData = new System.Windows.DataObject("DynamicFieldVM", field);
-
-                        try
-                        {
-                            DragScrollHelper.Current.BeginDrag(DashboardScrollViewer);
-                            System.Windows.DragDrop.DoDragDrop(_dashboardDraggedItem, dragData, System.Windows.DragDropEffects.Move);
-                        }
-                        finally
-                        {
-                            _isDashboardDraggingNow = false;
-                            DragScrollHelper.Current.Stop();
-                            _dashboardDraggedItem = null;
-                        }
-                    }
-                }
-            }
-        }
-
-        private void DashboardScrollViewer_DragEnter(object sender, DragEventArgs e)
-        {
-            if (e.Data.GetDataPresent("DynamicFieldVM"))
-                e.Effects = System.Windows.DragDropEffects.Move;
-            e.Handled = true;
-        }
-
-        private void DashboardScrollViewer_DragOver(object sender, DragEventArgs e)
-        {
-            if (!_isDashboardDraggingNow) return;
-            if (e.Data.GetDataPresent("DynamicFieldVM"))
-            {
-                e.Effects = System.Windows.DragDropEffects.Move;
-                DragScrollHelper.Current.Update(e, DashboardScrollViewer);
-            }
-            e.Handled = true;
-        }
-
-        private void DashboardScrollViewer_DragLeave(object sender, DragEventArgs e)
-        {
-            // Si el cursor sale del área sin soltar, frenar el auto-scroll
-            // (el hook de la rueda sigue activo hasta soltar el botón).
-            DragScrollHelper.Current.PauseAutoScroll();
-            e.Handled = true;
-        }
-
-        private void DashboardScrollViewer_Drop(object sender, DragEventArgs e)
-        {
-            if (!e.Data.GetDataPresent("DynamicFieldVM")) return;
-
-            var droppedField = e.Data.GetData("DynamicFieldVM") as DynamicFieldVM;
-            if (droppedField == null) return;
-
-            DragScrollHelper.Current.Stop();
-
-            if (DataContext is not MainViewModel vm) return;
-
-            var fields = vm.CurrentFields;
-            int oldIndex = fields.IndexOf(droppedField);
-            if (oldIndex == -1) return;
-
-            // Determine new index based on cursor position relative to items
-            System.Windows.Point dropPos = e.GetPosition(DashboardItemsControl);
-            double totalHeight = DashboardItemsControl.ActualHeight;
-            if (totalHeight <= 0) totalHeight = 1;
-
-            // Find the item under the cursor or estimate by position
-            int newIndex = -1;
-            for (int i = 0; i < DashboardItemsControl.Items.Count; i++)
-            {
-                var container = DashboardItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement;
-                if (container != null)
-                {
-                    double top = container.TransformToAncestor(DashboardItemsControl).Transform(new System.Windows.Point(0, 0)).Y;
-                    double bottom = top + container.ActualHeight;
-                    double mid = (top + bottom) / 2;
-                    if (dropPos.Y < mid)
-                    {
-                        newIndex = i;
-                        break;
-                    }
-                }
-            }
-            if (newIndex == -1) newIndex = DashboardItemsControl.Items.Count - 1;
-
-            if (newIndex != oldIndex)
-            {
-                fields.Move(oldIndex, newIndex);
-                vm.SaveDashboardFieldOrder();
-            }
-
-            e.Handled = true;
         }
 
         private void RebuildColumns()

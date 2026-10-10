@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using PautaDinamicaApp.Services;
 
 namespace PautaDinamicaApp
@@ -58,9 +59,40 @@ namespace PautaDinamicaApp
         private static void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
             // The mouse is over a ComboBox when this handler is reached.
-            // Suppress the wheel so the selection does not change while the
-            // page is scrolling and the dropdown is closed.
-            e.Handled = true;
+            // No cambiar la selección con la rueda cuando el desplegable está
+            // cerrado, PERO reenviar el scroll al ScrollViewer padre para que
+            // la página siga desplazándose bajo el cursor (antes se tragaba
+            // el evento con e.Handled=true y la página quedaba clavada).
+            if (sender is System.Windows.Controls.ComboBox combo)
+            {
+                if (combo.IsDropDownOpen) return;
+                e.Handled = true;
+                var parent = FindParentScrollViewer(combo);
+                if (parent != null)
+                {
+                    var forwarded = new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+                    {
+                        RoutedEvent = UIElement.MouseWheelEvent,
+                        Source = parent
+                    };
+                    parent.RaiseEvent(forwarded);
+                }
+            }
+            else
+            {
+                e.Handled = true;
+            }
+        }
+
+        private static System.Windows.Controls.ScrollViewer? FindParentScrollViewer(DependencyObject child)
+        {
+            DependencyObject current = child;
+            while (VisualTreeHelper.GetParent(current) is DependencyObject parent)
+            {
+                if (parent is System.Windows.Controls.ScrollViewer sv) return sv;
+                current = parent;
+            }
+            return null;
         }
     }
 }
