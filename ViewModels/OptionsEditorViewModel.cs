@@ -1,3 +1,5 @@
+using PautaDinamicaApp;
+using PautaDinamicaApp.Models;
 using System;
 using System.IO;
 using System.Collections.ObjectModel;
@@ -8,7 +10,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using ClosedXML.Excel;
 using Microsoft.Win32;
-using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using MessageBox = System.Windows.MessageBox;
 using MessageBoxButton = System.Windows.MessageBoxButton;
@@ -360,7 +361,7 @@ namespace PautaDinamicaApp.ViewModels
                 }
                 else
                 {
-                    System.Windows.MessageBox.Show("La carpeta de archivos aún no ha sido creada o no contiene archivos.", "Información");
+                    MessageBoxHelper.ShowNonCritical("La carpeta de archivos aún no ha sido creada o no contiene archivos.", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             });
         }
@@ -596,6 +597,17 @@ namespace PautaDinamicaApp.ViewModels
             TargetValue = r.TargetValue
         }).ToList();
 
+        private string LoadPautaName()
+        {
+            if (string.IsNullOrEmpty(_pautaId)) return "SinPauta";
+            try
+            {
+                var pauta = _storageService.LoadPautas().FirstOrDefault(p => p.Id == _pautaId);
+                return string.IsNullOrWhiteSpace(pauta?.Name) ? "SinPauta" : pauta.Name;
+            }
+            catch { return "SinPauta"; }
+        }
+
         private void ExportToExcel(IEnumerable<SelectableOptionVM> list, string baseName)
         {
             var items = list.ToList();
@@ -603,7 +615,8 @@ namespace PautaDinamicaApp.ViewModels
 
             var settings = _storageService.LoadSettings();
             string exportFolder = settings.ExcelExportPath;
-            string fileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            string pautaName = LoadPautaName();
+            string fileName = $"{baseName}_{pautaName}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
             string finalPath = "";
 
             if (System.IO.Directory.Exists(exportFolder))
@@ -632,10 +645,10 @@ namespace PautaDinamicaApp.ViewModels
                     for (int i = 0; i < items.Count; i++) worksheet.Cell(i + 2, 1).Value = items[i].Text;
                     worksheet.Columns().AdjustToContents();
                     workbook.SaveAs(finalPath);
-                    MessageBox.Show($"Opciones exportadas correctamente en:\n{finalPath}", "Exportación Exitosa");
+                    MessageBoxHelper.ShowNonCritical($"Opciones exportadas correctamente en:\n{finalPath}", "Exportación Exitosa");
                 }
             }
-            catch (Exception ex) { MessageBox.Show("Error al exportar: " + ex.Message); }
+            catch (Exception ex) { MessageBoxHelper.Show("Error al exportar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
 
         private void ImportFromExcel()
@@ -673,8 +686,8 @@ namespace PautaDinamicaApp.ViewModels
 
                         if (newOptions.Any())
                         {
-                            var result = MessageBox.Show($"Se encontraron {newOptions.Count} nuevas opciones. ¿Desea agregarlas?",
-                                "Importar Opciones", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                            var result = MessageBoxHelper.Show($"Se encontraron {newOptions.Count} nuevas opciones. ¿Desea agregarlas?",
+                                "Importar Opciones", MessageBoxButton.YesNo, MessageBoxImage.Question, true);
 
                             if (result == MessageBoxResult.Yes)
                             {
@@ -686,13 +699,13 @@ namespace PautaDinamicaApp.ViewModels
                         }
                         else
                         {
-                            MessageBox.Show("No se encontraron nuevas opciones válidas para importar.", "Importar", MessageBoxButton.OK, MessageBoxImage.Information);
+                            MessageBoxHelper.ShowNonCritical("No se encontraron nuevas opciones válidas para importar.", "Importar", MessageBoxButton.OK, MessageBoxImage.Information);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Error al importar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBoxHelper.Show("Error al importar: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -708,7 +721,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (o != null)
             {
-                var result = MessageBox.Show($"¿Estás seguro de que deseas eliminar la opción '{o.Text}'?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                var result = MessageBoxHelper.Show($"¿Estás seguro de que deseas eliminar la opción '{o.Text}'?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning, true);
                 if (result == MessageBoxResult.Yes)
                 {
                     Options.Remove(o);
@@ -722,7 +735,7 @@ namespace PautaDinamicaApp.ViewModels
             var sel = Options.Where(o => o.IsSelected).ToList();
             if (sel.Any())
             {
-                var result = MessageBox.Show($"¿Estás seguro de que deseas eliminar las {sel.Count} opciones seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                var result = MessageBoxHelper.Show($"¿Estás seguro de que deseas eliminar las {sel.Count} opciones seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning, true);
                 if (result == MessageBoxResult.Yes)
                 {
                     foreach (var s in sel) Options.Remove(s);

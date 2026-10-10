@@ -79,12 +79,6 @@ namespace PautaDinamicaApp.Views
             DialogResult = true;
         }
 
-        private void ClearButton_Click(object sender, RoutedEventArgs e)
-        {
-            SelectedValue = "";
-            DialogResult = true;
-        }
-
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
             if (int.TryParse(HourCombo.SelectedItem?.ToString(), out int h) &&
@@ -100,6 +94,11 @@ namespace PautaDinamicaApp.Views
                 SelectedValue = dt.ToString(_timeFormat);
                 DialogResult = true;
             }
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
         }
     }
 }

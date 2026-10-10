@@ -4,8 +4,11 @@
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
         Title="Gestión de Plantillas" Height="650" Width="800"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
-        <Window.Resources>
+    
+    <Window.Resources>
         <conv:BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:NotNullToVisibilityConverter x:Key="NotNullToVisibilityConverter"/>
+        <conv:CategoryToVisibilityConverter x:Key="CategoryToVisibilityConverter"/>
         <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
         
         <Style x:Key="MoveButtonStyle" TargetType="Button" BasedOn="{StaticResource GhostButton}">
@@ -28,171 +31,314 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <SolidColorBrush x:Key="SelectedCategoryBrush" Color="#28a745"/>
     </Window.Resources>
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Cabecera -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,15">
-            <TextBlock Text="Gestión de Plantillas de Texto" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-            <TextBlock Text="Agrega textos predefinidos para insertar rápidamente en campos cortos o largos." FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"/>
-        </StackPanel>
-
-        <!-- Agregar / Editar Plantilla -->
-        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" Padding="18,12" CornerRadius="12" Margin="0,0,0,20" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-                    <TextBlock Text="{Binding AddButtonText}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" FontSize="13"/>
-                    <TextBlock Text=" (Escribe el contenido abajo)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" VerticalAlignment="Bottom" Margin="5,0,0,1"/>
-                </StackPanel>
-                
-                <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding NewTemplateContent, UpdateSourceTrigger=PropertyChanged}" 
-                          Foreground="{DynamicResource TextBrush}" Background="{DynamicResource InputBackground}"
-                          AcceptsReturn="True" Height="80" VerticalScrollBarVisibility="Auto" 
-                          TextWrapping="Wrap" Margin="0,0,15,0" Padding="12,8"
-                          VerticalContentAlignment="Top"
-                          BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1.2"/>
-                
-                <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Stretch">
-                    <Button Content="{Binding AddButtonText}" Command="{Binding AddTemplateCommand}" 
-                            Style="{StaticResource SuccessButton}" Width="140" Height="45" Margin="0,0,0,8"/>
-                    <Button Content="✖️ CANCELAR" Command="{Binding CancelEditCommand}" 
-                            Style="{StaticResource GhostButton}" Width="140" Height="27" FontSize="11"
-                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- Lista de Plantillas -->
-        <DockPanel Grid.Row="2">
-            <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" Padding="10" CornerRadius="10,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
-                <Grid>
-                    <!-- Vista Normal -->
-                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
-                        <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" 
-                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
-                        <Button Content="📥 Importar Excel" Command="{Binding ImportExcelCommand}" 
-                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
-                        <Button Content="📤 Exportar Todo" Command="{Binding ExportExcelCommand}" 
-                                Style="{StaticResource SecondaryButton}" Padding="15,5" Height="34"/>
-                    </StackPanel>
-
-                    <!-- Vista Selección Múltiple -->
-                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVis}}">
-                        <Button Content="▲" Command="{Binding MoveUpCommand}" Style="{StaticResource SuccessButton}" Margin="0,0,6,0" Width="36" Height="34" ToolTip="Mover arriba" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/>
-                        <Button Content="▼" Command="{Binding MoveDownCommand}" Style="{StaticResource SuccessButton}" Margin="0,0,15,0" Width="36" Height="34" ToolTip="Mover abajo" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/>
-                        
-                        <Button Content="✔️ Seleccionar Todo" Command="{Binding SelectAllCommand}" 
-                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
-                        <Button Content="📤 Exportar Seleccionados" Command="{Binding ExportExcelCommand}" 
-                                Style="{StaticResource SecondaryButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
-                        <Button Content="🗑️ Eliminar Seleccionados" Command="{Binding DeleteSelectedCommand}" 
-                                Style="{StaticResource DangerButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
-                        <Button Content="❌ Salir" Command="{Binding ToggleMultiSelectCommand}" 
-                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <ListBox x:Name="TemplatesList" ItemsSource="{Binding Templates}" 
-                     Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}"
-                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1"
-                     HorizontalContentAlignment="Stretch" Padding="10"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     AllowDrop="True"
-                     PreviewMouseLeftButtonDown="TemplatesList_PreviewMouseLeftButtonDown"
-                     PreviewMouseLeftButtonUp="TemplatesList_PreviewMouseLeftButtonUp"
-                     MouseMove="TemplatesList_MouseMove"
-                     Drop="TemplatesList_Drop">
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Setter Property="Padding" Value="0"/>
-                        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        <Setter Property="Margin" Value="0,0,0,8"/>
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="ListBoxItem">
-                                     <Border x:Name="Bd" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{TemplateBinding Background}" Padding="12" CornerRadius="8">
-                                         <ContentPresenter />
-                                     </Border>
-                                     <ControlTemplate.Triggers>
-                                         <Trigger Property="IsMouseOver" Value="True">
-                                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BackgroundBrush}"/>
-                                         </Trigger>
-                                         <Trigger Property="IsSelected" Value="True">
-                                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                             <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
-                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-                                         </Trigger>
-                                     </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </ListBox.ItemContainerStyle>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Grid MinHeight="50">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-
-                            <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
-                                      Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVis}}"
-                                      VerticalAlignment="Center" Margin="5,0,15,0"/>
-
-                            <TextBlock Grid.Column="1" Text="{Binding Model.Content}" 
-                                       TextWrapping="Wrap" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextBrush}"
-                                       FontSize="13" Padding="5"/>
-
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,5,0"
-                                        Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
-                                <Button Content="▲" Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
-                                        CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Margin="0,0,4,0"/>
-                                <Button Content="▼" Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
-                                        CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Margin="0,0,12,0"/>
+        <TabControl x:Name="MainTabControl" Grid.Row="0" Margin="0,0,0,10" SelectedIndex="0" SelectionChanged="TabControl_SelectionChanged">
+            <!-- TAB 1: PLANTILLAS -->
+            <TabItem Header="📝 Plantillas">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Agregar / Editar Plantilla -->
+                        <Border Background="{DynamicResource CardBackgroundBrush}" Padding="18,12" CornerRadius="12" Margin="0,0,0,20" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
                                 
-                                <Button Content="✏️" Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
-                                        CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Width="32" Height="32" Margin="0,0,6,0" ToolTip="Editar contenido"/>
-                                
-                                <Button Content="🗑️" Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
-                                        CommandParameter="{Binding}" Style="{StaticResource DangerMoveButtonStyle}" ToolTip="Eliminar plantilla"/>
-                            </StackPanel>
-                        </Grid>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </DockPanel>
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="{Binding AddButtonText}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" FontSize="13"/>
+                                    <TextBlock Text=" (Escribe el contenido abajo)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" VerticalAlignment="Bottom" Margin="5,0,0,1"/>
+                                </StackPanel>
 
-        <!-- Pie -->
-        <Border Grid.Row="3" Margin="0,20,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+                                <!-- Categoría de la Plantilla -->
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                    <ComboBox x:Name="CategoryCombo"
+                                              ItemsSource="{Binding CategoryOptions}"
+                                              SelectedItem="{Binding SelectedCategory}"
+                                              Height="32" Width="220" Margin="0,0,10,0"
+                                              ToolTip="Asigna esta plantilla a una categoría"
+                                              VerticalContentAlignment="Center"
+                                              Background="{DynamicResource InputBackground}"
+                                              Foreground="{DynamicResource TextBrush}"
+                                              BorderBrush="{DynamicResource BorderBrush}"/>
+                                    <TextBlock Text="Categoría (opcional)" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <TextBox Grid.Row="2" Grid.Column="0"
+                                         Text="{Binding NewTemplateContent, UpdateSourceTrigger=PropertyChanged}"
+                                         Foreground="{DynamicResource TextBrush}"
+                                         Background="{DynamicResource InputBackground}"
+                                         AcceptsReturn="True" Height="80" VerticalScrollBarVisibility="Auto"
+                                         TextWrapping="Wrap" Margin="0,0,15,0" Padding="12,8"
+                                         VerticalContentAlignment="Top"
+                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1.2"/>
+
+                                <StackPanel Grid.Row="2" Grid.Column="1" VerticalAlignment="Stretch">
+                                    <Button Content="{Binding AddButtonText}"
+                                            Command="{Binding AddTemplateCommand}"
+                                            Style="{StaticResource SuccessButton}" Width="140" Height="45" Margin="0,0,0,8"/>
+                                    <Button Content="✖️ CANCELAR"
+                                            Command="{Binding CancelEditCommand}"
+                                            Style="{StaticResource GhostButton}" Width="140" Height="27" FontSize="11"
+                                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Lista de Plantillas -->
+                        <DockPanel>
+                            <Border DockPanel.Dock="Top" Background="{DynamicResource CardBackgroundBrush}" Padding="10" CornerRadius="10,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <!-- Filtro por categoría -->
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
+                                        <ComboBox x:Name="FilterCombo"
+                                                  ItemsSource="{Binding FilterOptions}"
+                                                  SelectedItem="{Binding FilterCategory}"
+                                                  Height="30" Width="200" Margin="0,0,10,0"
+                                                  ToolTip="Filtrar plantillas por categoría"
+                                                  VerticalContentAlignment="Center"
+                                                  Background="{DynamicResource InputBackground}"
+                                                  Foreground="{DynamicResource TextBrush}"
+                                                  BorderBrush="{DynamicResource BorderBrush}"/>
+                                        <TextBlock Text="Filtrar por categoría" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <!-- Vista Normal -->
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                        <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}"
+                                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
+                                        <Button Content="📥 Importar Excel" Command="{Binding ImportExcelCommand}"
+                                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
+                                        <Button Content="📤 Exportar Todo" Command="{Binding ExportExcelCommand}"
+                                                Style="{StaticResource SecondaryButton}" Padding="15,5" Height="34"/>
+                                    </StackPanel>
+
+                                    <!-- Vista Selección Múltiple -->
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVis}}">
+                                        <Button Content="▲" Command="{Binding MoveUpCommand}" Style="{StaticResource SuccessButton}" Margin="0,0,6,0" Width="36" Height="34" ToolTip="Mover arriba" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/>
+                                        <Button Content="▼" Command="{Binding MoveDownCommand}" Style="{StaticResource SuccessButton}" Margin="0,0,15,0" Width="36" Height="34" ToolTip="Mover abajo" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/>
+                                        
+                                        <Button Content="✔️ Seleccionar Todo" Command="{Binding SelectAllCommand}"
+                                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
+                                        <Button Content="📤 Exportar Seleccionados" Command="{Binding ExportExcelCommand}"
+                                                Style="{StaticResource SecondaryButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
+                                        <Button Content="🗑️ Eliminar Seleccionados" Command="{Binding DeleteSelectedCommand}"
+                                                Style="{StaticResource DangerButton}" Padding="15,5" Height="34" Margin="0,0,10,0"/>
+                                        <Button Content="❌ Salir" Command="{Binding ToggleMultiSelectCommand}"
+                                                Style="{StaticResource GhostButton}" Padding="15,5" Height="34"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <ListBox x:Name="TemplatesList" ItemsSource="{Binding Templates}"
+                                     Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}"
+                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1"
+                                     HorizontalContentAlignment="Stretch" Padding="10"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     AllowDrop="True"
+                                     PreviewMouseLeftButtonDown="TemplatesList_PreviewMouseLeftButtonDown"
+                                     PreviewMouseLeftButtonUp="TemplatesList_PreviewMouseLeftButtonUp"
+                                     PreviewMouseWheel="TemplatesList_PreviewMouseWheel"
+                                     MouseMove="TemplatesList_MouseMove"
+                                     DragOver="TemplatesList_DragOver"
+                                     Drop="TemplatesList_Drop">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Margin" Value="0,0,0,8"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                     <Border x:Name="Bd" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{TemplateBinding Background}" Padding="12" CornerRadius="8">
+                                                         <ContentPresenter />
+                                                     </Border>
+                                                     <ControlTemplate.Triggers>
+                                                         <Trigger Property="IsMouseOver" Value="True">
+                                                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+                                                         </Trigger>
+                                                         <Trigger Property="IsSelected" Value="True">
+                                                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                             <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
+                                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                                         </Trigger>
+                                                     </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid MinHeight="50">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <CheckBox Grid.RowSpan="2" IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                                      Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVis}}"
+                                                      VerticalAlignment="Center" Margin="5,0,15,0"/>
+
+                                            <TextBlock Grid.Column="1" Text="{Binding Model.Content}"
+                                                       TextWrapping="Wrap" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextBrush}"
+                                                       FontSize="13" Padding="5"/>
+
+                                            <!-- Tag de categoría: pill alineada a la derecha del contenido -->
+                                            <Border Grid.Column="1" Grid.Row="1"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                    Background="#1A3B82F6" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                                                    CornerRadius="10" Padding="10,3" Margin="5,2,0,4"
+                                                    Visibility="{Binding Category, Converter={StaticResource CategoryToVisibilityConverter}}">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="🏷️" FontSize="9" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="{Binding Category}" FontSize="10" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
+                                                               MaxWidth="220" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <StackPanel Grid.Column="2" Grid.RowSpan="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,5,0"
+                                                        Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                                <Button Content="▲" Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Margin="0,0,4,0"/>
+                                                <Button Content="▼" Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Margin="0,0,12,0"/>
+
+                                                <Button Content="✏️" Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        CommandParameter="{Binding}" Style="{StaticResource MoveButtonStyle}" Width="32" Height="32" Margin="0,0,6,0" ToolTip="Editar contenido"/>
+
+                                                <Button Content="🗑️" Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        CommandParameter="{Binding}" Style="{StaticResource DangerMoveButtonStyle}" ToolTip="Eliminar plantilla"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- TAB 2: CATEGORÍAS -->
+            <TabItem Header="🏷️ Categorías">
+                <Border Background="{DynamicResource CardBackgroundBrush}" Padding="18,14" CornerRadius="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Gestionar Categorías" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Las categorías organizan las plantillas. Crea, selecciona y elimina categorías de forma intuitiva." FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                        <!-- Lista de Categorías -->
+                        <Border Background="{DynamicResource InputBackground}" CornerRadius="10" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Margin="0,0,0,20" Padding="6">
+                            <ListBox x:Name="CategoryList" ItemsSource="{Binding AvailableCategories}"
+                                     SelectedItem="{Binding CategoryListSelection}"
+                                     Height="220"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
+                                     Padding="4" BorderThickness="0">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Margin" Value="0,0,0,6"/>
+                                        <Setter Property="MinHeight" Value="44"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" BorderThickness="1.5" BorderBrush="Transparent">
+                                                        <ContentPresenter VerticalAlignment="Center" Margin="14,4"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#1AFFFFFF"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#33FFFFFF"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="White"/>
+                                                            <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="4,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding}" FontSize="13" VerticalAlignment="Center" Padding="4,0"/>
+                                            <Button x:Name="DeleteCategoryBtn" Grid.Column="1" Content="🗑️"
+                                                    Command="{Binding DataContext.DeleteCategoryAtCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="Eliminar categoría"
+                                                    Style="{StaticResource DangerMoveButtonStyle}" Width="30" Height="30"
+                                                    Margin="8,0,0,0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+
+                        <!-- Nueva Categoría + Eliminar -->
+                        <StackPanel Orientation="Horizontal">
+                            <Border Background="{DynamicResource CardBackgroundBrush}" Padding="4" CornerRadius="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <TextBox x:Name="NewCategoryTextBox" Height="40" Width="240"
+                                         Text="{Binding NewCategoryText, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="{DynamicResource InputBackground}" Foreground="{DynamicResource TextBrush}"
+                                         BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                                         Padding="12,0" VerticalContentAlignment="Center"
+                                         ToolTip="Nombre de la nueva categoría"/>
+                            </Border>
+                            <Button Content="+ Nueva Categoría" Command="{Binding CreateCategoryCommand}" Style="{StaticResource SuccessButton}"
+                                    Height="40" Margin="10,0,0,0" Padding="16,0"
+                                    ToolTip="Crear categoría con este nombre"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+        </TabControl>
+
+        <!-- Footer -->
+        <Border Grid.Row="1" Margin="0,10,0,0" Padding="0,15,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="CANCELAR" Command="{Binding CancelCommand}" 
+                <Button Content="CANCELAR" Command="{Binding CancelCommand}"
                         Style="{StaticResource GhostButton}" Width="130" Height="45" Margin="0,0,10,0"/>
-                <Button Content="APLICAR" Command="{Binding ApplyChangesCommand}" 
+                <Button Content="APLICAR" Command="{Binding ApplyChangesCommand}"
                         Style="{StaticResource SecondaryButton}" Width="130" Height="45" Margin="0,0,10,0"/>
-                <Button Content="💾 GUARDAR CAMBIOS" Command="{Binding SaveChangesCommand}" 
+                <Button Content="💾 GUARDAR CAMBIOS" Command="{Binding SaveChangesCommand}"
                         Style="{StaticResource SuccessButton}" Width="200" Height="45"/>
             </StackPanel>
         </Border>

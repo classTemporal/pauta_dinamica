@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Windows;
+using PautaDinamicaApp;
 using PautaDinamicaApp.Models;
 
 namespace PautaDinamicaApp.Views
@@ -20,7 +21,7 @@ namespace PautaDinamicaApp.Views
             SelectedPreset = PresetsList.SelectedItem as ExportPreset;
             if (SelectedPreset == null)
             {
-                System.Windows.MessageBox.Show("Por favor seleccione una configuración.");
+                MessageBoxHelper.Show("Por favor seleccione una configuración.", "Selección Requerida", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             this.DialogResult = true;

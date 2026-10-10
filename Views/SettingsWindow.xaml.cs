@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Runtime.InteropServices;
+using PautaDinamicaApp.Services;
 
 namespace PautaDinamicaApp.Views
 {
@@ -10,6 +11,21 @@ namespace PautaDinamicaApp.Views
         private System.Windows.Point _startPoint;
         private System.Windows.Controls.ListBoxItem? _draggedItem;
         private bool _isDraggingNow;
+        private int _initialTabIndex = 0;
+
+        public int InitialTabIndex
+        {
+            get => _initialTabIndex;
+            set
+            {
+                _initialTabIndex = value;
+                // Object initializers run AFTER the constructor, so the tab selection
+                // must happen here for property-set values to take effect.
+                if (MainTabControl != null && _initialTabIndex > 0
+                    && _initialTabIndex < MainTabControl.Items.Count)
+                    MainTabControl.SelectedIndex = _initialTabIndex;
+            }
+        }
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -17,9 +33,26 @@ namespace PautaDinamicaApp.Views
 
         [StructLayout(LayoutKind.Sequential)]
         private struct POINT { public int X; public int Y; }
+
+        /// <summary>Abre los enlaces de "Sobre esta aplicación" en el navegador.</summary>
+        private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("no se pudo abrir el enlace: " + ex.Message);
+            }
+            e.Handled = true;
+        }
         public SettingsWindow()
         {
             InitializeComponent();
+            if (InitialTabIndex > 0 && InitialTabIndex < MainTabControl.Items.Count)
+                MainTabControl.SelectedIndex = InitialTabIndex;
+
             AdminPassBox.PasswordChanged += (s, e) =>
             {
                 if (DataContext is ViewModels.SettingsViewModel vm)
@@ -27,6 +60,20 @@ namespace PautaDinamicaApp.Views
                     vm.AdminPassword = AdminPassBox.Password;
                 }
             };
+
+            // Vuelca el HTML del editor a la pauta antes de cada guardado.
+            // Se engancha en DataContextChanged porque la ventana se crea con un
+            // inicializador de objeto (DataContext = vm), es decir, después del ctor.
+            DataContextChanged += (s, args) =>
+            {
+                if (args.OldValue is ViewModels.SettingsViewModel oldVm) oldVm.FlushRequested -= FlushHtmlBodyAsync;
+                if (args.NewValue is ViewModels.SettingsViewModel newVm) newVm.FlushRequested += FlushHtmlBodyAsync;
+            };
+
+            if (DataContext is ViewModels.SettingsViewModel initialVm)
+            {
+                initialVm.FlushRequested += FlushHtmlBodyAsync;
+            }
         }
 
         private void EmailBody_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
@@ -39,6 +86,181 @@ namespace PautaDinamicaApp.Views
                     EmailBodyTextBox.Height = newHeight;
                 }
             }
+        }
+
+        /// <summary>
+        /// Vuelca el HTML de los editores nativos a sus propiedades antes de guardar.
+        /// Recorre el árbol visual porque las reglas adicionales viven en un ItemsControl.
+        /// </summary>
+        public async System.Threading.Tasks.Task FlushHtmlBodyAsync()
+        {
+            foreach (var ed in FindVisualChildren<HtmlEditor.NativeRichEditor>(this))
+                ed.Flush();
+            await System.Threading.Tasks.Task.CompletedTask;
+        }
+
+        private static System.Collections.Generic.IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+        {
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                if (child is T t) yield return t;
+                foreach (var sub in FindVisualChildren<T>(child)) yield return sub;
+            }
+        }
+
+        private System.Collections.Generic.IEnumerable<Models.FieldDefinition> PautaFields()
+            => (DataContext as ViewModels.SettingsViewModel)?.CurrentPautaFields
+               ?? System.Linq.Enumerable.Empty<Models.FieldDefinition>();
+
+        private Models.DynamicDateConfig? CurrentDynamicDates()
+            => (DataContext as ViewModels.SettingsViewModel)?.SelectedPauta?.DynamicDates;
+
+        /// <summary>Inserta el marcador donde está el cursor del cuadro de texto plano.</summary>
+        private void InsertAtCaret(System.Windows.Controls.TextBox box, string placeholder)
+        {
+            if (box == null) return;
+
+            int caret = box.SelectionStart;
+            box.Text = box.Text.Insert(caret, placeholder);
+            box.SelectionStart = caret + placeholder.Length;
+            box.SelectionLength = 0;
+            box.Focus();
+        }
+
+        private void InsertFieldButton_Click(object sender, RoutedEventArgs e)
+        {
+            string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);
+            if (string.IsNullOrEmpty(placeholder)) return;
+            if ((DataContext as ViewModels.SettingsViewModel)?.SelectedPauta?.EmailMethod
+                == Models.EmailMethod.Outlook)
+            {
+                HtmlBodyEditor.InsertTextAtCaret(placeholder);
+                return;
+            }
+            InsertAtCaret(EmailBodyTextBox, placeholder);
+        }
+
+        private void InsertDateButton_Click(object sender, RoutedEventArgs e)
+        {
+            var picked = Views.DateTokenPickerPopup.Pick(CurrentDynamicDates(), this);
+            if (picked == null) return;
+
+            var vm = DataContext as ViewModels.SettingsViewModel;
+            if (picked.Value.Config != null && vm?.SelectedPauta != null)
+                vm.SelectedPauta.DynamicDates = picked.Value.Config;
+
+            if (vm?.SelectedPauta?.EmailMethod == Models.EmailMethod.Outlook)
+            {
+                HtmlBodyEditor.InsertTextAtCaret(picked.Value.Token);
+                return;
+            }
+            InsertAtCaret(EmailBodyTextBox, picked.Value.Token);
+        }
+
+        private void InsertSubjectField_Click(object sender, RoutedEventArgs e)
+        {
+            string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);
+            if (!string.IsNullOrEmpty(placeholder)) InsertAtCaret(EmailSubjectTextBox, placeholder);
+        }
+
+        private void InsertSubjectDate_Click(object sender, RoutedEventArgs e)
+        {
+            var picked = Views.DateTokenPickerPopup.Pick(CurrentDynamicDates(), this);
+            if (picked == null) return;
+
+            var vm = DataContext as ViewModels.SettingsViewModel;
+            if (picked.Value.Config != null && vm?.SelectedPauta != null)
+                vm.SelectedPauta.DynamicDates = picked.Value.Config;
+
+            InsertAtCaret(EmailSubjectTextBox, picked.Value.Token);
+        }
+
+        private System.Windows.Controls.TextBox? FindRuleSubjectBox(DependencyObject start)
+        {
+            DependencyObject? cur = start;
+            while (cur != null && cur is not System.Windows.Controls.Border)
+                cur = System.Windows.Media.VisualTreeHelper.GetParent(cur);
+            if (cur == null) return null;
+            foreach (var box in FindVisualChildren<System.Windows.Controls.TextBox>(cur))
+                if ((box.Tag as string) == "RuleSubjectBox") return box;
+            return null;
+        }
+
+        private void RuleSubjectField_Click(object sender, RoutedEventArgs e)
+        {
+            var box = FindRuleSubjectBox((DependencyObject)sender);
+            if (box == null) return;
+            string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);
+            if (!string.IsNullOrEmpty(placeholder)) InsertAtCaret(box, placeholder);
+        }
+
+        private void RuleSubjectDate_Click(object sender, RoutedEventArgs e)
+        {
+            var box = FindRuleSubjectBox((DependencyObject)sender);
+            if (box == null) return;
+            var picked = Views.DateTokenPickerPopup.Pick(CurrentDynamicDates(), this);
+            if (picked == null) return;
+
+            var vm = DataContext as ViewModels.SettingsViewModel;
+            if (picked.Value.Config != null && vm?.SelectedPauta != null)
+                vm.SelectedPauta.DynamicDates = picked.Value.Config;
+
+            InsertAtCaret(box, picked.Value.Token);
+        }
+
+        private System.Windows.DependencyObject? FindRuleCard(System.Windows.DependencyObject start)
+        {
+            System.Windows.DependencyObject? cur = start;
+            while (cur != null && cur is not System.Windows.Controls.Border)
+                cur = System.Windows.Media.VisualTreeHelper.GetParent(cur);
+            return cur;
+        }
+
+        private void RuleBodyField_Click(object sender, RoutedEventArgs e)
+        {
+            var card = FindRuleCard((System.Windows.DependencyObject)sender);
+            if (card == null) return;
+            string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);
+            if (string.IsNullOrEmpty(placeholder)) return;
+            foreach (var ed in FindVisualChildren<HtmlEditor.NativeRichEditor>(card))
+                if (ed.Visibility == System.Windows.Visibility.Visible)
+                {
+                    ed.InsertTextAtCaret(placeholder);
+                    return;
+                }
+            foreach (var box in FindVisualChildren<System.Windows.Controls.TextBox>(card))
+                if ((box.Tag as string) == "RuleBodyBox")
+                {
+                    InsertAtCaret(box, placeholder);
+                    return;
+                }
+        }
+
+        private void RuleBodyDate_Click(object sender, RoutedEventArgs e)
+        {
+            var card = FindRuleCard((System.Windows.DependencyObject)sender);
+            if (card == null) return;
+            var picked = Views.DateTokenPickerPopup.Pick(CurrentDynamicDates(), this);
+            if (picked == null) return;
+
+            var vm = DataContext as ViewModels.SettingsViewModel;
+            if (picked.Value.Config != null && vm?.SelectedPauta != null)
+                vm.SelectedPauta.DynamicDates = picked.Value.Config;
+
+            foreach (var ed in FindVisualChildren<HtmlEditor.NativeRichEditor>(card))
+                if (ed.Visibility == System.Windows.Visibility.Visible)
+                {
+                    ed.InsertTextAtCaret(picked.Value.Token);
+                    return;
+                }
+            foreach (var box in FindVisualChildren<System.Windows.Controls.TextBox>(card))
+                if ((box.Tag as string) == "RuleBodyBox")
+                {
+                    InsertAtCaret(box, picked.Value.Token);
+                    return;
+                }
         }
 
         // --- Drag & Drop Implementation ---
@@ -87,11 +309,22 @@ namespace PautaDinamicaApp.Views
                         System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
                         _draggedItem.GiveFeedback += feedbackHandler;
 
+                        DragScrollHelper.Current.BeginDrag(EmailRulesList);
                         try { System.Windows.DragDrop.DoDragDrop(_draggedItem, dragData, System.Windows.DragDropEffects.Move); }
-                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; DragScrollHelper.Current.Stop(); }
                     }
                 }
             }
+        }
+
+        private void EmailRulesList_DragOver(object sender, System.Windows.DragEventArgs e)
+        {
+            if (!_isDraggingNow) return;
+            if (sender is FrameworkElement listBox)
+            {
+                DragScrollHelper.Current.Update(e, listBox);
+            }
+            e.Handled = true;
         }
 
         private void EmailRulesList_Drop(object sender, System.Windows.DragEventArgs e)

@@ -1,3 +1,5 @@
+using PautaDinamicaApp;
+using PautaDinamicaApp.Models;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -8,7 +10,6 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.IO;
-using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using PautaDinamicaApp.Views;
 using ClosedXML.Excel;
@@ -71,6 +72,7 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand ToggleThemeCommand { get; }
         public ICommand ClearFiltersCommand { get; }
         public ICommand OpenAttachmentsFolderCommand { get; }
+        public ICommand ToggleHeaderCommand { get; }
 
         public UserModel? CurrentUser => SessionService.CurrentUser;
         private DateTime _currentAuditStartTime = DateTime.Now;
@@ -202,6 +204,8 @@ namespace PautaDinamicaApp.ViewModels
                     _storageService.SaveSettings(_settings);
                     OnPropertyChanged(nameof(DashboardLayout));
                     OnPropertyChanged(nameof(DashboardLayoutString));
+                    OnPropertyChanged(nameof(IsSinglePageLayout));
+                    OnPropertyChanged(nameof(IsSplitLayout));
                 }
             }
         }
@@ -214,6 +218,7 @@ namespace PautaDinamicaApp.ViewModels
                 DashboardLayout.Right => "Derecha",
                 DashboardLayout.Top => "Arriba",
                 DashboardLayout.Bottom => "Abajo",
+                DashboardLayout.SinglePage => "Una ventana",
                 _ => "Izquierda"
             };
             set
@@ -224,15 +229,20 @@ namespace PautaDinamicaApp.ViewModels
                     "Derecha" => DashboardLayout.Right,
                     "Arriba" => DashboardLayout.Top,
                     "Abajo" => DashboardLayout.Bottom,
+                    "Una ventana" => DashboardLayout.SinglePage,
                     _ => DashboardLayout.Left
                 };
             }
         }
 
-        public List<string> DashboardLayoutOptions => new List<string> { "Izquierda", "Derecha", "Arriba", "Abajo" };
+        public List<string> DashboardLayoutOptions => new List<string> { "Izquierda", "Derecha", "Arriba", "Abajo", "Una ventana" };
+
+        public bool IsSinglePageLayout => DashboardLayout == DashboardLayout.SinglePage;
+        public bool IsSplitLayout => DashboardLayout != DashboardLayout.SinglePage;
 
         public ICommand ToggleFiltersCommand { get; }
         public ICommand ChangeLayoutCommand { get; }
+        public ICommand OpenEmailConfigCommand { get; }
 
         public MainViewModel()
         {
@@ -242,7 +252,9 @@ namespace PautaDinamicaApp.ViewModels
 
             // Aplicar tema guardado del usuario al iniciar
             _settings = _storageService.LoadSettings();
-            new ThemeService().SetTheme(_settings.Theme);
+            var ts = new ThemeService();
+            ts.SetTheme(_settings.Theme);
+            ts.ApplyAccentColor(_settings.AccentColor);
 
             _recordsView = CollectionViewSource.GetDefaultView(_records);
             _recordsView.Filter = FilterRecords;
@@ -278,6 +290,8 @@ namespace PautaDinamicaApp.ViewModels
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
             ToggleFiltersCommand = new RelayCommand(_ => IsFiltersPanelExpanded = !IsFiltersPanelExpanded);
             ChangeLayoutCommand = new RelayCommand(_ => RotateLayout());
+            OpenEmailConfigCommand = new RelayCommand(_ => OpenEmailConfig());
+            ToggleHeaderCommand = new RelayCommand(_ => IsHeaderVisible = !IsHeaderVisible);
             
             // Comandos para Pick Date/Time (mismo comportamiento que en Config)
             PickDateFromCommand = new RelayCommand(p => PickDate(true));
@@ -295,7 +309,8 @@ namespace PautaDinamicaApp.ViewModels
                 DashboardLayout.Left => DashboardLayout.Top,
                 DashboardLayout.Top => DashboardLayout.Right,
                 DashboardLayout.Right => DashboardLayout.Bottom,
-                DashboardLayout.Bottom => DashboardLayout.Left,
+                DashboardLayout.Bottom => DashboardLayout.SinglePage,
+                DashboardLayout.SinglePage => DashboardLayout.Left,
                 _ => DashboardLayout.Left
             };
         }
@@ -311,10 +326,16 @@ namespace PautaDinamicaApp.ViewModels
             win.Owner = System.Windows.Application.Current.MainWindow;
             if (win.ShowDialog() == true)
             {
-                if (win.SelectedValue == "TODAY")
+                if (win.SelectedValue.Trim().Equals(Models.DateDefaultValue.TodayToken, StringComparison.OrdinalIgnoreCase))
                 {
                     if (isFrom) FilterStartDate = DateTime.Today;
                     else FilterEndDate = DateTime.Today.AddHours(23).AddMinutes(59);
+                }
+                else if (Models.DateDefaultValue.TryParseMonthDay(win.SelectedValue, out int monthDay))
+                {
+                    DateTime resolved = Models.DateDefaultValue.ResolveMonthDay(monthDay);
+                    if (isFrom) FilterStartDate = resolved;
+                    else FilterEndDate = resolved.AddHours(23).AddMinutes(59);
                 }
                 else if (DateTime.TryParse(win.SelectedValue, out DateTime date))
                 {
@@ -560,7 +581,19 @@ namespace PautaDinamicaApp.ViewModels
             }
             catch { /* Ignorar error al guardar default */ }
 
-            new ThemeService().SetTheme(newTheme);
+            // Also ensure accent color persists on the default profile
+            var ts = new ThemeService();
+            ts.SetTheme(newTheme);
+            ts.ApplyAccentColor(settings.AccentColor);
+            try
+            {
+                var defaultStorage = new StorageService("default");
+                var defaultSettings = defaultStorage.LoadSettings();
+                defaultSettings.Theme = newTheme;
+                defaultSettings.AccentColor = settings.AccentColor;
+                defaultStorage.SaveSettings(defaultSettings);
+            }
+            catch { /* Ignorar error al guardar default */ }
         }
 
         private void OpenAttachmentsFolder()
@@ -573,7 +606,7 @@ namespace PautaDinamicaApp.ViewModels
             }
             else
             {
-                MessageBox.Show("Aún no hay archivos adjuntos para esta pauta.");
+                MessageBoxHelper.Show("Aún no hay archivos adjuntos para esta pauta.", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -601,9 +634,6 @@ namespace PautaDinamicaApp.ViewModels
         {
             var content = new StringBuilder();
             content.AppendLine("# 📘 Documentación del Sistema");
-            content.AppendLine("");
-            content.AppendLine("**Versión:** 2.1.0");
-            content.AppendLine("**Creador:** Angel Gustavo Pacheco Manzanero");
             content.AppendLine("");
             content.AppendLine("### 🚀 Resumen del Sistema");
             content.AppendLine("Pauta Dinámica es una herramienta avanzada diseñada para la **Auditoría de Calidad** y el **Control de Procesos**. Su objetivo principal es permitir la creación de formularios 100% dinámicos, eliminando la dependencia de hojas de cálculo estáticas y automatizando la generación de reportes y envío de métricas.");
@@ -637,14 +667,9 @@ namespace PautaDinamicaApp.ViewModels
             content.AppendLine("- Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en **CONFIG. GENERAL > Rutas**.");
             content.AppendLine("");
             content.AppendLine("---");
-            content.AppendLine("");
-            content.AppendLine("## 🔗 Enlaces del Desarrollador");
-            content.AppendLine("");
-            content.AppendLine("- **LinkedIn:** [Angel Temporal Pacheco](https://www.linkedin.com/in/angel-temporal-pacheco/)");
-            content.AppendLine("- **GitHub:** [classTemporal](https://github.com/classTemporal)");
-            content.AppendLine("");
-            content.AppendLine("---");
             content.AppendLine("*Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.*");
+            content.AppendLine("");
+            content.AppendLine("Ver la versión y los datos del desarrollador en **Config. General > Sistema > Sobre esta aplicación**.");
 
             var vm = new HelpViewModel("Documentación General", content.ToString());
             var win = new Views.HelpWindow { DataContext = vm };
@@ -686,6 +711,33 @@ namespace PautaDinamicaApp.ViewModels
                 ApplyRowColoring();
                 UpdateAuditStats();
             }
+
+            // Refrescar directorio/plantillas aunque no se haya pulsado "Guardar"
+            // (pudieron guardarse cambios con "Aplicar" o desde el Directorio de Contactos).
+            RefreshEmailConfigFromDisk();
+        }
+
+        private void OpenEmailConfig()
+        {
+            var vm = new SettingsViewModel(CurrentPauta?.Id ?? "");
+            var settingsWin = new Views.SettingsWindow { DataContext = vm, InitialTabIndex = 3 };
+            var owner = GetBestOwner();
+            if (owner != null && owner != settingsWin) settingsWin.Owner = owner;
+
+            vm.RequestClose += () => settingsWin.Close();
+            settingsWin.ShowDialog();
+
+            if (vm.IsSaved)
+            {
+                Settings = vm.Settings;
+                LoadPautas();
+                ApplyRowColoring();
+                UpdateAuditStats();
+            }
+
+            // Refrescar directorio/plantillas aunque no se haya pulsado "Guardar"
+            // (pudieron guardarse cambios con "Aplicar" o desde el Directorio de Contactos).
+            RefreshEmailConfigFromDisk();
         }
 
         private void ApplyRowColoring()
@@ -848,7 +900,7 @@ namespace PautaDinamicaApp.ViewModels
                 }
 
                 string presetPart = !string.IsNullOrEmpty(selectedPresetName) ? $"_{selectedPresetName}" : "";
-                string fileName = $"{baseName}{presetPart}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                string fileName = $"{baseName}{presetPart}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
                 filePath = Path.Combine(exportDir, fileName);
             }
 
@@ -1033,12 +1085,12 @@ namespace PautaDinamicaApp.ViewModels
                     }
                     workbook.SaveAs(filePath);
                 }
-                if (!silent) MessageBox.Show($"Exportación a Excel exitosa en:\n{filePath}");
+                if (!silent) MessageBoxHelper.ShowNonCritical($"Exportación a Excel exitosa en:\n{filePath}", "Éxito");
                 return true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al exportar Excel: {ex.Message}");
+                MessageBoxHelper.Show($"Error al exportar Excel: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -1060,7 +1112,7 @@ namespace PautaDinamicaApp.ViewModels
                 string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(filePath, json);
 
-                if (MessageBox.Show($"Exportación a JSON exitosa.\n\nArchivo guardado en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical($"Exportación a JSON exitosa.\n\nArchivo guardado en:\n{filePath}\n\n¿Desea abrir la carpeta ahora?", "Éxito", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
                 {
                     if (Directory.Exists(exportDir)) System.Diagnostics.Process.Start("explorer.exe", exportDir);
                 }
@@ -1068,7 +1120,7 @@ namespace PautaDinamicaApp.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al exportar JSON: {ex.Message}");
+                MessageBoxHelper.Show($"Error al exportar JSON: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -1092,43 +1144,30 @@ namespace PautaDinamicaApp.ViewModels
                         if (worksheet == null) return;
 
                         var rows = worksheet.RowsUsed().Skip(1);
-                        var headerRow = worksheet.Row(1);
-                        var headers = headerRow.CellsUsed().ToDictionary(c => c.Address.ColumnNumber, c => c.Value.ToString().Trim());
+
+                        // Cabeceras por posición (1..última usada): así también se detectan
+                        // columnas sin cabecera en lugar de saltarlas en silencio.
+                        int lastCol = worksheet.LastColumnUsed()?.ColumnNumber() ?? 0;
+                        var headers = new List<string?>();
+                        for (int c = 1; c <= lastCol; c++)
+                            headers.Add(worksheet.Row(1).Cell(c).Value.ToString());
 
                         // --- MAPEO DE COLUMNAS A IDs ---
-                        var columnMap = new Dictionary<int, string>(); // ColumnIndex -> FieldId
-                        int timestampColIndex = -1;
-                        int durationColIndex = -1;
-
-                        var exportConfig = CurrentPauta?.ExportConfig ?? new List<ExportColumnConfig>();
-
-                        foreach (var h in headers)
-                        {
-                            string headerText = h.Value;
-
-                            // 1. Checar campos sistema
-                            if (headerText.Equals("Fecha de evaluación", StringComparison.OrdinalIgnoreCase)) { timestampColIndex = h.Key; continue; }
-                            if (headerText.Equals("Duración (min)", StringComparison.OrdinalIgnoreCase)) { durationColIndex = h.Key; continue; }
-
-                            // 2. Checar configuración de exportación (Header Personalizado)
-                            var configMatch = exportConfig.FirstOrDefault(c => string.Equals(c.CustomHeader, headerText, StringComparison.OrdinalIgnoreCase));
-                            if (configMatch != null)
-                            {
-                                columnMap[h.Key] = configMatch.FieldId;
-                                continue;
-                            }
-
-                            // 3. Checar Labels de campos actuales (Nombre original)
-                            var fieldMatch = CurrentFields.FirstOrDefault(f => string.Equals(f.Label, headerText, StringComparison.OrdinalIgnoreCase));
-                            if (fieldMatch != null)
-                            {
-                                columnMap[h.Key] = fieldMatch.Id;
-                            }
-                        }
+                        // Acepta cabeceras de cualquier preset (CustomHeader / OriginalLabel),
+                        // de la config legacy y de las etiquetas actuales: lo exportado con
+                        // un encabezado personalizado debe poder reimportarse.
+                        var mapResult = ExcelImportMapper.MapColumns(
+                            headers,
+                            CurrentPauta?.ExportPresets,
+                            CurrentPauta?.ExportConfig,
+                            CurrentFields.Select(f => (f.Id, f.Label)));
+                        var columnMap = mapResult.ColumnMap; // ColumnIndex -> FieldId
+                        int timestampColIndex = mapResult.TimestampColumn;
+                        int durationColIndex = mapResult.DurationColumn;
 
                         if (columnMap.Count == 0 && timestampColIndex == -1)
                         {
-                            MessageBox.Show("No se pudieron mapear las columnas. Asegúrate de que los nombres de cabecera coincidan con la Pauta actual.", "Error Importación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            MessageBoxHelper.Show("No se pudieron mapear las columnas. Asegúrate de que los nombres de cabecera coincidan con la Pauta actual.", "Error Importación", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
 
@@ -1206,13 +1245,17 @@ namespace PautaDinamicaApp.ViewModels
                         }
 
                         if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
-                        MessageBox.Show($"Importación completada. Se importaron {importedCount} registros.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                        string importMsg = $"Importación completada. Se importaron {importedCount} registros.";
+                        var ignored = mapResult.Skipped.Concat(mapResult.Conflicts).ToList();
+                        if (ignored.Any())
+                            importMsg += $"\n\nColumnas ignoradas ({ignored.Count}):\n- " + string.Join("\n- ", ignored);
+                        MessageBoxHelper.ShowNonCritical(importMsg, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                         RefreshCalculations();
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error al importar: {ex.Message}");
+                    MessageBoxHelper.Show($"Error al importar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -1235,14 +1278,14 @@ namespace PautaDinamicaApp.ViewModels
                     }
                 }
 
-                if (MessageBox.Show($"Se generaron {count} PDFs en:\n{folderPath}\n\n¿Abrir carpeta?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical($"Se generaron {count} PDFs en:\n{folderPath}\n\n¿Abrir carpeta?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                 {
                     System.Diagnostics.Process.Start("explorer.exe", folderPath);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al generar PDFs: {ex.Message}");
+                MessageBoxHelper.Show($"Error al generar PDFs: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1332,7 +1375,7 @@ namespace PautaDinamicaApp.ViewModels
 
                 if (!silent)
                 {
-                    if (MessageBox.Show($"PDF Generado con éxito en:\n{filePath}\n\n¿Abrir ahora?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                    if (MessageBoxHelper.ShowNonCritical($"PDF Generado con éxito en:\n{filePath}\n\n¿Abrir ahora?", "Éxito", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                     {
                         new System.Diagnostics.Process { StartInfo = new System.Diagnostics.ProcessStartInfo(filePath) { UseShellExecute = true } }.Start();
                     }
@@ -1341,7 +1384,9 @@ namespace PautaDinamicaApp.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al generar PDF: {ex.Message}");
+                // En lote silencioso no se espamea un diálogo por envío: el resumen informa.
+                if (!silent)
+                    MessageBoxHelper.Show($"Error al generar PDF: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return null;
             }
         }
@@ -1396,10 +1441,24 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
+        private bool _hasMissingEmails;
+        public bool HasMissingEmails
+        {
+            get => _hasMissingEmails;
+            set => SetProperty(ref _hasMissingEmails, value);
+        }
+
         // Duplicate command properties removed.
 
         private bool _isMultiSelectMode;
         public bool IsMultiSelectMode { get => _isMultiSelectMode; set => SetProperty(ref _isMultiSelectMode, value); }
+
+        private bool _isHeaderVisible = true;
+        public bool IsHeaderVisible
+        {
+            get => _isHeaderVisible;
+            set { if (SetProperty(ref _isHeaderVisible, value)) { /* visibility change triggers via binding */ } }
+        }
 
         private void LoadPautas()
         {
@@ -1408,6 +1467,84 @@ namespace PautaDinamicaApp.ViewModels
 
             Pautas = new ObservableCollection<PautaSchema>(pautas);
             CurrentPauta = Pautas.FirstOrDefault(p => p.Id == lastId) ?? Pautas.FirstOrDefault();
+        }
+
+        private void CheckMissingEmails()
+        {
+            if (CurrentPauta == null || Records == null || string.IsNullOrEmpty(CurrentPauta.EmailNameFieldId))
+            {
+                HasMissingEmails = false;
+                return;
+            }
+
+            var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var record in Records)
+            {
+                if (record.Values.TryGetValue(CurrentPauta.EmailNameFieldId, out var val) && val != null)
+                {
+                    string nameText = val.ToString()?.Trim() ?? "";
+                    if (!string.IsNullOrWhiteSpace(nameText))
+                    {
+                        uniqueNames.Add(nameText);
+                    }
+                }
+            }
+
+            var contacts = CurrentPauta.RecipientContacts ?? new List<RecipientContact>();
+            bool hasMissing = false;
+            foreach (var name in uniqueNames)
+            {
+                var contact = contacts.FirstOrDefault(c => string.Equals(c.Name?.Trim(), name, StringComparison.OrdinalIgnoreCase));
+                if (contact == null || string.IsNullOrWhiteSpace(contact.Email))
+                {
+                    hasMissing = true;
+                    break;
+                }
+            }
+            HasMissingEmails = hasMissing;
+        }
+
+        /// <summary>
+        /// Recarga desde disco los datos de correo de la pauta activa (Directorio de Contactos,
+        /// campo de origen, método y plantillas). Evita que el envío y la validación de
+        /// "Correos Faltantes" trabajen con datos en memoria obsoletos cuando el usuario acaba
+        /// de editar el Directorio de Contactos o la configuración de correo.
+        /// </summary>
+        private void RefreshEmailConfigFromDisk()
+        {
+            if (CurrentPauta == null) return;
+
+            try
+            {
+                var diskPauta = _storageService.LoadPautas().FirstOrDefault(p => p.Id == CurrentPauta.Id);
+                if (diskPauta == null) return;
+
+                CurrentPauta.RecipientContacts = diskPauta.RecipientContacts ?? new List<RecipientContact>();
+                CurrentPauta.UseAutomatedRecipient = diskPauta.UseAutomatedRecipient;
+                CurrentPauta.EmailNameFieldId = diskPauta.EmailNameFieldId;
+                CurrentPauta.EmailMethod = diskPauta.EmailMethod;
+                CurrentPauta.EmailToTemplate = diskPauta.EmailToTemplate;
+                CurrentPauta.EmailCcTemplate = diskPauta.EmailCcTemplate;
+                CurrentPauta.EmailSubjectTemplate = diskPauta.EmailSubjectTemplate;
+                CurrentPauta.EmailBodyTemplate = diskPauta.EmailBodyTemplate;
+                CurrentPauta.EmailBodyHtmlTemplate = diskPauta.EmailBodyHtmlTemplate;
+                CurrentPauta.UseDynamicDates = diskPauta.UseDynamicDates;
+                CurrentPauta.DynamicDates = diskPauta.DynamicDates ?? new DynamicDateConfig();
+                CurrentPauta.EmailReplacementRules = diskPauta.EmailReplacementRules;
+                CurrentPauta.ConditionalEmailRules = diskPauta.ConditionalEmailRules;
+                // Adjuntos y exclusión: también se editan en Config. General y deben
+                // estar vigentes al enviar sin reiniciar la app.
+                CurrentPauta.AttachPdfToEmail = diskPauta.AttachPdfToEmail;
+                CurrentPauta.ExcludedAttachmentFieldIds = diskPauta.ExcludedAttachmentFieldIds ?? new List<string>();
+                CurrentPauta.ExcludeByFieldId = diskPauta.ExcludeByFieldId;
+                CurrentPauta.ExcludeByFieldValue = diskPauta.ExcludeByFieldValue;
+            }
+            catch
+            {
+                // Un fallo de lectura no debe abortar el envío; se conserva lo que haya en memoria.
+            }
+
+            CheckMissingEmails();
         }
 
         private void LoadData()
@@ -1419,8 +1556,9 @@ namespace PautaDinamicaApp.ViewModels
             // Reutilizar la colección si es posible o disparar el setter
             Records = new ObservableCollection<AuditEntry>(savedRecords);
             
-            Records.CollectionChanged += (s, e) => UpdateAuditStats();
+            Records.CollectionChanged += (s, e) => { UpdateAuditStats(); CheckMissingEmails(); };
             UpdateAuditStats();
+            CheckMissingEmails();
 
             ApplyRowColoring();
             ValidateAllRecordAttachments();
@@ -1463,6 +1601,33 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (CurrentPauta == null) return;
             var config = _storageService.LoadConfiguration(CurrentPauta.Id).OrderBy(f => f.Order).ToList();
+            
+            // Card 39: Apply DashboardFieldOrder from PautaSchema if available
+            // This allows the dashboard to display fields in a different order than the main config list
+            if (CurrentPauta.DashboardFieldOrder != null && CurrentPauta.DashboardFieldOrder.Any())
+            {
+                var orderedConfig = new List<FieldDefinition>();
+                var orderedIds = new HashSet<string>(CurrentPauta.DashboardFieldOrder);
+                
+                // First, add fields in the dashboard-specified order
+                foreach (var fieldId in CurrentPauta.DashboardFieldOrder)
+                {
+                    var field = config.FirstOrDefault(f => f.Id == fieldId);
+                    if (field != null) orderedConfig.Add(field);
+                }
+                
+                // Then, add any remaining fields that weren't in the dashboard order
+                foreach (var field in config)
+                {
+                    if (!orderedIds.Contains(field.Id))
+                    {
+                        orderedConfig.Add(field);
+                    }
+                }
+                
+                config = orderedConfig;
+            }
+            
             var fields = config.Where(c => c.Type != FieldType.Separator).Select(c => new DynamicFieldVM(c)).ToList();
 
             foreach (var f in fields)
@@ -1472,6 +1637,7 @@ namespace PautaDinamicaApp.ViewModels
                     if (e.PropertyName == nameof(DynamicFieldVM.Value) && !_isCalculating)
                     {
                         RefreshCalculations();
+                        CheckDuplicateWarning(f);
                     }
                 };
             }
@@ -1483,6 +1649,17 @@ namespace PautaDinamicaApp.ViewModels
 
             RefreshCalculations();
             FieldsRefreshed?.Invoke();
+        }
+
+        /// <summary>
+        /// Persists the current dashboard field order into CurrentPauta.DashboardFieldOrder
+        /// and saves via StorageService.
+        /// </summary>
+        public void SaveDashboardFieldOrder()
+        {
+            if (CurrentPauta == null) return;
+            CurrentPauta.DashboardFieldOrder = CurrentFields.Select(f => f.Id).ToList();
+            _storageService.SavePautas(Pautas.ToList());
         }
 
         private bool _isCalculating;
@@ -1758,7 +1935,7 @@ namespace PautaDinamicaApp.ViewModels
                     // Aquí solo limpiamos y refrescamos la vista actual del MainViewModel.
                     Records.Clear();
                     RefreshFields();
-                    MessageBox.Show("La vista se ha refrescado debido a cambios estructurales o restauración de base de datos.");
+                    MessageBoxHelper.ShowNonCritical("La vista se ha refrescado debido a cambios estructurales o restauración de base de datos.", "Éxito");
                 }
                 else
                 {
@@ -1814,13 +1991,48 @@ namespace PautaDinamicaApp.ViewModels
 
         private bool CanSaveRecord() => true;
 
+        /// <summary>
+        /// Checks the current value of a field against all existing records in real-time
+        /// and sets a visible warning on the field if a duplicate is detected.
+        /// </summary>
+        private void CheckDuplicateWarning(DynamicFieldVM field)
+        {
+            // Clear any previous warning first
+            field.DuplicateWarning = "";
+
+            var def = field.Definition;
+            bool checkType = def.Type == FieldType.Text || def.Type == FieldType.Numeric || def.Type == FieldType.TextArea;
+
+            // Only check if the feature is enabled on this field and there is a value
+            if (!checkType || !def.WarnOnDuplicate)
+                return;
+
+            string strValue = field.Value?.ToString() ?? "";
+            if (string.IsNullOrWhiteSpace(strValue))
+                return;
+
+            string currentValue = strValue.Trim();
+
+            // Search for the same value in other existing records (exclude the one being edited)
+            bool isDuplicate = Records.Any(r =>
+                r != SelectedRecord &&
+                r.Values.TryGetValue(field.Definition.Id, out var val) &&
+                val != null &&
+                string.Equals(val.ToString()!.Trim(), currentValue, StringComparison.OrdinalIgnoreCase));
+
+            if (isDuplicate)
+            {
+                field.DuplicateWarning = $"⚠️ Valor duplicado: '{currentValue}' ya existe en otro registro.";
+            }
+        }
+
         private void SaveCurrentRecord()
         {
             foreach (var field in CurrentFields) field.Validate();
             if (CurrentFields.Any(f => !f.IsValid))
             {
                 string errors = string.Join("\n", CurrentFields.Where(f => !f.IsValid).Select(f => $"- {f.Label}: {f.ValidationError}"));
-                MessageBox.Show($"Por favor, corrija los siguientes errores:\n\n{errors}", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxHelper.Show($"Por favor, corrija los siguientes errores:\n\n{errors}", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1846,15 +2058,23 @@ namespace PautaDinamicaApp.ViewModels
 
                     if (isDuplicate)
                     {
-                        var result = MessageBox.Show(
-                            $"El valor '{currentValue}' en el campo '{field.Label}' ya existe en otro registro.\n\n¿Desea agregarlo de todas formas?",
-                            "Valor Duplicado Detectado",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Warning);
+                        var result = MessageBoxHelper.Show(
+                                                    $"El valor '{currentValue}' en el campo '{field.Label}' ya existe en otro registro.\n\n¿Desea agregarlo de todas formas?",
+                                                    "Valor Duplicado Detectado",
+                                                    MessageBoxButton.YesNo,
+                                                    MessageBoxImage.Warning, true);
 
                         if (result == MessageBoxResult.No) return;
                     }
                 }
+            }
+
+            // Al editar un registro existente se sobrescribe: confirmación crítica
+            // (nunca suprimible por "desactivar mensajes no críticos").
+            if (SelectedRecord != null)
+            {
+                var editRes = MessageBoxHelper.Show("¿Guardar los cambios en este registro?", "Confirmar edición", MessageBoxButton.YesNo, MessageBoxImage.Question, true);
+                if (editRes != MessageBoxResult.Yes) return;
             }
 
             var entry = SelectedRecord ?? new AuditEntry();
@@ -1882,7 +2102,7 @@ namespace PautaDinamicaApp.ViewModels
             // Reiniciar todo para la siguiente auditoría (limpia campos y resetea el temporizador)
             CreateNewRecord();
 
-            MessageBox.Show("Registro guardado correctamente.");
+            MessageBoxHelper.ShowNonCritical("Registro guardado correctamente.", "Éxito");
         }
 
         private void EditRecord(AuditEntry? entry)
@@ -1895,7 +2115,7 @@ namespace PautaDinamicaApp.ViewModels
         private void DeleteRecord(AuditEntry? entry)
         {
             if (entry == null) return;
-            if (MessageBox.Show("¿Eliminar registro?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show("¿Eliminar registro?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 Records.Remove(entry);
                 if (CurrentPauta != null) _storageService.SaveRecords(CurrentPauta.Id, Records.ToList());
@@ -1905,7 +2125,7 @@ namespace PautaDinamicaApp.ViewModels
 
         private void DeleteAllRecords()
         {
-            if (MessageBox.Show("¿Eliminar TODOS los registros de esta pauta?", "Confirmar Eliminación Total", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show("¿Eliminar TODOS los registros de esta pauta?", "Confirmar Eliminación Total", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 bool wasEditing = SelectedRecord != null;
                 Records.Clear();
@@ -1925,7 +2145,7 @@ namespace PautaDinamicaApp.ViewModels
             var selected = Records.Where(r => r.IsSelected).ToList();
             if (!selected.Any())
             {
-                MessageBox.Show("No hay registros seleccionados.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBoxHelper.ShowNonCritical("No hay registros seleccionados.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -1933,11 +2153,40 @@ namespace PautaDinamicaApp.ViewModels
             else GenerateBatchPdfs(selected);
         }
 
+        private bool _isSendingEmails;
+
+        /// <summary>
+        /// Garantiza que la bandera de envío en curso se libere en todas las salidas
+        /// (fin, return o excepción): evita envíos traslapados que pelean por el COM de Outlook.
+        /// </summary>
+        private sealed class SendingGuard : IDisposable
+        {
+            private readonly MainViewModel _vm;
+            public SendingGuard(MainViewModel vm) { _vm = vm; _vm._isSendingEmails = true; }
+            public void Dispose() => _vm._isSendingEmails = false;
+        }
+
+        /// <summary>Identifica un registro en el resumen (agente o fecha/hora).</summary>
+        private string DescribeEntryForReport(AuditEntry entry)
+        {
+            if (CurrentPauta != null && !string.IsNullOrWhiteSpace(CurrentPauta.EmailNameFieldId)
+                && entry.Values.TryGetValue(CurrentPauta.EmailNameFieldId, out var nameVal) && nameVal != null
+                && !string.IsNullOrWhiteSpace(nameVal.ToString()))
+                return nameVal.ToString()!.Trim();
+            return entry.Timestamp.ToString("dd/MM/yyyy HH:mm");
+        }
+
         private async void SendEmails(AuditEntry? singleEntry = null)
         {
             if (CurrentPauta == null)
             {
-                MessageBox.Show("No hay una pauta activa.");
+                MessageBoxHelper.Show("No hay una pauta activa.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (_isSendingEmails)
+            {
+                MessageBoxHelper.Show("Ya hay un envío en curso. Espere a que termine antes de iniciar otro.", "Envío en curso", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -1955,12 +2204,18 @@ namespace PautaDinamicaApp.ViewModels
 
             if (!toProcess.Any())
             {
-                MessageBox.Show("No hay registros para enviar.");
+                MessageBoxHelper.ShowNonCritical("No hay registros para enviar.", "Aviso");
                 return;
             }
 
-            // Aplicar lógica de exclusión si estamos enviando múltiples
-            if (toProcess.Count > 1 && !string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldId))
+            // Refrescar directorio/plantillas desde disco: si el usuario acaba de guardar el
+            // Directorio de Contactos, la validación y el envío deben usar los datos actuales,
+            // no la copia en memoria de la sesión (causa del aviso permanente de correos faltantes).
+            RefreshEmailConfigFromDisk();
+
+            // Aplicar lógica de exclusión por calificación/campo valor
+            // Funciona tanto para envío individual como múltiple.
+            if (!string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldId) && !string.IsNullOrEmpty(CurrentPauta.ExcludeByFieldValue))
             {
                 int totalBefore = toProcess.Count;
                 toProcess = toProcess.Where(entry =>
@@ -1976,21 +2231,99 @@ namespace PautaDinamicaApp.ViewModels
                 int excluded = totalBefore - toProcess.Count;
                 if (excluded > 0)
                 {
-                    var res = MessageBox.Show($"Se han excluido {excluded} registros según la regla de la pauta.\n\n¿Desea continuar con los {toProcess.Count} restantes?", "Filtro de Exclusión", MessageBoxButton.YesNo);
+                    var res = MessageBoxHelper.Show($"Se han excluido {excluded} registros según la regla de la pauta.\n\n¿Desea continuar con los {toProcess.Count} restantes?", "Filtro de Exclusión", MessageBoxButton.YesNo, MessageBoxImage.Question, true);
                     if (res == MessageBoxResult.No) return;
+                }
+            }
+
+            // Cargar ajustes globales y definiciones de campos (la plantilla "Para" se usa como
+            // respaldo del Directorio de Contactos y también se valida aquí).
+            var globalSettings = _storageService.LoadSettings();
+            var fieldDefinitions = _storageService.LoadConfiguration(CurrentPauta.Id);
+
+            // --- VALIDACIÓN DE CORREOS FALTANTES (Card 31) ---
+            // Si el envío es automático (UseAutomatedRecipient) y hay agentes sin correo asociado,
+            // mostrar un mensaje con opción de ir al directorio de contactos. Se re-valida en bucle
+            // cada vez que el usuario regresa del Directorio de Contactos con datos recién guardados.
+            while (CurrentPauta.UseAutomatedRecipient && !string.IsNullOrEmpty(CurrentPauta.EmailNameFieldId))
+            {
+                var contacts = CurrentPauta.RecipientContacts ?? new List<RecipientContact>();
+                var missingEmailAgents = new List<string>();
+
+                foreach (var entry in toProcess)
+                {
+                    string nameText = "";
+                    if (entry.Values.TryGetValue(CurrentPauta.EmailNameFieldId, out var nameVal) && nameVal != null)
+                    {
+                        nameText = nameVal.ToString()?.Trim() ?? "";
+                    }
+
+                    if (string.IsNullOrWhiteSpace(nameText))
+                    {
+                        // Sin nombre en el campo de origen: solo puede usarse la plantilla "Para".
+                        // Si tampoco produce destinatario, el envío de este registro fallaría.
+                        string fallbackTo = _emailService.ProcessTemplate(CurrentPauta.EmailToTemplate, entry, fieldDefinitions, CurrentPauta.EmailReplacementRules);
+                        if (string.IsNullOrWhiteSpace(fallbackTo))
+                        {
+                            missingEmailAgents.Add($"Registro del {entry.Timestamp:dd/MM/yyyy HH:mm} (sin nombre y sin plantilla \"Para\")");
+                        }
+                        continue;
+                    }
+
+                    var contact = contacts.FirstOrDefault(c => string.Equals(c.Name?.Trim(), nameText, StringComparison.OrdinalIgnoreCase));
+                    if (contact == null || string.IsNullOrWhiteSpace(contact.Email))
+                    {
+                        missingEmailAgents.Add(nameText);
+                    }
+                }
+
+                if (!missingEmailAgents.Any()) break;
+
+                if (missingEmailAgents.Any())
+                {
+                    string agentList = string.Join("\n", missingEmailAgents.Distinct().Select(a => $"• {a}"));
+                    string msg = $"No se puede enviar el correo porque los siguientes agentes no tienen correo electrónico asociado:\n\n{agentList}\n\n" +
+                                 "Diríjase al Directorio de Contactos para completar los correos.";
+
+                    var result = MessageBoxHelper.Show(msg, "Correos Faltantes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, true);
+                    if (result == MessageBoxResult.Yes) break; // Enviar de todas formas
+
+                    if (result == MessageBoxResult.No)
+                    {
+                        // Abrir el Directorio de Contactos y volver a validar con los datos
+                        // recién guardados (evita enviar con contactos obsoletos en memoria).
+                        var win = new Views.EmailDirectoryWindow { DataContext = new ViewModels.SettingsViewModel(CurrentPauta.Id), Owner = System.Windows.Application.Current.MainWindow };
+                        win.ShowDialog();
+                        RefreshEmailConfigFromDisk();
+                        continue;
+                    }
+
+                    return; // Cancelar: bloquear envío
                 }
             }
 
             if (toProcess.Count > 1)
             {
-                var confirm = MessageBox.Show($"Se prepararán {toProcess.Count} correos individuales. ¿Continuar?", "Confirmar Envío", MessageBoxButton.YesNo);
+                var confirm = MessageBoxHelper.Show($"Se prepararán {toProcess.Count} correos individuales. ¿Continuar?", "Confirmar Envío", MessageBoxButton.YesNo, MessageBoxImage.Question, true);
                 if (confirm == MessageBoxResult.No) return;
             }
 
-            var globalSettings = _storageService.LoadSettings();
-            var fieldDefinitions = _storageService.LoadConfiguration(CurrentPauta.Id);
+            // A partir de aquí el envío queda protegido contra reentradas.
+            using var sendGuard = new SendingGuard(this);
+
+            bool batch = toProcess.Count > 1;
             int count = 0;
+            int failedCount = 0;
+            int conditionalCount = 0;
+            int conditionalFailedCount = 0;
+            int sentWithoutPdf = 0;
+            var failureDetails = new List<string>();
             var generatedPdfs = new List<string>();
+            var entryPdfPaths = new Dictionary<AuditEntry, string?>();
+            var activeConditionalRules = (CurrentPauta.ConditionalEmailRules ?? new System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule>())
+                .Where(r => r != null && !string.IsNullOrWhiteSpace(r.TriggerFieldId) && !string.IsNullOrWhiteSpace(r.TriggerValue))
+                .ToList();
+            var askMatches = new Dictionary<ConditionalEmailRule, List<AuditEntry>>();
 
             foreach (var entry in toProcess)
             {
@@ -1999,10 +2332,54 @@ namespace PautaDinamicaApp.ViewModels
                     // Generar PDF individual (para el adjunto)
                     string? pdfPath = GeneratePdfCommon(new List<AuditEntry> { entry }, silent: true);
                     if (!string.IsNullOrEmpty(pdfPath)) generatedPdfs.Add(pdfPath);
+                    entryPdfPaths[entry] = pdfPath;
+                    bool pdfMissing = string.IsNullOrEmpty(pdfPath);
 
-                    // El EmailService ahora maneja la herencia internamente
-                    _emailService.SendEmail(globalSettings, CurrentPauta, entry, fieldDefinitions, pdfPath);
-                    count++;
+                    // El EmailService ahora maneja la herencia internamente.
+                    // En lotes (silent) no se muestra un aviso por cada registro fallido;
+                    // el resumen final informa quiénes fallaron y por qué.
+                    bool sent = _emailService.SendEmail(globalSettings, CurrentPauta, entry, fieldDefinitions, pdfPath, silent: batch, out string? reason);
+                    if (sent)
+                    {
+                        count++;
+                        if (pdfMissing) sentWithoutPdf++;
+                    }
+                    else
+                    {
+                        failedCount++;
+                        failureDetails.Add($"• {DescribeEntryForReport(entry)}: {reason ?? "no se pudo entregar"}");
+                    }
+
+                    // Evaluar reglas de correos adicionales condicionales.
+                    // Las Auto se abren de inmediato; las Ask se acumulan para una
+                    // pregunta agrupada por regla al final (evita N diálogos en lotes).
+                    foreach (var rule in activeConditionalRules)
+                    {
+                        bool matches;
+                        try { matches = rule.Matches(entry.Values); }
+                        catch { matches = false; }
+                        if (!matches) continue;
+
+                        if (rule.Mode == ConditionalEmailMode.Auto)
+                        {
+                            bool condSent = _emailService.SendConditionalEmail(globalSettings, CurrentPauta, rule, entry, fieldDefinitions, pdfPath, silent: batch, out string? condReason);
+                            if (condSent) conditionalCount++;
+                            else
+                            {
+                                conditionalFailedCount++;
+                                failureDetails.Add($"• adicional '{rule.Name}' ({DescribeEntryForReport(entry)}): {condReason ?? "no se pudo entregar"}");
+                            }
+                        }
+                        else
+                        {
+                            if (!askMatches.TryGetValue(rule, out var list))
+                            {
+                                list = new List<AuditEntry>();
+                                askMatches[rule] = list;
+                            }
+                            list.Add(entry);
+                        }
+                    }
 
                     // Añadir un pequeño retraso para evitar que Windows ignore las peticiones (especialmente con Mailto)
                     if (toProcess.Count > 1)
@@ -2012,13 +2389,88 @@ namespace PautaDinamicaApp.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error al procesar registro: {ex.Message}");
+                    failedCount++;
+                    if (batch)
+                        failureDetails.Add($"• {DescribeEntryForReport(entry)}: {ex.Message}");
+                    else
+                        MessageBoxHelper.Show($"Error al enviar el correo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
 
-            if (count > 0)
+            // Preguntas agrupadas por regla (modo Ask): un solo diálogo por regla con
+            // todos los registros coincidentes, en vez de un diálogo por registro.
+            foreach (var kvp in askMatches)
+            {
+                var rule = kvp.Key;
+                var matched = kvp.Value;
+                if (matched.Count == 0) continue;
+
+                string triggerLabel = fieldDefinitions.FirstOrDefault(f => f.Id == rule.TriggerFieldId)?.Label ?? "campo";
+                var askRes = MessageBoxHelper.Show(
+                    $"{matched.Count} registro(s) coinciden con '{rule.Name}' ({triggerLabel} = '{rule.TriggerValue}').\n\n¿Desea enviar también esos {matched.Count} correo(s) adicional(es)?",
+                    "Correo adicional",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (askRes != MessageBoxResult.Yes) continue;
+
+                foreach (var entry in matched)
+                {
+                    try
+                    {
+                        entryPdfPaths.TryGetValue(entry, out string? pdfPath);
+                        bool askBatch = matched.Count > 1;
+                        bool condSent = _emailService.SendConditionalEmail(globalSettings, CurrentPauta, rule, entry, fieldDefinitions, pdfPath, silent: askBatch, out string? askReason);
+                        if (condSent) conditionalCount++;
+                        else
+                        {
+                            conditionalFailedCount++;
+                            failureDetails.Add($"• adicional '{rule.Name}' ({DescribeEntryForReport(entry)}): {askReason ?? "no se pudo entregar"}");
+                        }
+
+                        if (askBatch)
+                        {
+                            await System.Threading.Tasks.Task.Delay(800);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        conditionalFailedCount++;
+                        if (matched.Count > 1)
+                            failureDetails.Add($"• adicional '{rule.Name}' ({DescribeEntryForReport(entry)}): {ex.Message}");
+                        else
+                            MessageBoxHelper.Show($"Error al enviar el correo adicional '{rule.Name}': {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+
+            if (count > 0 || failedCount > 0 || conditionalCount > 0 || conditionalFailedCount > 0)
             {
                 string msg = $"{count} correos procesados.";
+                if (failedCount > 0)
+                {
+                    msg += $"\n\n⚠️ {failedCount} registros no se pudieron procesar. Verifique que tengan correo asociado o que la plantilla 'Para' produzca un destinatario.";
+                }
+                if (conditionalCount > 0 || conditionalFailedCount > 0)
+                {
+                    msg += $"\n\n📧 Correos adicionales: {conditionalCount} procesados.";
+                    if (conditionalFailedCount > 0)
+                    {
+                        msg += $" ⚠️ {conditionalFailedCount} no se pudieron procesar (destinatario vacío).";
+                    }
+                }
+
+                if (failureDetails.Any())
+                {
+                    int shown = Math.Min(8, failureDetails.Count);
+                    msg += "\n\n❌ Detalle de fallos:\n" + string.Join("\n", failureDetails.Take(shown));
+                    if (failureDetails.Count > shown)
+                        msg += $"\n...y {failureDetails.Count - shown} más.";
+                }
+
+                if (sentWithoutPdf > 0)
+                {
+                    msg += $"\n\n⚠️ {sentWithoutPdf} correo(s) se abrieron sin el PDF adjunto (no se pudo generar).";
+                }
 
                 // Determinar el método efectivo para el aviso de adjuntos
                 EmailMethod effectiveMethod = CurrentPauta.EmailMethod;
@@ -2032,7 +2484,7 @@ namespace PautaDinamicaApp.ViewModels
                     }
                 }
 
-                if (MessageBox.Show(msg + "\n\n¿Desea abrir la carpeta de los reportes ahora?", "Proceso Finalizado", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.ShowNonCritical(msg + "\n\n¿Desea abrir la carpeta de los reportes ahora?", "Proceso Finalizado", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
                 {
                     if (Directory.Exists(globalSettings.PdfReportPath))
                     {
@@ -2061,7 +2513,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             var selected = Records.Where(r => r.IsSelected).ToList();
             if (!selected.Any()) return;
-            if (MessageBox.Show($"¿Eliminar {selected.Count}?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show($"¿Eliminar {selected.Count}?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 bool wasEditingDeleted = SelectedRecord != null && selected.Contains(SelectedRecord);
                 foreach (var rec in selected) Records.Remove(rec);

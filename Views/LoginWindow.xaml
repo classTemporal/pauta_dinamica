@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Acceso - CHECK-O" Height="580" Width="420"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
-        Background="Transparent" Foreground="{DynamicResource TextBrush}" WindowStyle="None" AllowsTransparency="True"
+        KeyDown="Window_KeyDown"
+        Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}" WindowStyle="None" AllowsTransparency="False"
         Icon="pack://application:,,,/Assets/logo.ico">
     
     <Border CornerRadius="15" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">

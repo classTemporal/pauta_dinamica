@@ -3,6 +3,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Microsoft.Win32;
 
 namespace PautaDinamicaApp.Services
@@ -17,8 +18,11 @@ namespace PautaDinamicaApp.Services
     {
         private const string DarkThemePath = "Views/Resources/Themes/DarkTheme.xaml";
         private const string LightThemePath = "Views/Resources/Themes/LightTheme.xaml";
+        private const string AccentColorPath = "Views/Resources/Themes/AccentColor.xaml";
 
         public static AppTheme CurrentTheme { get; private set; } = AppTheme.Light;
+
+        private const string DefaultAccentColor = "#007bff";
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
@@ -54,15 +58,70 @@ namespace PautaDinamicaApp.Services
             }
         }
 
+        public void ApplyAccentColor(string colorHex)
+        {
+            var mergedDicts = System.Windows.Application.Current.Resources.MergedDictionaries;
+
+            var existingAccentDict = mergedDicts.FirstOrDefault(d =>
+                d.Source != null && d.Source.OriginalString.Contains("AccentColor.xaml"));
+
+            var brush = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex));
+
+            if (existingAccentDict != null)
+            {
+                // Cannot modify a ResourceDictionary that has a Source URI — remove and replace
+                int index = mergedDicts.IndexOf(existingAccentDict);
+                mergedDicts.RemoveAt(index);
+                var newAccentDict = new ResourceDictionary();
+                newAccentDict.Add("AccentBrush", brush);
+                mergedDicts.Insert(index, newAccentDict);
+            }
+            else
+            {
+                // Find an existing in-memory accent dict (no Source) to update in-place
+                var existingInMemory = mergedDicts.FirstOrDefault(d =>
+                    d.Source == null && d.Contains("AccentBrush"));
+
+                if (existingInMemory != null)
+                {
+                    existingInMemory["AccentBrush"] = brush;
+                }
+                else
+                {
+                    var newAccentDict = new ResourceDictionary();
+                    newAccentDict.Add("AccentBrush", brush);
+                    mergedDicts.Add(newAccentDict);
+                }
+            }
+        }
+
         public void ApplyThemeToWindow(Window window, AppTheme theme)
         {
             if (window == null) return;
 
-            IntPtr hwnd = new WindowInteropHelper(window).EnsureHandle();
-            int useImmersiveDarkMode = theme == AppTheme.Dark ? 1 : 0;
+            try
+            {
+                // IMPORTANTE: nunca usar EnsureHandle() aquí. Forzaría la creación del HWND en
+                // mitad de la carga del BAML (p. ej. si se invoca desde el evento Loaded) y a
+                // partir de ahí WPF prohíbe cambiar propiedades de ventana como
+                // AllowsTransparency o WindowStyle, provocando al arrancar:
+                //   "No se puede cambiar AllowsTransparency después de mostrarse un elemento
+                //    Window o de haber llamado a WindowInteropHelper.EnsureHandle".
+                // Leemos el handle que ya exista; si la ventana todavía no lo tiene, se omite
+                // aquí y se vuelve a aplicar con la pasada diferida del arranque (ver App.xaml.cs).
+                IntPtr hwnd = new WindowInteropHelper(window).Handle;
+                if (hwnd == IntPtr.Zero) return;
 
-            if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useImmersiveDarkMode, sizeof(int)) != 0)
-                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref useImmersiveDarkMode, sizeof(int));
+                int useImmersiveDarkMode = theme == AppTheme.Dark ? 1 : 0;
+
+                if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useImmersiveDarkMode, sizeof(int)) != 0)
+                    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref useImmersiveDarkMode, sizeof(int));
+            }
+            catch
+            {
+                // El tema de la barra de título es cosmético: nunca debe impedir el arranque
+                // de la aplicación ni el cierre de una ventana.
+            }
         }
 
         public static AppTheme GetSystemTheme()
@@ -84,5 +143,7 @@ namespace PautaDinamicaApp.Services
             catch { }
             return AppTheme.Light; // Default
         }
+
+        public static string GetDefaultAccentColor() => DefaultAccentColor;
     }
 }

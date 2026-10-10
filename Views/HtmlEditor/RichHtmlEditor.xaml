@@ -1,0 +1,180 @@
+<UserControl x:Class="PautaDinamicaApp.Views.HtmlEditor.RichHtmlEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             Background="{DynamicResource CardBackgroundBrush}"
+             Foreground="{DynamicResource TextBrush}">
+
+    <!--
+        Editor de texto enriquecido para el cuerpo del correo.
+        Se usa SOLO cuando el método de envío es Outlook, único capaz de
+        interpretar HTML (.HTMLBody). En mailto se conserva el TextBox plano.
+    -->
+    <UserControl.Resources>
+        <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">
+            <Setter Property="MinWidth" Value="32"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <Style x:Key="ToolLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="8,0,2,0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Barra de formato -->
+        <Border Grid.Row="0" Background="{DynamicResource BackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0"
+                CornerRadius="6,6,0,0" Padding="4">
+            <WrapPanel>
+                <Button Style="{StaticResource ToolButton}" Content="B" FontWeight="Bold" ToolTip="Negrita"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="bold"/>
+                <Button Style="{StaticResource ToolButton}" Content="I" FontStyle="Italic" ToolTip="Cursiva"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="italic"/>
+                <Button Style="{StaticResource ToolButton}" ToolTip="Subrayado">
+                    <Button.Content>
+                        <TextBlock Text="U" TextDecorations="Underline" Foreground="{DynamicResource TextBrush}"/>
+                    </Button.Content>
+                </Button>
+                <!-- S button commented out for isolation -->
+<!-- <Button Style="{StaticResource ToolButton}" Content="S" ToolTip="Tachado"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="strikeThrough">
+                    <Button.Content>
+                        <TextBlock Text="S" TextDecorations="Strikethrough" Foreground="{DynamicResource TextBrush}"/>
+                    </Button.Content>
+                </Button> -->
+
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+
+                <Button Style="{StaticResource ToolButton}" Content="A" Foreground="#dc3545" ToolTip="Color de texto"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="foreColor:#dc3545"/>
+                <Button Style="{StaticResource ToolButton}" Content="A" Foreground="#28a745" ToolTip="Color de texto"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="foreColor:#28a745"/>
+                <Button Style="{StaticResource ToolButton}" Content="A" Foreground="#0078D4" ToolTip="Color de texto"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="foreColor:#0078D4"/>
+
+
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+
+                <Button Style="{StaticResource ToolButton}" Content="•" ToolTip="Lista con viñetas"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="insertUnorderedList"/>
+                <Button Style="{StaticResource ToolButton}" Content="1." ToolTip="Lista numerada"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="insertOrderedList"/>
+
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+
+                <Button Style="{StaticResource ToolButton}" Content="⬅" ToolTip="Alinear a la izquierda"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="justifyLeft"/>
+                <Button Style="{StaticResource ToolButton}" Content="↔" ToolTip="Centrar"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="justifyCenter"/>
+                <Button Style="{StaticResource ToolButton}" Content="➡" ToolTip="Alinear a la derecha"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="justifyRight"/>
+
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+
+                <Button Style="{StaticResource ToolButton}" Content="🔗" ToolTip="Insertar enlace"
+                        Command="{Binding InsertLinkCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                <Button Style="{StaticResource ToolButton}" Content="🖼" ToolTip="Insertar imagen"
+                        Command="{Binding PickImageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+
+                <Button Style="{StaticResource ToolButton}" Content="✕" ToolTip="Quitar formato"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="removeFormat"/>
+                <Button Style="{StaticResource ToolButton}" Content="↶" ToolTip="Deshacer"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="undo"/>
+                <Button Style="{StaticResource ToolButton}" Content="↷" ToolTip="Rehacer"
+                        Command="{Binding ExecCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="redo"/>
+            </WrapPanel>
+        </Border>
+
+
+        <!-- Barra de tablas y placeholders -->
+        <Border Grid.Row="1" Background="{DynamicResource BackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,0" Padding="4">
+            <WrapPanel>
+                <TextBlock Style="{StaticResource ToolLabel}" Text="Tabla:"/>
+                <Button Style="{StaticResource ToolButton}" Content="2×2" ToolTip="Insertar tabla de 2×2"
+                        Command="{Binding InsertTableCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="2,2"/>
+                <Button Style="{StaticResource ToolButton}" Content="3×2" ToolTip="Insertar tabla de 3×2"
+                        Command="{Binding InsertTableCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="3,2"/>
+                <Button Style="{StaticResource ToolButton}" Content="3×3" ToolTip="Insertar tabla de 3×3"
+                        Command="{Binding InsertTableCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="3,3"/>
+                <Button Style="{StaticResource ToolButton}" Content="4×3" ToolTip="Insertar tabla de 4×3"
+                        Command="{Binding InsertTableCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="4,3"/>
+
+                <TextBlock Style="{StaticResource ToolLabel}" Text="|"/>
+
+                <!--
+                    Los comandos de placeholder los define la ventana contenedora,
+                    porque la lista depende de la pauta activa en ese momento.
+                -->
+                <Button Style="{StaticResource ToolButton}" Content="🏷️ Campo"
+                        ToolTip="Insertar un campo de la pauta en la posición del cursor"
+                        Command="{Binding InsertFieldRequested, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                <Button Style="{StaticResource ToolButton}" Content="📅 Fecha"
+                        ToolTip="Insertar una fecha dinámica (semana, mes, año, rango)"
+                        Command="{Binding InsertDateRequested, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+            </WrapPanel>
+        </Border>
+
+        <!-- Superficie de edición -->
+        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1"
+                CornerRadius="0,0,6,6">
+            <Grid>
+                <wv2:WebView2 x:Name="Browser" DefaultBackgroundColor="Transparent"/>
+
+                <!-- Aviso cuando falta el runtime de WebView2 -->
+                <Border x:Name="RuntimeWarning" Background="{DynamicResource CardBackgroundBrush}"
+                        Padding="20" Visibility="Collapsed">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
+                        <TextBlock Text="⚠️ Editor enriquecido no disponible"
+                                   FontSize="14" FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                        <TextBlock TextWrapping="Wrap" TextAlignment="Center" FontSize="11"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   Text="El editor de formato requiere el runtime de Microsoft Edge WebView2, que no se encontró en este equipo. Puede seguir escribiendo el cuerpo en el cuadro de texto plano, o instalar el runtime para recuperar el editor visual."/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Pie de estado -->
+        <TextBlock Grid.Row="3" Margin="4,4,0,0" FontSize="10"
+                   Foreground="{DynamicResource SecondaryTextBrush}"
+                   Text="{Binding StatusText, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+    </Grid>
+</UserControl>

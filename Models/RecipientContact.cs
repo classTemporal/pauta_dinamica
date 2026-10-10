@@ -19,7 +19,7 @@ namespace PautaDinamicaApp.Models
         public string Email
         {
             get => _email;
-            set { _email = value; OnPropertyChanged(); }
+            set { _email = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsMissingEmail)); }
         }
 
         [System.Text.Json.Serialization.JsonIgnore]
@@ -31,6 +31,9 @@ namespace PautaDinamicaApp.Models
             get => _isSelected;
             set { _isSelected = value; OnPropertyChanged(); }
         }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsMissingEmail => string.IsNullOrWhiteSpace(Email);
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected virtual void OnPropertyChanged([CallerMemberName] string? name = null)

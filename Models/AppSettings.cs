@@ -13,7 +13,8 @@ namespace PautaDinamicaApp.Models
         Left,
         Right,
         Top,
-        Bottom
+        Bottom,
+        SinglePage
     }
 
     public class AppSettings
@@ -24,9 +25,13 @@ namespace PautaDinamicaApp.Models
 
         // UI Theme
         public Services.AppTheme Theme { get; set; } = Services.ThemeService.GetSystemTheme();
+        public string AccentColor { get; set; } = "#007bff";
 
         // Admin Settings
         public bool EnableInternalTimer { get; set; } = true;
+
+        // MessageBox Settings
+        public bool ShowNonCriticalMessages { get; set; } = true;
 
         // Spellcheck Settings
         public string SpellCheckLanguage { get; set; } = "es-ES"; // Default to Spanish

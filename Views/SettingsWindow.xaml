@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:PautaDinamicaApp.Views"
         xmlns:models="clr-namespace:PautaDinamicaApp.Models"
         xmlns:conv="clr-namespace:PautaDinamicaApp.Views.Converters"
+        xmlns:editor="clr-namespace:PautaDinamicaApp.Views.HtmlEditor"
         mc:Ignorable="d"
         Title="Configuración General" Height="700" Width="900"
         WindowStartupLocation="CenterOwner" 
@@ -37,9 +38,9 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <TabControl Background="Transparent" BorderThickness="0" Margin="10">
+        <TabControl x:Name="MainTabControl" Background="Transparent" BorderThickness="0" Margin="10">
             <!-- TAB GENERAL: Interfaz y Ortografía -->
-            <TabItem Header="✨ General">
+            <TabItem Header="⚙️ General">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <Border Padding="20">
                         <StackPanel>
@@ -57,6 +58,35 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- Color del Tema (Tinte/Accent) -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                                <StackPanel>
+                                    <TextBlock Text="Color del Tinte:" Style="{StaticResource LabelStyle}"/>
+                                    <TextBlock Text="Personalice el color principal de la interfaz (botones, enlaces, resaltados)." 
+                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,10"/>
+                                    <ComboBox ItemsSource="{Binding AccentColors}" 
+                                              SelectedValuePath="Key"
+                                              SelectedValue="{Binding SelectedAccentColorName, Mode=TwoWay}"
+                                              DisplayMemberPath="Key"
+                                              Height="35" Width="150" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="Color personalizado:" Style="{StaticResource LabelStyle}" Margin="0,15,0,0"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <Button Command="{Binding PickAccentColorCommand}" 
+                                                Style="{StaticResource GhostButton}" Height="36" Padding="8,2" FontSize="11" ToolTip="Seleccionar color personalizado">
+                                            <UniformGrid Columns="2">
+                                                <Border Width="20" Height="20" CornerRadius="4"
+                                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                                    <Border.Background>
+                                                        <SolidColorBrush Color="{Binding Settings.AccentColor, Converter={StaticResource StringToBrushConverter}}"/>
+                                                    </Border.Background>
+                                                </Border>
+                                                <TextBlock Text="..." Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                            </UniformGrid>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Ortografía -->
                             <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
                                 <StackPanel>
@@ -70,10 +100,26 @@
                                               Height="35" Width="200" HorizontalAlignment="Left"/>
                                     <TextBlock Text="Nota: Requiere el paquete de idioma de Windows." 
                                                FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="0,8,0,0"/>
-                                </StackPanel>
-                            </Border>
+                                    </StackPanel>
+                                    </Border>
 
-                            <TextBlock Text="💡 Estos ajustes se aplican a toda la aplicación de forma global." 
+                                    <!-- Mensajes emergentes no críticos -->
+                                    <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,20,0,0">
+                                    <StackPanel>
+                                    <CheckBox IsChecked="{Binding DisableNonCriticalMessages}" Margin="0,0,0,5">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Desactivar mensajes emergentes no críticos"
+                                                           FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Al activar esta opción se silencian avisos como '¿Desea abrir la carpeta?' o 'Plantillas aplicadas correctamente'. Los mensajes críticos (errores, respaldos, advertencias estructurales y validaciones) se mantienen siempre."
+                                                       FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                    </StackPanel>
+                                    </Border>
+
+                                    <TextBlock Text="💡 Estos ajustes se aplican a toda la aplicación de forma global." 
                                        FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" Margin="5,20,0,0"/>
                         </StackPanel>
                     </Border>
@@ -264,7 +310,7 @@
                                                 <TextBlock Text="Detección Automática" VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                                             </StackPanel>
                                             <Button Content="⚙️ DIRECTORIO DE CORREOS" 
-                                                    Command="{Binding OpenEmailDirectoryCommand}"
+                                                    Command="{Binding OpenEmailDirectoryFromWarningCommand}"
                                                     Style="{StaticResource GhostButton}" Height="35" FontSize="11"
                                                     IsEnabled="{Binding ElementName=AutoRecipientCheck, Path=IsChecked}"/>
                                             <TextBlock Text="Asocia nombres con correos automáticamente." 
@@ -323,6 +369,13 @@
                                                 <Run FontWeight="Bold" Foreground="#0078D4">Requisito de Outlook:</Run>
                                                 <LineBreak/>
                                                 <Run Foreground="{DynamicResource TextBrush}">Este método requiere que la aplicación de escritorio de Microsoft Outlook esté instalada y configurada con una cuenta activa en este equipo.</Run>
+                                                <LineBreak/>
+                                                <LineBreak/>
+                                                <Run FontWeight="Bold" Foreground="{DynamicResource TextBrush}">Cuerpo separado:</Run>
+                                                <Run Foreground="{DynamicResource TextBrush}"> el cuerpo con formato (negritas, tablas, imágenes) es independiente del cuerpo en texto plano de MAILTO. Cada método guarda el suyo, así que puede cambiar de uno a otro sin perder el texto.</Run>
+                                                <LineBreak/>
+                                                <Run FontWeight="Bold" Foreground="{DynamicResource TextBrush}">Editor enriquecido (nativo):</Run>
+                                                <Run Foreground="{DynamicResource TextBrush}"> funciona sin instalar nada extra. Solo Outlook usa este cuerpo con formato; MAILTO sigue usando texto plano.</Run>
                                             </TextBlock>
                                         </Grid>
                                     </Border>
@@ -344,18 +397,80 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <TextBlock Text="Asunto:" Style="{StaticResource LabelStyle}" FontSize="12"/>
-                                <TextBox Text="{Binding SelectedPauta.EmailSubjectTemplate}" Margin="0,0,0,10" Height="35" VerticalContentAlignment="Center"/>
+                                <TextBlock Text="Asunto: (acepta [Etiquetas] y [Fecha])" Style="{StaticResource LabelStyle}" FontSize="12"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="EmailSubjectTextBox" Text="{Binding SelectedPauta.EmailSubjectTemplate}" Height="42" Padding="10,0" VerticalContentAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="🏷 Campo" Click="InsertSubjectField_Click"
+                                            Style="{StaticResource GhostButton}" Height="42" Padding="10,0" Margin="6,0,0,0"
+                                            ToolTip="Insertar campo en el asunto"/>
+                                    <Button Grid.Column="2" Content="📅 Fecha" Click="InsertSubjectDate_Click"
+                                            Style="{StaticResource GhostButton}" Height="42" Padding="10,0" Margin="6,0,0,0"
+                                            ToolTip="Insertar fecha en el asunto"/>
+                                </Grid>
 
                                 <TextBlock Text="Cuerpo:" Style="{StaticResource LabelStyle}" FontSize="12"/>
-                                <Grid Margin="0,0,0,20">
-                                    <TextBox x:Name="EmailBodyTextBox" 
-                                             Text="{Binding SelectedPauta.EmailBodyTemplate}" 
-                                             AcceptsReturn="True" Height="200" MinHeight="150" 
+
+                                <!-- Botones de inserción de marcadores dinámicos -->
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="8,6" Margin="0,0,0,6">
+                                    <WrapPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Insertar:" VerticalAlignment="Center" FontSize="11"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,6,0"/>
+                                        <Button Content="🏷 Campo" Click="InsertFieldButton_Click"
+                                                Style="{StaticResource GhostButton}" Height="30" Padding="10,0" Margin="0,0,6,0"
+                                                ToolTip="Insertar campo en el cuerpo"/>
+                                        <Button Content="📅 Fecha" Click="InsertDateButton_Click"
+                                                Style="{StaticResource GhostButton}" Height="30" Padding="10,0"
+                                                ToolTip="Insertar fecha en el cuerpo"/>
+                                        <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" FontSize="11"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                                   Text="Los marcadores [Etiqueta] y [Fecha] se resuelven al enviar."/>
+                                    </WrapPanel>
+                                </Border>
+
+                                <Grid Margin="0,0,0,0">
+                                    <!-- MAILTO: cuerpo en texto plano -->
+                                    <TextBox x:Name="EmailBodyTextBox"
+                                             Text="{Binding SelectedPauta.EmailBodyTemplate}"
+                                             AcceptsReturn="True" Height="200" MinHeight="150"
                                              VerticalContentAlignment="Top" TextWrapping="Wrap"
                                              VerticalScrollBarVisibility="Auto"
                                              SpellCheck.IsEnabled="{Binding SpellCheckLanguage, Converter={StaticResource NotNullToBooleanConverter}}"
-                                             Language="{Binding SpellCheckLanguage, Converter={StaticResource StringToLanguageConverter}, ConverterCulture='es-ES'}"/>
+                                             Language="{Binding SpellCheckLanguage, Converter={StaticResource StringToLanguageConverter}, ConverterCulture='es-ES'}">
+                                        <TextBox.Style>
+                                            <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedPauta.EmailMethod}"
+                                                                 Value="{x:Static models:EmailMethod.Mailto}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBox.Style>
+                                    </TextBox>
+
+                                    <!-- OUTLOOK: cuerpo en HTML enriquecido (nativo) -->
+                                    <editor:NativeRichEditor x:Name="HtmlBodyEditor"
+                                             Html="{Binding SelectedPauta.EmailBodyHtmlTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                        <editor:NativeRichEditor.Style>
+                                            <Style TargetType="editor:NativeRichEditor">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedPauta.EmailMethod}"
+                                                                 Value="{x:Static models:EmailMethod.Outlook}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </editor:NativeRichEditor.Style>
+                                    </editor:NativeRichEditor>
+
                                     <Thumb Width="15" Height="15" HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE" DragDelta="EmailBody_DragDelta">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
@@ -366,8 +481,176 @@
                                         </Thumb.Template>
                                     </Thumb>
                                 </Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,20">
+                                    <Button Content="📎 Elegir archivos a enviar" Command="{Binding ConfigureAttachmentsCommand}"
+                                            Style="{StaticResource GhostButton}" Height="30" Padding="10,0"
+                                            ToolTip="Elige qué archivos (PDF del reporte y campos de adjunto) se envían con este correo principal"/>
+                                    <TextBlock Text="{Binding AttachmentSummary}" VerticalAlignment="Center" Margin="10,0,0,0"
+                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
                                 <Separator Background="{DynamicResource BorderBrush}" Margin="0,5,0,20"/>
-                                
+
+                                <TextBlock Text="Correos Adicionales por Condición" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,20,0,8" Padding="0,0,0,3" LineHeight="24"/>
+                                <TextBlock Text="Envíe un correo extra cuando un campo tenga un valor específico (ej: Calificación = 0% → correo de 'Detractor alto riesgo'). Por defecto se pide confirmación agrupada antes de enviar; marca la casilla en la regla para abrir el correo directamente sin preguntar."
+                                           FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15" TextWrapping="Wrap"/>
+
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,10">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Visibility="{Binding IsConditionalRuleMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                <Button Content="+ Nuevo Correo" Command="{Binding AddConditionalEmailRuleCommand}" Style="{StaticResource PrimaryButton}" Height="34" Padding="15,0" Margin="0,0,10,0"/>
+                                                <Button Content="Selección Múltiple" Command="{Binding ToggleConditionalRuleMultiSelectCommand}" Style="{StaticResource SecondaryButton}" Height="34" Padding="15,0"
+                                                        Visibility="{Binding SelectedPauta.ConditionalEmailRules.Count, Converter={StaticResource DictConverter}, ConverterParameter=0:Collapsed|Default:Visible}"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Visibility="{Binding IsConditionalRuleMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <Button Content="Eliminar Seleccionados" Command="{Binding DeleteSelectedConditionalRulesCommand}" Style="{StaticResource DangerButton}" Margin="0,0,10,0" Height="34" Padding="15,0"/>
+                                                <Button Content="Seleccionar Todo" Command="{Binding SelectAllConditionalRulesCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Height="34" Padding="15,0"/>
+                                                <Button Content="Cancelar" Command="{Binding ToggleConditionalRuleMultiSelectCommand}" Style="{StaticResource GhostButton}" Height="34" Padding="15,0"/>
+                                             </StackPanel>
+                                        </Grid>
+                                        <ItemsControl ItemsSource="{Binding SelectedPauta.ConditionalEmailRules}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                                                        <StackPanel>
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,10,0"
+                                                                          Visibility="{Binding Data.IsConditionalRuleMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                    <TextBlock Text="Nombre:" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"
+                                                                               Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,8,0"/>
+                                                                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                                                             FontWeight="Bold" FontSize="14" Padding="6,5" VerticalContentAlignment="Center"
+                                                                             MinWidth="180"/>
+                                                                </StackPanel>
+                                                                <Button Grid.Column="2" Content="🗑️ Eliminar" Command="{Binding Data.RemoveConditionalEmailRuleCommand, Source={StaticResource Proxy}}"
+                                                                        CommandParameter="{Binding}" Style="{StaticResource DangerButton}" Padding="12,0" Height="32" VerticalAlignment="Center" FontSize="11"
+                                                                        Visibility="{Binding Data.IsConditionalRuleMultiSelectMode, Source={StaticResource Proxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                            </Grid>
+                                                            <Grid Margin="0,0,0,12">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="12"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="Si el campo..." Style="{StaticResource LabelStyle}" FontSize="11"/>
+                                                                    <ComboBox ItemsSource="{Binding Data.CurrentPautaFields, Source={StaticResource Proxy}}"
+                                                                              SelectedValue="{Binding TriggerFieldId}"
+                                                                              SelectedValuePath="Id"
+                                                                              DisplayMemberPath="Label" Height="38" VerticalContentAlignment="Center"/>
+                                                                </StackPanel>
+                                                                <StackPanel Grid.Column="2">
+                                                                    <TextBlock Text="...tiene exactamente este valor:" Style="{StaticResource LabelStyle}" FontSize="11"/>
+                                                                    <TextBox Text="{Binding TriggerValue, UpdateSourceTrigger=PropertyChanged}" Height="38" VerticalContentAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </Grid>
+
+                                                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,12">
+                                                                <CheckBox IsChecked="{Binding SendWithoutConfirm}" VerticalContentAlignment="Center">
+                                                                    <TextBlock Text="No confirmar antes de enviar correos adicionales (abrir directamente)"
+                                                                               TextWrapping="Wrap" FontSize="11" VerticalAlignment="Center"/>
+                                                                </CheckBox>
+                                                            </Border>
+                                                            <TextBlock Text="Para (vacío = usa el del correo principal):" Style="{StaticResource LabelStyle}" FontSize="11" Margin="0,0,0,3"/>
+                                                            <TextBox Text="{Binding ToTemplate, UpdateSourceTrigger=PropertyChanged}" Height="38" VerticalContentAlignment="Center"/>
+                                                            <TextBlock Text="CC:" Style="{StaticResource LabelStyle}" FontSize="11" Margin="0,8,0,3"/>
+                                                            <TextBox Text="{Binding CcTemplate, UpdateSourceTrigger=PropertyChanged}" Height="38" VerticalContentAlignment="Center"/>
+                                                            <TextBlock Text="Asunto: (acepta [Etiquetas] y [Fecha])" Style="{StaticResource LabelStyle}" FontSize="11" Margin="0,8,0,3"/>
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBox Text="{Binding SubjectTemplate, UpdateSourceTrigger=PropertyChanged}" Height="40" MinHeight="40" VerticalContentAlignment="Center" Padding="10,0" Tag="RuleSubjectBox"/>
+                                                                <Button Grid.Column="1" Content="🏷" Click="RuleSubjectField_Click" FontSize="16"
+                                                                        Style="{StaticResource GhostButton}" Height="40" MinHeight="40" Width="44" Margin="6,0,0,0"
+                                                                        VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0,2,0,4"
+                                                                        ToolTip="Insertar campo en el asunto"/>
+                                                                <Button Grid.Column="2" Content="📅" Click="RuleSubjectDate_Click" FontSize="16"
+                                                                        Style="{StaticResource GhostButton}" Height="40" MinHeight="40" Width="44" Margin="6,0,0,0"
+                                                                        VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0,2,0,4"
+                                                                        ToolTip="Insertar fecha en el asunto"/>
+                                                            </Grid>
+                                                            <TextBlock Text="Cuerpo (acepta [Etiquetas] y [Fecha]):" Style="{StaticResource LabelStyle}" FontSize="11" Margin="0,8,0,3"/>
+                                                            <WrapPanel Margin="0,0,0,6">
+                                                                <Button Content="🏷 Campo" Click="RuleBodyField_Click"
+                                                                        Style="{StaticResource GhostButton}" Height="30" Padding="10,0" Margin="0,0,6,0"
+                                                                        ToolTip="Insertar campo en el cuerpo"/>
+                                                                <Button Content="📅 Fecha" Click="RuleBodyDate_Click"
+                                                                        Style="{StaticResource GhostButton}" Height="30" Padding="10,0"
+                                                                        ToolTip="Insertar fecha en el cuerpo"/>
+                                                            </WrapPanel>
+                                                            <TextBox x:Name="RulePlainBox" Tag="RuleBodyBox" Text="{Binding BodyTemplate, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" Height="200" MinHeight="150" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top">
+                                                                <TextBox.Style>
+                                                                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Data.SelectedPauta.EmailMethod, Source={StaticResource Proxy}}" Value="Outlook">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBox.Style>
+                                                            </TextBox>
+                                                            <editor:NativeRichEditor x:Name="RuleHtmlBox" Html="{Binding BodyHtmlTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                                                <editor:NativeRichEditor.Style>
+                                                                    <Style TargetType="editor:NativeRichEditor">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Data.SelectedPauta.EmailMethod, Source={StaticResource Proxy}}" Value="Outlook">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </editor:NativeRichEditor.Style>
+                                                            </editor:NativeRichEditor>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,0">
+                                                                <Button Content="📎 Elegir archivos a enviar"
+                                                                        Command="{Binding Data.ConfigureRuleAttachmentsCommand, Source={StaticResource Proxy}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Style="{StaticResource GhostButton}" Height="30" Padding="10,0"
+                                                                        ToolTip="Elige qué archivos (PDF del reporte y campos de adjunto) se envían con este correo adicional. Solo afecta a este correo."/>
+                                                                <TextBlock Text="{Binding AttachmentSummary}" VerticalAlignment="Center" Margin="10,0,0,0"
+                                                                           FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap"/>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="Sin reglas configuradas. Pulse '+ Nuevo Correo' para agregar una."
+                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic"
+                                                   Visibility="{Binding SelectedPauta.ConditionalEmailRules.Count, Converter={StaticResource DictConverter}, ConverterParameter=0:Visible|Default:Collapsed}"/>
+                                    </StackPanel>
+                                </Border>
+                                <!-- Reglas de Envío (Exclusión) -->
+                                <TextBlock Text="Reglas de Envío (Exclusión)" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,5"/>
+                                <TextBlock Text="Evite enviar correos para registros que coincidan con un valor específico (ej: calificación = 100%)." 
+                                           FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15"/>
+
+                                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                                    <StackPanel>
+                                        <TextBlock Text="No enviar correo si el campo..." Style="{StaticResource LabelStyle}"/>
+                                        <ComboBox ItemsSource="{Binding CurrentPautaFields}" 
+                                                  SelectedValue="{Binding SelectedPauta.ExcludeByFieldId}"
+                                                  SelectedValuePath="Id"
+                                                  DisplayMemberPath="Label"
+                                                  Margin="0,0,0,10" Height="35"/>
+
+                                        <TextBlock Text="...tiene exactamente este valor:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBox Text="{Binding SelectedPauta.ExcludeByFieldValue}" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Ejemplo: Excluir si 'Calificación' tiene el valor '100%'" 
+                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic"/>
+                                    </StackPanel>
+                                </Border>
+
                                 <TextBlock Text="Reglas de Traducción (Reemplazo Automático)" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,5"/>
                                 <TextBlock Text="Traduzca valores internos (ej: '1' a 'Excelente') para que el correo sea legible." 
                                            FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15"/>
@@ -397,12 +680,14 @@
                                                  PreviewMouseLeftButtonDown="EmailRulesList_PreviewMouseLeftButtonDown"
                                                  PreviewMouseLeftButtonUp="EmailRulesList_PreviewMouseLeftButtonUp"
                                                  MouseMove="EmailRulesList_MouseMove"
+                                                 DragOver="EmailRulesList_DragOver"
                                                  Drop="EmailRulesList_Drop"
                                                  Height="250">
                                             <ListBox.ItemContainerStyle>
                                                 <Style TargetType="ListBoxItem">
                                                     <Setter Property="Padding" Value="0"/>
                                                     <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                                     <Setter Property="Template">
                                                         <Setter.Value>
@@ -476,18 +761,19 @@
                                             </ListBox.ItemTemplate>
                                         </ListBox>
 
-                                        <TextBlock Text="* Pulse 'Editar...' para seleccionar a qué campos se aplica cada regla." 
+                                        <TextBlock Text="* Pulse 'Editar...' para seleccionar a qué campos se aplica cada regla."
                                                    FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" FontStyle="Italic"/>
                                     </StackPanel>
                                 </Border>
+
                             </StackPanel>
                         </StackPanel>
                     </Border>
                 </ScrollViewer>
             </TabItem>
 
-            <!-- TAB PLANTILLAS -->
-            <TabItem Header="📑 Plantillas">
+            <!-- TAB TEXTOS RÁPIDOS: Fragmentos de texto -->
+            <TabItem Header="📝 Textos Rápidos">
                 <Border Padding="30">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="500">
                         <TextBlock Text="Gestión de Fragmentos de Texto" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,15"/>
@@ -568,6 +854,67 @@
                             </Border>
                         </StackPanel>
                     </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- TAB SISTEMA: Documentación, Usuario, Cerrar Sesión -->
+            <TabItem Header="🔧 Sistema">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border Padding="20">
+                        <StackPanel>
+                            <!-- Documentación -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                                <StackPanel>
+                                    <TextBlock Text="📘 Documentación y Guía del Sistema" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Consulta la guía completa del sistema: uso de pautas, registro de datos, exportación, correo electrónico y más." 
+                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15" TextWrapping="Wrap"/>
+                                    <Button Content="Abrir Documentación" Command="{Binding OpenHelpCommand}" 
+                                            Style="{StaticResource PrimaryButton}" Height="40" Width="200" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Sobre esta aplicación -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                                <StackPanel>
+                                    <TextBlock Text="ℹ️ Sobre esta aplicación" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Pauta Dinámica" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,2,0,10">
+                                        <Run Text="Versión "/><Run Text="{Binding AppVersion, Mode=OneWay}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="Desarrollada por Angel Gustavo Pacheco Manzanero" FontSize="12" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0">
+                                            <Hyperlink NavigateUri="https://www.linkedin.com/in/angel-temporal-pacheco/" RequestNavigate="Hyperlink_RequestNavigate">LinkedIn</Hyperlink>
+                                        </TextBlock>
+                                        <TextBlock Text="•" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock FontSize="12" VerticalAlignment="Center">
+                                            <Hyperlink NavigateUri="https://github.com/classTemporal" RequestNavigate="Hyperlink_RequestNavigate">GitHub</Hyperlink>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Usuario actual -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                                <StackPanel>
+                                    <TextBlock Text="👤 Usuario Actual" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Sesión activa:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,5"/>
+                                    <TextBlock Text="{Binding CurrentUser.Username}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Cerrar Sesión -->
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="15">
+                                <StackPanel>
+                                    <TextBlock Text="🚪 Cerrar Sesión" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Cierra la sesión actual y regresa a la pantalla de login." 
+                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15" TextWrapping="Wrap"/>
+                                    <Button Content="CERRAR SESIÓN" Command="{Binding LogoutCommand}" 
+                                            Style="{StaticResource DangerButton}" Height="40" Width="180" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
                 </ScrollViewer>
             </TabItem>
         </TabControl>

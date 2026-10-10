@@ -54,12 +54,26 @@ namespace PautaDinamicaApp.Models
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsValid => true;
 
+        // --- Categorías de Plantillas ---
+        private List<string> _templateCategories = new();
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public List<string> TemplateCategories
+        {
+            get => _templateCategories;
+            set => SetProperty(ref _templateCategories, value);
+        }
+
         // --- Configuración de Correo por Pauta ---
         private EmailMethod _emailMethod = EmailMethod.Mailto;
         private string _emailToTemplate = "";
+        private string _emailToHtmlTemplate = "";
         private string _emailCcTemplate = "";
+        private string _emailCcHtmlTemplate = "";
         private string _emailSubjectTemplate = "";
+        private string _emailSubjectHtmlTemplate = "";
         private string _emailBodyTemplate = "";
+        private string _emailBodyHtmlTemplate = "";
         private bool _useAutomatedRecipient = false;
         private bool _isDragging;
         private bool _isDropTarget;
@@ -83,6 +97,34 @@ namespace PautaDinamicaApp.Models
         public string EmailCcTemplate { get => _emailCcTemplate; set => SetProperty(ref _emailCcTemplate, value); }
         public string EmailSubjectTemplate { get => _emailSubjectTemplate; set => SetProperty(ref _emailSubjectTemplate, value); }
         public string EmailBodyTemplate { get => _emailBodyTemplate; set => SetProperty(ref _emailBodyTemplate, value); }
+
+        /// <summary>
+        /// Cuerpo del correo en formato HTML enriquecido (negritas, tablas, imágenes inline).
+        /// Solo se usa cuando <see cref="EmailMethod"/> es <see cref="EmailMethod.Outlook"/>,
+        /// que es el único capaz de interpretarlo (.HTMLBody).
+        ///
+        /// Es un campo INDEPENDIENTE de <see cref="EmailBodyTemplate"/> a propósito:
+        ///   - Mailto  -> usa EmailBodyTemplate  (texto plano, no puede transportar marcado).
+        ///   - Outlook -> usa EmailBodyHtmlTemplate (HTML, admite formato y tablas).
+        /// Al estar separados, mailto nunca puede recibir HTML por error.
+        /// </summary>
+        public string EmailBodyHtmlTemplate { get => _emailBodyHtmlTemplate; set => SetProperty(ref _emailBodyHtmlTemplate, value); }
+
+        // --- Fechas Dinámicas (opcionales) ---
+        // Permiten títulos como "Auditorías de llamadas del 03/10/2026 al 09/10/2026"
+        // calculando el rango con la fecha del sistema, sin escribirlo a mano.
+        private bool _useDynamicDates = false;
+        private DynamicDateConfig _dynamicDates = new();
+
+        /// <summary>
+        /// Se conserva por compatibilidad con pautas guardadas. La resolución de fechas
+        /// dinámicas ahora siempre está activa al enviar: si el texto trae tokens,
+        /// se resuelven; si no, el texto queda intacto.
+        /// </summary>
+        public bool UseDynamicDates { get => _useDynamicDates; set => SetProperty(ref _useDynamicDates, value); }
+
+        /// <summary>Configuración del rango custom usado por el token [Rango].</summary>
+        public DynamicDateConfig DynamicDates { get => _dynamicDates; set => SetProperty(ref _dynamicDates, value); }
         public bool UseAutomatedRecipient { get => _useAutomatedRecipient; set => SetProperty(ref _useAutomatedRecipient, value); }
         public string EmailNameFieldId { get => _emailNameFieldId; set => SetProperty(ref _emailNameFieldId, value); }
         public System.Collections.Generic.List<RecipientContact> RecipientContacts { get => _recipientContacts; set => SetProperty(ref _recipientContacts, value); }
@@ -135,9 +177,47 @@ namespace PautaDinamicaApp.Models
         private System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule> _emailReplacementRules = new();
         public System.Collections.ObjectModel.ObservableCollection<EmailReplacementRule> EmailReplacementRules { get => _emailReplacementRules; set => SetProperty(ref _emailReplacementRules, value); }
 
+        // --- Correos Adicionales Condicionales ---
+        // Reglas que disparan un correo extra cuando un campo contiene un valor específico
+        // (ej: Calificación = "0%" -> correo de "Detractor alto riesgo").
+        private System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule> _conditionalEmailRules = new();
+        public System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule> ConditionalEmailRules { get => _conditionalEmailRules; set => SetProperty(ref _conditionalEmailRules, value); }
+
+        // --- Adjuntos del Correo Principal ---
+        // Qué archivos acompañan el correo principal. Cada correo adicional tiene
+        // su propia configuración en la regla. Solo aplica al método Outlook
+        // (mailto no admite adjuntos).
+        private bool _attachPdfToEmail = true;
+
+        /// <summary>
+        /// Incluir el PDF del reporte en los correos. Por defecto <c>true</c>
+        /// (comportamiento histórico: el PDF siempre se mandaba).
+        /// </summary>
+        public bool AttachPdfToEmail { get => _attachPdfToEmail; set => SetProperty(ref _attachPdfToEmail, value); }
+
+        private System.Collections.Generic.List<string> _excludedAttachmentFieldIds = new();
+
+        /// <summary>
+        /// IDs de campos de archivo adjunto que NO se enviarán con el correo.
+        /// Es una capa adicional a <c>FieldDefinition.AttachToEmail</c>: un campo solo se
+        /// adjunta si su propio flag lo permite Y su ID no está en esta lista.
+        /// Vacío = se envían todos (comportamiento histórico).
+        /// </summary>
+        public System.Collections.Generic.List<string> ExcludedAttachmentFieldIds { get => _excludedAttachmentFieldIds; set => SetProperty(ref _excludedAttachmentFieldIds, value); }
+
         // --- Reglas de Reemplazo para PDF ---
         private System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule> _pdfReplacementRules = new();
         public System.Collections.ObjectModel.ObservableCollection<PdfReplacementRule> PdfReplacementRules { get => _pdfReplacementRules; set => SetProperty(ref _pdfReplacementRules, value); }
+
+        // --- Orden de Campos en Dashboard (Card 39) ---
+        // Lista de IDs de campos que define el orden de visualización en el dashboard principal.
+        // Si está vacío, se usa el orden natural de la configuración.
+        private List<string> _dashboardFieldOrder = new();
+        public List<string> DashboardFieldOrder
+        {
+            get => _dashboardFieldOrder;
+            set => SetProperty(ref _dashboardFieldOrder, value);
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

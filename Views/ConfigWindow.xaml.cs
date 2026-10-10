@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using PautaDinamicaApp;
 using PautaDinamicaApp.Models;
 using MessageBox = System.Windows.MessageBox;
 using MessageBoxButton = System.Windows.MessageBoxButton;
@@ -16,6 +17,8 @@ using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Windows.Threading;
+using PautaDinamicaApp.Services;
 
 
 namespace PautaDinamicaApp
@@ -133,7 +136,7 @@ namespace PautaDinamicaApp
 
                 if (vm.IsSaveSuccessful)
                 {
-                    System.Windows.MessageBox.Show("Cambios aplicados correctamente.", "Éxito");
+                    MessageBoxHelper.Show("Cambios aplicados correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
         }
@@ -150,11 +153,11 @@ namespace PautaDinamicaApp
             {
                 if (vm.HasPendingChanges())
                 {
-                    var result = System.Windows.MessageBox.Show(
+                    var result = MessageBoxHelper.Show(
                         "Se han detectado cambios sin guardar. Si sale ahora, perderá todos los cambios realizados.\r\n\r\n¿Desea salir de todos modos?",
                         "Cambios sin guardar",
                         MessageBoxButton.YesNo,
-                        MessageBoxImage.Warning);
+                        MessageBoxImage.Warning, true);
 
                     if (result == MessageBoxResult.No)
                     {
@@ -216,6 +219,7 @@ namespace PautaDinamicaApp
                     System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
                     _draggedItem.GiveFeedback += feedbackHandler;
 
+                    DragScrollHelper.Current.BeginDrag(EditorGrid);
                     try {
                         DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move);
                     }
@@ -223,6 +227,7 @@ namespace PautaDinamicaApp
                         _draggedItem.GiveFeedback -= feedbackHandler;
                         dragWindow.Close();
                         _isDraggingNow = false;
+                        DragScrollHelper.Current.Stop();
                     }
                 }
             }
@@ -255,6 +260,11 @@ namespace PautaDinamicaApp
                     if (newIndex != -1 && oldIndex != newIndex)
                     {
                         vm.Fields.Move(oldIndex, newIndex);
+                        // Card 40: Keep DashboardFieldOrder in sync with the new Fields order.
+                        // The dashboard displays fields following DashboardFieldOrder; if we
+                        // don't update it here, reordering in ConfigWindow would persist a
+                        // stale dashboard order that doesn't match the user's intent.
+                        vm.SyncDashboardFieldOrderFromFields();
                     }
                 }
             }
@@ -323,7 +333,8 @@ namespace PautaDinamicaApp
 
                         System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
                         _draggedItem.GiveFeedback += feedbackHandler;
-                        
+
+                        DragScrollHelper.Current.BeginDrag(PautaList);
                         try {
                             DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move);
                         }
@@ -332,6 +343,7 @@ namespace PautaDinamicaApp
                             pauta.IsDragging = false;
                             dragWindow.Close();
                             _isDraggingNow = false;
+                            DragScrollHelper.Current.Stop();
                         }
                     }
                 }
@@ -494,8 +506,9 @@ namespace PautaDinamicaApp
                         System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
                         _draggedItem.GiveFeedback += feedbackHandler;
 
+                        DragScrollHelper.Current.BeginDrag(ExportGrid);
                         try { DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move); }
-                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; DragScrollHelper.Current.Stop(); }
                     }
                 }
             }
@@ -561,8 +574,9 @@ namespace PautaDinamicaApp
                         System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
                         _draggedItem.GiveFeedback += feedbackHandler;
 
+                        DragScrollHelper.Current.BeginDrag(PdfGrid);
                         try { DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move); }
-                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; DragScrollHelper.Current.Stop(); }
                     }
                 }
             }
@@ -628,8 +642,9 @@ namespace PautaDinamicaApp
                         System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
                         _draggedItem.GiveFeedback += feedbackHandler;
 
+                        DragScrollHelper.Current.BeginDrag(PdfRulesList);
                         try { DragDrop.DoDragDrop(_draggedItem, dragData, DragDropEffects.Move); }
-                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; DragScrollHelper.Current.Stop(); }
                     }
                 }
             }
@@ -715,6 +730,23 @@ namespace PautaDinamicaApp
             {
                 vm.EditingPauta.PdfFileNameFieldId2 = "";
             }
+        }
+
+        // --- Auto-scroll durante Drag-Drop (delegado al helper compartido) ---
+
+        /// <summary>
+        /// Handles DragOver for all ListBoxes to enable auto-scroll during drag-drop.
+        /// Re-resuelve el ScrollViewer objetivo (las listas virtualizadas pueden
+        /// recrearlo al hacer scroll) y marca el evento como manejado.
+        /// </summary>
+        private void ListBox_DragOver(object sender, DragEventArgs e)
+        {
+            if (!_isDraggingNow) return;
+            if (sender is FrameworkElement listBox)
+            {
+                DragScrollHelper.Current.Update(e, listBox);
+            }
+            e.Handled = true;
         }
     }
 }

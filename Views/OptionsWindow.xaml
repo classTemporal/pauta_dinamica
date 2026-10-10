@@ -121,6 +121,7 @@
                                      PreviewMouseLeftButtonDown="OptionsList_PreviewMouseLeftButtonDown"
                                      PreviewMouseLeftButtonUp="OptionsList_PreviewMouseLeftButtonUp"
                                      MouseMove="OptionsList_MouseMove"
+                                     DragOver="OptionsList_DragOver"
                                      Drop="OptionsList_Drop">
                                      <ListBox.ItemContainerStyle>
                                          <Style TargetType="ListBoxItem">

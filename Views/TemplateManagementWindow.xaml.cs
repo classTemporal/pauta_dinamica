@@ -2,11 +2,13 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Runtime.InteropServices;
 using System.Windows.Media;
+using PautaDinamicaApp.Services;
 
 namespace PautaDinamicaApp.Views
 {
     public partial class TemplateManagementWindow : Window
     {
+        public int InitialTabIndex { get; set; } = 0;
         private System.Windows.Point _startPoint;
         private System.Windows.Controls.ListBoxItem? _draggedItem;
         private bool _isDraggingNow;
@@ -27,6 +29,7 @@ namespace PautaDinamicaApp.Views
                     vm.RequestClose += () => Close();
                 }
             };
+            Loaded += (s, e) => MainTabControl.SelectedIndex = InitialTabIndex;
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -57,6 +60,28 @@ namespace PautaDinamicaApp.Views
             _draggedItem = null;
         }
 
+        /// <summary>
+        /// The templates ListBox lives inside the tab's ScrollViewer. The ListBox's own viewer
+        /// swallows the mouse wheel (marks it handled) even when it has nothing to scroll, so the
+        /// page behind appears "dead" when the mouse is over a template. Forward the wheel to the
+        /// outer ScrollViewer so the whole tab scrolls.
+        /// </summary>
+        private void TemplatesList_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (e.Handled) return;
+            e.Handled = true;
+
+            var outer = FindVisualParent<System.Windows.Controls.ScrollViewer>((System.Windows.DependencyObject)sender);
+            if (outer == null) return;
+
+            var forwarded = new System.Windows.Input.MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+            {
+                RoutedEvent = System.Windows.UIElement.MouseWheelEvent,
+                Source = sender
+            };
+            outer.RaiseEvent(forwarded);
+        }
+
         private void TemplatesList_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
         {
             if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed && _draggedItem != null)
@@ -80,11 +105,22 @@ namespace PautaDinamicaApp.Views
                         System.Windows.GiveFeedbackEventHandler feedbackHandler = (s, args) => UpdateDragVisualPosition(dragWindow);
                         _draggedItem.GiveFeedback += feedbackHandler;
 
+                        DragScrollHelper.Current.BeginDrag(TemplatesList);
                         try { System.Windows.DragDrop.DoDragDrop(_draggedItem, dragData, System.Windows.DragDropEffects.Move); }
-                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; }
+                        finally { _draggedItem.GiveFeedback -= feedbackHandler; dragWindow.Close(); _isDraggingNow = false; DragScrollHelper.Current.Stop(); }
                     }
                 }
             }
+        }
+
+        private void TemplatesList_DragOver(object sender, System.Windows.DragEventArgs e)
+        {
+            if (!_isDraggingNow) return;
+            if (sender is FrameworkElement listBox)
+            {
+                DragScrollHelper.Current.Update(e, listBox);
+            }
+            e.Handled = true;
         }
 
         private void TemplatesList_Drop(object sender, System.Windows.DragEventArgs e)
@@ -134,7 +170,7 @@ namespace PautaDinamicaApp.Views
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(10),
-                Opacity = 0.7,
+                Opacity = 0.85,
                 Child = new TextBlock
                 {
                     Text = text,
@@ -146,7 +182,7 @@ namespace PautaDinamicaApp.Views
             var window = new Window
             {
                 WindowStyle = WindowStyle.None,
-                AllowsTransparency = true,
+                AllowsTransparency = false,
                 Background = System.Windows.Media.Brushes.Transparent,
                 SizeToContent = SizeToContent.WidthAndHeight,
                 Topmost = true,
@@ -166,6 +202,16 @@ namespace PautaDinamicaApp.Views
                 window.Left = lpPoint.X + 5;
                 window.Top = lpPoint.Y + 5;
             }
+        }
+
+        private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            InitialTabIndex = MainTabControl.SelectedIndex;
+        }
+
+        private void CategoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // SelectedCategory is bound TwoWay; this handler exists to allow future keyboard navigation
         }
     }
 }

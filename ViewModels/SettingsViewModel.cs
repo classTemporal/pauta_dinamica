@@ -1,4 +1,6 @@
+using PautaDinamicaApp;
 using System;
+using System.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Forms; // Using WinForms for FolderBrowserDialog
 using System.Collections.ObjectModel;
@@ -6,11 +8,21 @@ using System.Linq;
 using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using System.Windows;
+using System.Windows.Media;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 
 namespace PautaDinamicaApp.ViewModels
 {
+    /// <summary>
+    /// Opción de modo de correo condicional con nombre visible en español.
+    /// </summary>
+    public class ConditionalEmailModeOption
+    {
+        public ConditionalEmailMode Mode { get; set; }
+        public string DisplayName { get; set; } = "";
+    }
+
     public class SettingsViewModel : ViewModelBase
     {
         private readonly StorageService _storageService;
@@ -33,7 +45,31 @@ namespace PautaDinamicaApp.ViewModels
         public ICommand CancelCommand { get; }
         public ICommand OpenTemplateManagementCommand { get; }
         public ICommand UnlockAdminSettingsCommand { get; }
+        public ICommand PickAccentColorCommand { get; }
+        public ICommand OpenHelpCommand { get; }
+        public ICommand LogoutCommand { get; }
 
+        public UserModel? CurrentUser => SessionService.CurrentUser;
+
+        /// <summary>
+        /// Versión de la aplicación (del ensamblado, ej: "3.0.0").
+        /// Se muestra en la tarjeta "Sobre esta aplicación".
+        /// </summary>
+        public string AppVersion
+        {
+            get
+            {
+                try
+                {
+                    var v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                    return v == null ? "" : $"{v.Major}.{v.Minor}.{v.Build}";
+                }
+                catch
+                {
+                    return "";
+                }
+            }
+        }
         public string AdminPassword { get => _adminPassword; set => SetProperty(ref _adminPassword, value); }
         public bool IsAdminSettingsUnlocked { get => _isAdminSettingsUnlocked; set => SetProperty(ref _isAdminSettingsUnlocked, value); }
 
@@ -72,12 +108,63 @@ namespace PautaDinamicaApp.ViewModels
                 {
                     Settings.Theme = value;
                     OnPropertyChanged();
-                    new ThemeService().SetTheme(value);
+                    var ts = new ThemeService();
+                    ts.SetTheme(value);
+                    ts.ApplyAccentColor(Settings.AccentColor);
                 }
             }
         }
 
         public Array Themes => Enum.GetValues(typeof(Services.AppTheme));
+
+        // Popular accent color presets (name → hex)
+        public Dictionary<string, string> AccentColors { get; } = new()
+        {
+            { "Azul", "#007bff" },
+            { "Rosa", "#ff6090" },
+            { "Rojo", "#dc3545" },
+            { "Verde", "#28a745" },
+            { "Amarillo", "#ffc107" },
+            { "Púrpura", "#6f42c1" },
+            { "Teal", "#20c997" },
+            { "Naranja", "#fd7e14" }
+        };
+
+        private string _selectedAccentColorName = "Azul";
+        public string SelectedAccentColorName
+        {
+            get => _selectedAccentColorName;
+            set
+            {
+                if (_selectedAccentColorName == value) return;
+                _selectedAccentColorName = value;
+                if (AccentColors.TryGetValue(value, out var hex))
+                {
+                    Settings.AccentColor = hex;
+                    _customAccentColor = "";
+                    new ThemeService().ApplyAccentColor(hex);
+                    OnPropertyChanged(nameof(SelectedAccentColorName));
+                }
+            }
+        }
+
+        private string _customAccentColor = "";
+        public string CustomAccentColor
+        {
+            get => _customAccentColor;
+            set
+            {
+                if (SetProperty(ref _customAccentColor, value))
+                {
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        Settings.AccentColor = value;
+                        _selectedAccentColorName = "";
+                        new ThemeService().ApplyAccentColor(value);
+                    }
+                }
+            }
+        }
 
         public Dictionary<string, string> SpellCheckLanguages { get; } = new()
         {
@@ -92,6 +179,13 @@ namespace PautaDinamicaApp.ViewModels
         private PautaSchema? _selectedPauta;
         public event Action? RequestClose;
 
+        /// <summary>
+        /// Se dispara justo antes de persistir, para que la vista pueda volcar el HTML del
+        /// editor enriquecido a la pauta. El editor solo escribe en el modelo cuando cambia
+        /// la pauta, así que sin este aviso se perdería lo último tecleado.
+        /// </summary>
+        public event Func<Task>? FlushRequested;
+
         public ObservableCollection<PautaSchema> Pautas
         {
             get => _pautas;
@@ -104,56 +198,208 @@ namespace PautaDinamicaApp.ViewModels
             set
             {
                 if (_selectedPauta == value) return;
-                if (_selectedPauta != null) SyncContacts();
+                if (_selectedPauta != null)
+                {
+                    _selectedPauta.PropertyChanged -= OnSelectedPautaPropertyChanged;
+                    SyncContacts();
+                }
 
                 _selectedPauta = value;
                 if (value != null)
                 {
+                    value.PropertyChanged += OnSelectedPautaPropertyChanged;
                     LoadPautaData(value);
                 }
 
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(AttachmentSummary));
+            }
+        }
+
+        /// <summary>
+        /// Resumen corto de la configuración de adjuntos de la pauta seleccionada
+        /// (PDF + campos de adjunto que sí se enviarán). Se muestra junto al botón
+        /// "Configurar adjuntos" en la pestaña Correo.
+        /// </summary>
+        public string AttachmentSummary
+        {
+            get
+            {
+                if (SelectedPauta == null) return "";
+                var attachFields = CurrentPautaFields.Where(f => f.Type == FieldType.FileAttachment).ToList();
+                var excluded = SelectedPauta.ExcludedAttachmentFieldIds;
+                int sendable = attachFields.Count(f => f.AttachToEmail && (excluded == null || !excluded.Contains(f.Id)));
+                string pdf = SelectedPauta.AttachPdfToEmail ? "PDF: sí" : "PDF: no";
+                if (attachFields.Count == 0) return $"{pdf} · Sin campos de adjunto";
+                return $"{pdf} · Adjuntos: {sendable} de {attachFields.Count}";
+            }
+        }
+
+        private void ConfigureAttachments()
+        {
+            if (SelectedPauta == null) return;
+            var win = new Views.AttachmentConfigWindow(
+                SelectedPauta.AttachPdfToEmail,
+                SelectedPauta.ExcludedAttachmentFieldIds,
+                CurrentPautaFields,
+                "el correo principal")
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+            if (win.ShowDialog() == true)
+            {
+                SelectedPauta.AttachPdfToEmail = win.ResultIncludePdf;
+                SelectedPauta.ExcludedAttachmentFieldIds = win.ResultExcludedIds;
+                OnPropertyChanged(nameof(AttachmentSummary));
+            }
+        }
+
+        /// <summary>
+        /// Abre la configuración de adjuntos propia de un correo adicional.
+        /// Lo elegido ahí solo afecta a ese correo, no al principal ni a otras reglas.
+        /// </summary>
+        private void ConfigureRuleAttachments(ConditionalEmailRule? rule)
+        {
+            if (rule == null) return;
+            var win = new Views.AttachmentConfigWindow(
+                rule.AttachPdfToEmail,
+                rule.ExcludedAttachmentFieldIds,
+                CurrentPautaFields,
+                $"el correo adicional '{rule.Name}'")
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+            if (win.ShowDialog() == true)
+            {
+                rule.AttachPdfToEmail = win.ResultIncludePdf;
+                rule.ExcludedAttachmentFieldIds = win.ResultExcludedIds;
+            }
+        }
+
+        private void OnSelectedPautaPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(SelectedPauta.EmailNameFieldId))
+            {
+                // Sync SelectedPautaField so the ComboBox reflects external changes to EmailNameFieldId
+                if (!string.IsNullOrEmpty(SelectedPauta?.EmailNameFieldId))
+                {
+                    SelectedPautaField = CurrentPautaFields.FirstOrDefault(f => f.Id == SelectedPauta.EmailNameFieldId);
+                }
+                else
+                {
+                    SelectedPautaField = null;
+                }
+
+                if (!string.IsNullOrEmpty(SelectedPauta?.EmailNameFieldId))
+                {
+                    AutoDetectContactsFromRecords();
+                }
+                else
+                {
+                    SyncContacts();
+                }
             }
         }
 
         private ObservableCollection<RecipientContact> _currentContacts = new();
         private ObservableCollection<FieldDefinition> _currentPautaFields = new();
-        private bool _allContactsSelected;
+        private FieldDefinition? _selectedPautaField;
 
         public ObservableCollection<RecipientContact> CurrentContacts { get => _currentContacts; set => SetProperty(ref _currentContacts, value); }
         public ObservableCollection<FieldDefinition> CurrentPautaFields { get => _currentPautaFields; set => SetProperty(ref _currentPautaFields, value); }
 
-        public bool AllContactsSelected
+        public FieldDefinition? SelectedPautaField
         {
-            get => _allContactsSelected;
+            get => _selectedPautaField;
             set
             {
-                if (SetProperty(ref _allContactsSelected, value))
+                if (_selectedPautaField == value) return;
+                _selectedPautaField = value;
+                OnPropertyChanged();
+                if (SelectedPauta != null)
                 {
-                    foreach (var c in CurrentContacts) c.IsSelected = value;
+                    SelectedPauta.EmailNameFieldId = value?.Id ?? "";
                 }
             }
         }
 
-        public ICommand AddContactCommand { get; }
-        public ICommand DeleteContactCommand { get; }
-        public ICommand ImportContactsCommand { get; }
-        public ICommand ExportContactsCommand { get; }
-        public ICommand SelectAllContactsCommand { get; }
-        public ICommand DeleteSelectedContactsCommand { get; }
-        public ICommand OpenEmailDirectoryCommand { get; }
-        public ICommand ToggleContactMultiSelectCommand { get; }
-        public ICommand PickColorCommand { get; }
+        // Agentes detectados automáticamente que NO tienen correo asociado
+        private ObservableCollection<RecipientContact> _missingEmailContacts = new();
+        public ObservableCollection<RecipientContact> MissingEmailContacts
+        {
+            get => _missingEmailContacts;
+            set => SetProperty(ref _missingEmailContacts, value);
+        }
+
+        private bool _hasMissingEmails;
+        public bool HasMissingEmails
+        {
+            get => _hasMissingEmails;
+            set => SetProperty(ref _hasMissingEmails, value);
+        }
+
+        public bool ShowNonCriticalMessages
+        {
+            get => Settings.ShowNonCriticalMessages;
+            set
+            {
+                if (Settings.ShowNonCriticalMessages != value)
+                {
+                    Settings.ShowNonCriticalMessages = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisableNonCriticalMessages));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Vista invertida de ShowNonCriticalMessages para la UI: la casilla se presenta como
+        /// "Desactivar mensajes emergentes no críticos" y debe quedar SIN marcar por defecto
+        /// (es decir, los mensajes no críticos se muestran salvo que el usuario los desactive).
+        /// </summary>
+        public bool DisableNonCriticalMessages
+        {
+            get => !Settings.ShowNonCriticalMessages;
+            set
+            {
+                bool newValue = !value;
+                if (Settings.ShowNonCriticalMessages != newValue)
+                {
+                    Settings.ShowNonCriticalMessages = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ShowNonCriticalMessages));
+                }
+            }
+        }
+
+
+        public ICommand OpenEmailDirectoryFromWarningCommand { get; }
         public ICommand AddEmailReplacementRuleCommand { get; }
         public ICommand RemoveEmailReplacementRuleCommand { get; }
         public ICommand ToggleEmailRuleMultiSelectCommand { get; }
         public ICommand DeleteSelectedEmailRulesCommand { get; }
         public ICommand SelectAllEmailRulesCommand { get; }
         public ICommand EditEmailRuleFieldsCommand { get; }
+        public ICommand AddConditionalEmailRuleCommand { get; }
+        public ICommand RemoveConditionalEmailRuleCommand { get; }
+        public ICommand ConfigureAttachmentsCommand { get; }
+        public ICommand ConfigureRuleAttachmentsCommand { get; }
+        public ICommand ToggleConditionalRuleMultiSelectCommand { get; }
+        public ICommand DeleteSelectedConditionalRulesCommand { get; }
+        public ICommand SelectAllConditionalRulesCommand { get; }
 
+        private bool _isConditionalRuleMultiSelectMode;
+        public bool IsConditionalRuleMultiSelectMode { get => _isConditionalRuleMultiSelectMode; set => SetProperty(ref _isConditionalRuleMultiSelectMode, value); }
+        /// <summary>
+        /// Opciones de modo con nombre visible (para el ComboBox de configuración).
+        /// </summary>
+        public List<ConditionalEmailModeOption> ConditionalEmailModeOptions { get; } = new()
+        {
+            new ConditionalEmailModeOption { Mode = ConditionalEmailMode.Ask, DisplayName = "Preguntar" },
+            new ConditionalEmailModeOption { Mode = ConditionalEmailMode.Auto, DisplayName = "Automático" }
+        };
 
-        private bool _isContactMultiSelectMode;
-        public bool IsContactMultiSelectMode { get => _isContactMultiSelectMode; set => SetProperty(ref _isContactMultiSelectMode, value); }
+        public ICommand PickColorCommand { get; }
 
         private bool _isEmailRuleMultiSelectMode;
         public bool IsEmailRuleMultiSelectMode { get => _isEmailRuleMultiSelectMode; set => SetProperty(ref _isEmailRuleMultiSelectMode, value); }
@@ -183,16 +429,16 @@ namespace PautaDinamicaApp.ViewModels
             ApplyCommand = new RelayCommand(_ => SaveSettings(false));
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke());
             PickColorCommand = new RelayCommand(_ => PickColor());
+            PickAccentColorCommand = new RelayCommand(_ => PickAccentColor());
 
-            AddContactCommand = new RelayCommand(_ => AddContact());
-            DeleteContactCommand = new RelayCommand(p => DeleteContact(p as RecipientContact));
-            ImportContactsCommand = new RelayCommand(_ => ImportContacts());
-            ExportContactsCommand = new RelayCommand(_ => ExportContacts());
-            DeleteSelectedContactsCommand = new RelayCommand(_ => DeleteSelectedContacts());
-            SelectAllContactsCommand = new RelayCommand(p => { AllContactsSelected = (bool)(p ?? false); });
-            OpenEmailDirectoryCommand = new RelayCommand(_ => OpenEmailDirectory());
-            ToggleContactMultiSelectCommand = new RelayCommand(_ => IsContactMultiSelectMode = !IsContactMultiSelectMode);
+            // Initialize accent color selection from saved settings
+            InitializeAccentColor();
+            ApplyAccentColorToUI(Settings.AccentColor);
+
+            OpenEmailDirectoryFromWarningCommand = new RelayCommand(_ => OpenEmailDirectory());
             OpenTemplateManagementCommand = new RelayCommand(_ => OpenTemplateManagement());
+            OpenHelpCommand = new RelayCommand(_ => OpenHelp());
+            LogoutCommand = new RelayCommand(_ => Logout());
             UnlockAdminSettingsCommand = new RelayCommand(_ => UnlockAdminSettings());
 
             AddEmailReplacementRuleCommand = new RelayCommand(_ => AddEmailReplacementRule());
@@ -208,6 +454,26 @@ namespace PautaDinamicaApp.ViewModels
                 }
             });
 
+            AddConditionalEmailRuleCommand = new RelayCommand(_ => AddConditionalEmailRule());
+            ConfigureAttachmentsCommand = new RelayCommand(_ => ConfigureAttachments());
+            ConfigureRuleAttachmentsCommand = new RelayCommand(r => ConfigureRuleAttachments(r as ConditionalEmailRule));
+            RemoveConditionalEmailRuleCommand = new RelayCommand(r => RemoveConditionalEmailRule(r as ConditionalEmailRule));
+            DeleteSelectedConditionalRulesCommand = new RelayCommand(_ => DeleteSelectedConditionalRules());
+            ToggleConditionalRuleMultiSelectCommand = new RelayCommand(_ =>
+            {
+                IsConditionalRuleMultiSelectMode = !IsConditionalRuleMultiSelectMode;
+                if (!IsConditionalRuleMultiSelectMode && SelectedPauta != null)
+                    foreach (var r in SelectedPauta.ConditionalEmailRules) r.IsSelected = false;
+            });
+            SelectAllConditionalRulesCommand = new RelayCommand(_ =>
+            {
+                if (SelectedPauta != null)
+                {
+                    bool all = SelectedPauta.ConditionalEmailRules.All(r => r.IsSelected);
+                    foreach (var r in SelectedPauta.ConditionalEmailRules) r.IsSelected = !all;
+                }
+            });
+
         }
 
         private void UnlockAdminSettings()
@@ -216,17 +482,17 @@ namespace PautaDinamicaApp.ViewModels
             {
                 IsAdminSettingsUnlocked = true;
                 AdminPassword = "";
-                System.Windows.MessageBox.Show("Opciones administrativas desbloqueadas.", "Acceso Concedido", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBoxHelper.Show("Opciones administrativas desbloqueadas.", "Acceso Concedido", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
-                System.Windows.MessageBox.Show("Contraseña administrativa incorrecta.", "Acceso Denegado", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBoxHelper.Show("Contraseña administrativa incorrecta.", "Acceso Denegado", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void OpenTemplateManagement()
         {
-            var vm = new TemplateManagementViewModel();
+            var vm = new TemplateManagementViewModel(SelectedPauta?.Id ?? string.Empty);
             var win = new Views.TemplateManagementWindow { DataContext = vm, Owner = System.Windows.Application.Current.MainWindow };
             win.ShowDialog();
         }
@@ -235,62 +501,84 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (SelectedPauta == null) return;
 
-            // Crear respaldo para Cancelar
-            var backupContacts = CurrentContacts.Select(c => new RecipientContact { Name = c.Name, Email = c.Email }).ToList();
-            var backupFieldId = SelectedPauta.EmailNameFieldId;
-
             var win = new Views.EmailDirectoryWindow { DataContext = this, Owner = System.Windows.Application.Current.MainWindow };
-            var result = win.ShowDialog();
-
-            if (result != true)
-            {
-                // Restaurar respaldo
-                CurrentContacts = new ObservableCollection<RecipientContact>(backupContacts);
-                SelectedPauta.EmailNameFieldId = backupFieldId;
-                SyncContacts();
-            }
-
-            IsContactMultiSelectMode = false; // Resetear modo al cerrar
+            win.ShowDialog();
         }
 
         private void LoadPautaData(PautaSchema pauta)
         {
             CurrentContacts = new ObservableCollection<RecipientContact>(pauta.RecipientContacts ?? new());
             CurrentPautaFields = new ObservableCollection<FieldDefinition>(_storageService.LoadConfiguration(pauta.Id).Where(f => f.Type != FieldType.Separator));
+
+            // Sync SelectedPautaField from EmailNameFieldId so the ComboBox SelectedItem binding reflects the current value
+            if (!string.IsNullOrEmpty(SelectedPauta?.EmailNameFieldId))
+            {
+                SelectedPautaField = CurrentPautaFields.FirstOrDefault(f => f.Id == SelectedPauta.EmailNameFieldId);
+            }
+            else
+            {
+                SelectedPautaField = null;
+            }
+
+            AutoDetectContactsFromRecords();
         }
 
-        private void AddContact()
+        private void AutoDetectContactsFromRecords()
         {
-            var newContact = new RecipientContact { Name = "Nuevo Nombre", Email = "correo@ejemplo.com" };
-            CurrentContacts.Add(newContact);
+            if (SelectedPauta == null || string.IsNullOrEmpty(SelectedPauta.EmailNameFieldId))
+            {
+                SyncContacts();
+                return;
+            }
+
+            var selectedField = CurrentPautaFields.FirstOrDefault(f => f.Id == SelectedPauta.EmailNameFieldId);
+            var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Priorizar Options del campo (lista de elementos definida por usuario)
+            if (selectedField != null && selectedField.Options != null && selectedField.Options.Any())
+            {
+                foreach (var opt in selectedField.Options)
+                {
+                    if (!string.IsNullOrWhiteSpace(opt)) uniqueNames.Add(opt.Trim());
+                }
+            }
+
+            // Fallback: buscar en records guardados
+            var records = _storageService.LoadRecords(SelectedPauta.Id);
+            foreach (var record in records)
+            {
+                if (record.Values.TryGetValue(SelectedPauta.EmailNameFieldId, out var val) && val != null)
+                {
+                    string nameText = val.ToString()?.Trim() ?? "";
+                    if (!string.IsNullOrWhiteSpace(nameText)) uniqueNames.Add(nameText);
+                }
+            }
+
+            var existingMap = CurrentContacts
+                .Where(c => !string.IsNullOrWhiteSpace(c.Name))
+                .ToDictionary(c => c.Name.Trim(), c => c, StringComparer.OrdinalIgnoreCase);
+
+            var newContacts = new List<RecipientContact>();
+            foreach (var name in uniqueNames)
+            {
+                if (existingMap.TryGetValue(name, out var existing)) newContacts.Add(existing);
+                else newContacts.Add(new RecipientContact { Name = name, Email = "" });
+            }
+
+            var detectedNames = new HashSet<string>(uniqueNames, StringComparer.OrdinalIgnoreCase);
+            foreach (var c in CurrentContacts)
+            {
+                if (!string.IsNullOrWhiteSpace(c.Name) && !detectedNames.Contains(c.Name.Trim()))
+                {
+                    if (!string.IsNullOrWhiteSpace(c.Email)) newContacts.Add(c);
+                }
+            }
+
+            CurrentContacts = new ObservableCollection<RecipientContact>(newContacts.OrderBy(c => c.Name).ToList());
             SyncContacts();
         }
 
-        private void DeleteContact(RecipientContact? contact)
-        {
-            if (contact != null)
-            {
-                if (System.Windows.MessageBox.Show($"¿Desea eliminar a {contact.Name}?", "Confirmar Eliminación", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                {
-                    CurrentContacts.Remove(contact);
-                    SyncContacts();
-                }
-            }
-        }
 
-        private void DeleteSelectedContacts()
-        {
-            var toRemove = CurrentContacts.Where(c => c.IsSelected).ToList();
-            if (toRemove.Count == 0) return;
-
-            if (System.Windows.MessageBox.Show($"¿Desea eliminar los {toRemove.Count} contactos seleccionados?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
-            {
-                foreach (var c in toRemove) CurrentContacts.Remove(c);
-                SyncContacts();
-            }
-        }
-
-        // --- Gestión de Reglas de Email ---
 
         private void AddEmailReplacementRule()
         {
@@ -312,7 +600,7 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (SelectedPauta != null && rule != null)
             {
-                if (System.Windows.MessageBox.Show("¿Eliminar esta regla?", "Confirmar", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                if (MessageBoxHelper.Show("¿Eliminar esta regla?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
                 {
                     SelectedPauta.EmailReplacementRules.Remove(rule);
                 }
@@ -325,9 +613,50 @@ namespace PautaDinamicaApp.ViewModels
             var toRemove = SelectedPauta.EmailReplacementRules.Where(r => r.IsSelected).ToList();
             if (toRemove.Count == 0) return;
 
-            if (System.Windows.MessageBox.Show($"¿Eliminar las {toRemove.Count} reglas seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBoxHelper.Show($"¿Eliminar las {toRemove.Count} reglas seleccionadas?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
             {
                 foreach (var r in toRemove) SelectedPauta.EmailReplacementRules.Remove(r);
+            }
+        }
+
+        // --- Gestión de Correos Adicionales Condicionales ---
+
+        private void AddConditionalEmailRule()
+        {
+            if (SelectedPauta == null) return;
+            var rule = new ConditionalEmailRule
+            {
+                Name = $"Correo adicional {SelectedPauta.ConditionalEmailRules.Count + 1}",
+                TriggerValue = "0%",
+                Mode = ConditionalEmailMode.Ask
+            };
+
+            var firstField = CurrentPautaFields.FirstOrDefault();
+            if (firstField != null) rule.TriggerFieldId = firstField.Id;
+
+            SelectedPauta.ConditionalEmailRules.Add(rule);
+        }
+
+        private void RemoveConditionalEmailRule(ConditionalEmailRule? rule)
+        {
+            if (SelectedPauta != null && rule != null)
+            {
+                if (MessageBoxHelper.Show("¿Eliminar este correo adicional?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
+                {
+                    SelectedPauta.ConditionalEmailRules.Remove(rule);
+                }
+            }
+        }
+
+        private void DeleteSelectedConditionalRules()
+        {
+            if (SelectedPauta == null) return;
+            var toRemove = SelectedPauta.ConditionalEmailRules.Where(r => r.IsSelected).ToList();
+            if (toRemove.Count == 0) return;
+
+            if (MessageBoxHelper.Show($"¿Eliminar los {toRemove.Count} correos adicionales seleccionados?", "Confirmar Eliminación Múltiple", MessageBoxButton.YesNo, MessageBoxImage.Warning, true) == MessageBoxResult.Yes)
+            {
+                foreach (var r in toRemove) SelectedPauta.ConditionalEmailRules.Remove(r);
             }
         }
 
@@ -386,143 +715,37 @@ namespace PautaDinamicaApp.ViewModels
             {
                 SelectedPauta.RecipientContacts = CurrentContacts.ToList();
             }
+            // Refresh missing-email tracking
+            var missing = CurrentContacts.Where(c => string.IsNullOrWhiteSpace(c.Email)).ToList();
+            MissingEmailContacts = new ObservableCollection<RecipientContact>(missing);
+            HasMissingEmails = missing.Any();
         }
 
-        private void ImportContacts()
+        /// <summary>
+        /// Persiste el Directorio de Contactos (y los datos de la pauta seleccionada) en disco.
+        /// Se invoca al cerrar el EmailDirectoryWindow con "Aceptar y Regresar" para que los
+        /// correos escritos no se pierdan y la validación de "Correos Faltantes" los reconozca.
+        /// </summary>
+        public void SaveDirectoryChanges()
         {
-            if (CurrentContacts.Count > 0)
-            {
-                var confirm = System.Windows.MessageBox.Show("¡ATENCIÓN! Al importar se ELIMINARÁN todos los contactos actuales y se reemplazarán por los del archivo.\n\n¿Desea realizar un respaldo automático en Excel de sus contactos actuales antes de continuar?", "Importar y Reemplazar", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-
-                if (confirm == MessageBoxResult.Cancel) return;
-                if (confirm == MessageBoxResult.Yes)
-                {
-                    // Auto-respaldo silencioso en la ruta configurada
-                    string backupPath = System.IO.Path.Combine(Settings.ExcelExportPath, $"Backup_Contactos_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
-                    ExportContacts(backupPath);
-                }
-            }
-
-            var openFileDialog = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = "Excel Files (*.xlsx)|*.xlsx",
-                Title = "Importar Directorio (Reemplaza Actual)"
-            };
-
-            if (openFileDialog.ShowDialog() == true)
-            {
-                try
-                {
-                    using (var workbook = new ClosedXML.Excel.XLWorkbook(openFileDialog.FileName))
-                    {
-                        var worksheet = workbook.Worksheet(1);
-                        var usedRange = worksheet.RangeUsed();
-                        if (usedRange == null)
-                        {
-                            System.Windows.MessageBox.Show("El archivo de Excel parece estar vacío.");
-                            return;
-                        }
-
-                        var rows = usedRange.RowsUsed().Skip(1);
-
-                        CurrentContacts.Clear(); // LIMPIAR CONTACTOS ACTUALES
-
-                        int count = 0;
-                        foreach (var row in rows)
-                        {
-                            var name = row.Cell(1).GetValue<string>();
-                            var email = row.Cell(2).GetValue<string>();
-                            if (!string.IsNullOrWhiteSpace(name))
-                            {
-                                CurrentContacts.Add(new RecipientContact { Name = name, Email = email });
-                                count++;
-                            }
-                        }
-                        SyncContacts();
-                        System.Windows.MessageBox.Show($"{count} contactos importados y reemplazados correctamente.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show("Error al importar: " + ex.Message);
-                }
-            }
-        }
-
-        private void ExportContacts(string? targetPath = null)
-        {
-            string finalPath = targetPath ?? "";
-
-            if (string.IsNullOrEmpty(finalPath))
-            {
-                // -- MODO AUTOMÁTICO (Directo a ruta configurada) --
-                string exportFolder = Settings.ExcelExportPath;
-                string pautaName = SelectedPauta?.Name ?? "Pauta";
-                string cleanName = string.Join("_", pautaName.Split(System.IO.Path.GetInvalidFileNameChars()));
-                string fileName = $"Contactos_{cleanName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-
-                if (System.IO.Directory.Exists(exportFolder))
-                {
-                    // Si la carpeta existe, guardamos directamente sin molestar al usuario
-                    finalPath = System.IO.Path.Combine(exportFolder, fileName);
-                }
-                else
-                {
-                    // Si la carpeta NO existe, usamos el diálogo como fallback
-                    var saveFileDialog = new Microsoft.Win32.SaveFileDialog
-                    {
-                        Filter = "Excel Files (*.xlsx)|*.xlsx",
-                        InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                        FileName = fileName,
-                        Title = "Exportar Contactos a Excel"
-                    };
-
-                    if (saveFileDialog.ShowDialog() == true)
-                    {
-                        finalPath = saveFileDialog.FileName;
-                    }
-                    else return;
-                }
-            }
-
+            SyncContacts();
             try
             {
-                using (var workbook = new ClosedXML.Excel.XLWorkbook())
-                {
-                    var worksheet = workbook.Worksheets.Add("Contactos");
-                    worksheet.Cell(1, 1).Value = "Nombre";
-                    worksheet.Cell(1, 2).Value = "Correo";
-
-                    int rowNum = 2;
-                    // Exportar solo seleccionados si estamos en modo multiselección y hay alguno seleccionado
-                    var listToExport = (IsContactMultiSelectMode && CurrentContacts.Any(c => c.IsSelected))
-                                       ? CurrentContacts.Where(c => c.IsSelected)
-                                       : CurrentContacts;
-
-                    foreach (var contact in listToExport)
-                    {
-                        worksheet.Cell(rowNum, 1).Value = contact.Name;
-                        worksheet.Cell(rowNum, 2).Value = contact.Email;
-                        rowNum++;
-                    }
-                    worksheet.Columns().AdjustToContents();
-                    workbook.SaveAs(finalPath);
-                    if (string.IsNullOrEmpty(targetPath)) // Solo avisar si no fue automatización externa
-                        System.Windows.MessageBox.Show($"Contactos exportados correctamente en:\n{finalPath}", "Exportación Exitosa");
-                }
+                _storageService.SavePautas(Pautas.ToList());
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show("Error al exportar: " + ex.Message);
+                MessageBoxHelper.Show("No se pudo guardar el Directorio de Contactos: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        public Array EmailMethods => Enum.GetValues(typeof(EmailMethod));
+
+
+ public Array EmailMethods => Enum.GetValues(typeof(EmailMethod));
 
         private void PickColor()
         {
             if (SelectedPauta == null) return;
-
             using (var dialog = new ColorDialog())
             {
                 if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
@@ -531,6 +754,57 @@ namespace PautaDinamicaApp.ViewModels
                     SelectedPauta.ColoringColor = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
                 }
             }
+        }
+
+        private void PickAccentColor()
+        {
+            using (var dialog = new ColorDialog())
+            {
+                // Set initial color from current Settings.AccentColor
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(Settings.AccentColor))
+                    {
+                        var wpfColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(Settings.AccentColor);
+                        dialog.Color = System.Drawing.Color.FromArgb(wpfColor.A, wpfColor.R, wpfColor.G, wpfColor.B);
+                    }
+                }
+                catch { /* Use default color in dialog */ }
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    var c = dialog.Color;
+                    string hex = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+                    CustomAccentColor = hex;
+                }
+            }
+        }
+
+        private void InitializeAccentColor()
+        {
+            // Determine if the saved accent color matches a preset or is custom
+            if (!string.IsNullOrWhiteSpace(Settings.AccentColor))
+            {
+                var match = AccentColors.FirstOrDefault(kvp =>
+                    kvp.Value.Equals(Settings.AccentColor, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(match.Key))
+                {
+                    _selectedAccentColorName = match.Key;
+                    OnPropertyChanged(nameof(SelectedAccentColorName));
+                    _customAccentColor = "";
+                }
+                else
+                {
+                    _customAccentColor = Settings.AccentColor;
+                    _selectedAccentColorName = "";
+                    OnPropertyChanged(nameof(CustomAccentColor));
+                    OnPropertyChanged(nameof(SelectedAccentColorName));
+                }
+            }
+        }
+
+        private void ApplyAccentColorToUI(string colorHex)
+        {
+            new ThemeService().ApplyAccentColor(colorHex);
         }
 
         private void BrowseFolder(Action<string> updateAction)
@@ -555,7 +829,36 @@ namespace PautaDinamicaApp.ViewModels
 
         private void SaveSettings(bool close)
         {
+            // El editor HTML solo vuelca al modelo cuando cambia la pauta, así que hay
+            // que forzarlo aquí o se pierde lo último tecleado en el cuerpo.
+            if (FlushRequested != null)
+            {
+                try { FlushRequested().GetAwaiter().GetResult(); }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("flush del editor falló: " + ex.Message);
+                }
+            }
+
             SyncContacts();
+
+            // Advertencia: contactos sin email
+            var missingEmails = CurrentContacts.Where(c => string.IsNullOrWhiteSpace(c.Email)).ToList();
+            if (missingEmails.Any())
+            {
+                var names = string.Join(", ", missingEmails.Select(c => c.Name));
+                var result = MessageBoxHelper.Show(
+                    $"Los siguientes agentes no tienen correo electrónico asignado:\n{names}\n\n¿Desea guardar de todos modos?",
+                    "Advertencia: Correos Faltantes",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.Cancel)
+                    return;
+                if (result == MessageBoxResult.No)
+                    return;
+                // Yes = continuar guardando
+            }
 
             // 1. Validar Pauta Specific Templates
             foreach (var pauta in Pautas)
@@ -569,23 +872,61 @@ namespace PautaDinamicaApp.ViewModels
                     !ValidateTemplateString(pauta.EmailSubjectTemplate, pautaLabels, $"'{pauta.Name}' (Asunto)", out err) ||
                     !ValidateTemplateString(pauta.EmailBodyTemplate, pautaLabels, $"'{pauta.Name}' (Cuerpo)", out err))
                 {
-                    System.Windows.MessageBox.Show(err, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBoxHelper.Show(err, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
+                }
+
+                // Validar plantillas de correos adicionales condicionales
+                if (pauta.ConditionalEmailRules != null)
+                {
+                    foreach (var rule in pauta.ConditionalEmailRules)
+                    {
+                        if (string.IsNullOrWhiteSpace(rule.TriggerFieldId) || string.IsNullOrWhiteSpace(rule.TriggerValue))
+                        {
+                            MessageBoxHelper.Show($"El correo adicional '{rule.Name}' de la pauta '{pauta.Name}' no tiene campo o valor de detección configurado.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+
+                        if (!ValidateTemplateString(rule.ToTemplate, pautaLabels, $"'{pauta.Name}' / '{rule.Name}' (Para)", out err) ||
+                            !ValidateTemplateString(rule.CcTemplate, pautaLabels, $"'{pauta.Name}' / '{rule.Name}' (CC)", out err) ||
+                            !ValidateTemplateString(rule.SubjectTemplate, pautaLabels, $"'{pauta.Name}' / '{rule.Name}' (Asunto)", out err) ||
+                            !ValidateTemplateString(rule.BodyTemplate, pautaLabels, $"'{pauta.Name}' / '{rule.Name}' (Cuerpo)", out err))
+                        {
+                            MessageBoxHelper.Show(err, "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+                    }
                 }
             }
 
             _storageService.SaveSettings(Settings);
             _storageService.SavePautas(Pautas.ToList());
 
+            // Apply accent color and theme immediately
+            var ts = new ThemeService();
+            ts.SetTheme(Settings.Theme);
+            ts.ApplyAccentColor(Settings.AccentColor);
+
+            // Sync accent color to the default (login) profile so it persists across sessions
+            try
+            {
+                var defaultStorage = new StorageService("default");
+                var defaultSettings = defaultStorage.LoadSettings();
+                defaultSettings.AccentColor = Settings.AccentColor;
+                defaultSettings.Theme = Settings.Theme;
+                defaultStorage.SaveSettings(defaultSettings);
+            }
+            catch { /* Ignorar error al guardar default */ }
+
             if (close)
             {
-                System.Windows.MessageBox.Show("Configuración guardada correctamente.", "Éxito");
+                MessageBoxHelper.Show("Configuración guardada correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                 IsSaved = true;
                 RequestClose?.Invoke();
             }
             else
             {
-                System.Windows.MessageBox.Show("Cambios aplicados correctamente.", "Éxito");
+                MessageBoxHelper.Show("Cambios aplicados correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -598,6 +939,19 @@ namespace PautaDinamicaApp.ViewModels
             foreach (Match match in matches)
             {
                 string tag = match.Groups[1].Value;
+
+                // Los tokens de fecha dinámica ([Hoy], [Semana], [Semana:Sab], [Mes],
+                // [Año], [Rango], [Rango:7d]...) no son campos: se validan aparte.
+                if (TryMatchDynamicDateTag(tag, out string? dateError))
+                {
+                    if (dateError != null)
+                    {
+                        error = $"{dateError} (campo {context})";
+                        return false;
+                    }
+                    continue;
+                }
+
                 if (!validLabels.Contains(tag))
                 {
                     error = $"La etiqueta '[{tag}]' en el campo {context} no corresponde a ningún campo existente.";
@@ -605,6 +959,137 @@ namespace PautaDinamicaApp.ViewModels
                 }
             }
             return true;
+        }
+
+        /// <summary>
+        /// Determina si una etiqueta es un token de fecha dinámica.
+        /// Devuelve <c>true</c> si lo es (válido o no); <paramref name="error"/> describe
+        /// el problema cuando parece un token pero está mal formado (ej: día inválido
+        /// en <c>[Semana:X]</c> o parámetro no reconocido en <c>[Rango:...]</c>).
+        /// </summary>
+        private static bool TryMatchDynamicDateTag(string tag, out string? error)
+        {
+            error = null;
+            string t = (tag ?? "").Trim();
+
+            if (t.Equals("Hoy", StringComparison.OrdinalIgnoreCase) ||
+                t.Equals("Semana", StringComparison.OrdinalIgnoreCase) ||
+                t.Equals("Mes", StringComparison.OrdinalIgnoreCase) ||
+                t.Equals("Año", StringComparison.OrdinalIgnoreCase) ||
+                t.Equals("Anio", StringComparison.OrdinalIgnoreCase) ||
+                t.Equals("Rango", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (t.StartsWith("Semana:", StringComparison.OrdinalIgnoreCase))
+            {
+                string day = t.Substring("Semana:".Length).Trim();
+                try
+                {
+                    DateTokenService.ParseDayEs(day);
+                    return true;
+                }
+                catch (FormatException)
+                {
+                    error = $"El día '{day}' no es válido. Use Lun, Mar, Mie, Jue, Vie, Sab o Dom (ej: [Semana:Sab])";
+                    return true;
+                }
+            }
+
+            if (t.StartsWith("Rango:", StringComparison.OrdinalIgnoreCase))
+            {
+                string param = t.Substring("Rango:".Length);
+                try
+                {
+                    new DateTokenService().RangoParam(param);
+                    return true;
+                }
+                catch (FormatException ex)
+                {
+                    error = ex.Message;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void OpenHelp()
+        {
+            var vm = new HelpViewModel("Documentación General", BuildGeneralHelpContent());
+            var win = new Views.HelpWindow { DataContext = vm };
+            win.Owner = System.Windows.Application.Current.MainWindow;
+            win.ShowDialog();
+        }
+
+        private void Logout()
+        {
+            new SessionService().Logout();
+
+            var app = System.Windows.Application.Current;
+            // Ventanas abiertas (principal + este diálogo de configuración).
+            var openWindows = app.Windows.OfType<Window>().ToList();
+
+            // El login pasa a ser la ventana principal ANTES de cerrar lo demás:
+            // así cerrar el MainWindow viejo no apaga la app
+            // (ShutdownMode.OnMainWindowClose) y el login nace fuera del loop modal
+            // del diálogo, que era lo que lo dejaba transparente y mal renderizado.
+            var loginWin = new Views.LoginWindow();
+            app.MainWindow = loginWin;
+
+            foreach (var window in openWindows)
+            {
+                try { window.Close(); }
+                catch { /* seguir con las demás */ }
+            }
+
+            // Igual que al arrancar: login modeless; al ingresar se abre un
+            // MainWindow fresco y este login se cierra solo.
+            loginWin.Show();
+        }
+
+        private static string BuildGeneralHelpContent()
+        {
+            var content = new System.Text.StringBuilder();
+            content.AppendLine("# 📘 Documentación del Sistema");
+            content.AppendLine("");
+            content.AppendLine("### 🚀 Resumen del Sistema");
+            content.AppendLine("Pauta Dinámica es una herramienta avanzada diseñada para la **Auditoría de Calidad** y el **Control de Procesos**. Su objetivo principal es permitir la creación de formularios 100% dinámicos, eliminando la dependencia de hojas de cálculo estáticas y automatizando la generación de reportes y envío de métricas.");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("");
+            content.AppendLine("## 💡 Guía de Uso");
+            content.AppendLine("");
+            content.AppendLine("### 1. Gestión de Pautas (Diseño)");
+            content.AppendLine("En el botón **CONFIG. PAUTA** puedes crear la estructura de tus formularios:");
+            content.AppendLine("- **Campos Dinámicos:** Agrega textos, números, fechas, menús desplegables y campos de cálculo.");
+            content.AppendLine("- **Agrupación:** Usa el botón **BOX** para crear secciones visuales que organizan los campos.");
+            content.AppendLine("- **Personalización:** Marca campos como obligatorios o haz que conserven su valor al limpiar el formulario.");
+            content.AppendLine("- **Instrucciones:** En la pestaña 'Instrucciones de Apoyo' puedes dejar guías específicas para cada pauta.");
+            content.AppendLine("");
+            content.AppendLine("### 2. Registro de Datos");
+            content.AppendLine("- Selecciona una pauta en el menú superior izquierdo.");
+            content.AppendLine("- Completa los campos en el panel izquierdo y presiona **Guardar Registro**.");
+            content.AppendLine("- Los registros aparecerán en la tabla central de la derecha.");
+            content.AppendLine("");
+            content.AppendLine("### 3. Exportación y Reportes");
+            content.AppendLine("- **Excel/JSON:** Exporta toda la base de datos o registros seleccionados a formatos editables.");
+            content.AppendLine("- **PDF:** Genera reportes visuales con un solo clic. Puedes configurar la carpeta de salida en **CONFIG. GENERAL**.");
+            content.AppendLine("");
+            content.AppendLine("### 4. Sistema de Correos y Directorio");
+            content.AppendLine("- **Envío Individual/Masivo:** Selecciona registros y presiona el icono de sobre para enviar correos pre-formateados.");
+            content.AppendLine("- **Directorio de Agentes:** En la configuración general, puedes asociar nombres de agentes con sus correos para que el sistema los detecte automáticamente.");
+            content.AppendLine("- **Plantillas:** Personaliza el asunto y cuerpo del mensaje usando `[Nombre del Campo]` como comodín.");
+            content.AppendLine("");
+            content.AppendLine("### 5. Resaltado Visual");
+            content.AppendLine("- Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en **CONFIG. GENERAL > Rutas**.");
+            content.AppendLine("");
+            content.AppendLine("---");
+            content.AppendLine("*Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.*");
+            content.AppendLine("");
+            content.AppendLine("Ver la versión y los datos del desarrollador en **Config. General > Sistema > Sobre esta aplicación**.");
+            return content.ToString();
         }
     }
 }

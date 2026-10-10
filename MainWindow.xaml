@@ -18,6 +18,7 @@
             <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <conv:GridLengthConverter x:Key="GridLengthConverter"/>
             <conv:StringSwitchConverter x:Key="StringSwitchConverter"/>
+            <conv:SubtractWidthConverter x:Key="SubtractWidthConverter"/>
 
             <Style x:Key="FilterButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
                 <Setter Property="Height" Value="28"/>
@@ -47,9 +48,9 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="{x:Type GroupItem}">
-                            <Border Background="{DynamicResource CardBackgroundBrush}" 
-                                    CornerRadius="8" Margin="0,0,0,15" Padding="15"
-                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <Border Background="Transparent" 
+                                    CornerRadius="0" Margin="0,0,0,15" Padding="0"
+                                    BorderBrush="Transparent" BorderThickness="0">
                                 <StackPanel>
                                     <TextBlock Text="{Binding Name}" Foreground="{DynamicResource AccentBrush}" 
                                                FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
@@ -71,12 +72,14 @@
     <Grid Background="{DynamicResource BackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Padding="20,15" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Padding="20,15" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,0"
+                CornerRadius="8,8,0,0"
+                Visibility="{Binding IsHeaderVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -134,33 +137,60 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" Margin="20">
+        <!-- Botón toggle del header: flecha ▲ cuando está visible (se puede ocultar), flecha ▼ cuando está oculto (se puede mostrar) -->
+        <Button Grid.Row="1" Command="{Binding ToggleHeaderCommand}"
+                Style="{StaticResource GhostButton}" Height="24" Padding="0"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Width="32" ToolTip="Ocultar/Mostrar encabezado"
+                Background="Transparent" BorderThickness="0">
+            <TextBlock x:Name="ToggleButtonContent" FontSize="12" FontWeight="Bold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Text" Value="▲"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsHeaderVisible}" Value="True">
+                                <Setter Property="Text" Value="▲"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsHeaderVisible}" Value="False">
+                                <Setter Property="Text" Value="▼"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Button>
+
+        <Grid x:Name="SplitRoot" Grid.Row="2" Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition x:Name="Row0">
-                    <RowDefinition.Style>
-                        <Style TargetType="RowDefinition">
-                            <Setter Property="Height" Value="*"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
-                                    <Setter Property="Height" Value="{Binding DashboardFormHeight, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </RowDefinition.Style>
-                </RowDefinition>
-                <RowDefinition x:Name="RowSplit" Height="Auto"/>
-                <RowDefinition x:Name="Row2">
-                    <RowDefinition.Style>
-                        <Style TargetType="RowDefinition">
-                            <Setter Property="Height" Value="*"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding DashboardLayout}" Value="Top">
-                                    <Setter Property="Height" Value="{Binding DashboardFormHeight, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </RowDefinition.Style>
-                </RowDefinition>
+                        <RowDefinition.Style>
+                            <Style TargetType="RowDefinition">
+                                <Setter Property="Height" Value="*"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
+                                        <Setter Property="Height" Value="{Binding DashboardFormHeight, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </RowDefinition.Style>
+                    </RowDefinition>
+                    <RowDefinition x:Name="RowSplit" Height="Auto"/>
+                    <RowDefinition x:Name="Row2">
+                        <RowDefinition.Style>
+                            <Style TargetType="RowDefinition">
+                                <Setter Property="Height" Value="*"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DashboardLayout}" Value="Top">
+                                        <Setter Property="Height" Value="{Binding DashboardFormHeight, Mode=TwoWay, Converter={StaticResource GridLengthConverter}}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
+                                        <Setter Property="Height" Value="*"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </RowDefinition.Style>
+                    </RowDefinition>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="Col0">
@@ -227,7 +257,7 @@
             </GridSplitter>
 
             <!-- Dynamic Form (General) -->
-            <DockPanel Margin="0">
+            <DockPanel x:Name="FormPanel" Margin="0">
                 <DockPanel.Style>
                     <Style TargetType="DockPanel">
                         <Style.Triggers>
@@ -252,8 +282,9 @@
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
                                 <Setter Property="Grid.Column" Value="0"/>
                                 <Setter Property="Grid.Row" Value="0"/>
+                                <Setter Property="Grid.RowSpan" Value="1"/>
                                 <Setter Property="Grid.ColumnSpan" Value="3"/>
-                                <Setter Property="Margin" Value="0,0,0,10"/>
+                                <Setter Property="Margin" Value="0,10,0,0"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -279,12 +310,19 @@
                             Content="✖️ Cancelar" Height="40" Padding="20,0" Margin="0,0,10,0"
                             Style="{StaticResource DangerButton}"
                             Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                    <Button Command="{Binding SendEmailsCommand}" 
-                            Content="📧 Enviar todos los correos" Height="40" Padding="20,0" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
                 </StackPanel>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding GroupedFields}">
+                <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto" Padding="0,0,0,5"
+                              AllowDrop="True"
+                              DragEnter="DashboardScrollViewer_DragEnter"
+                              DragOver="DashboardScrollViewer_DragOver"
+                              DragLeave="DashboardScrollViewer_DragLeave"
+                              Drop="DashboardScrollViewer_Drop">
+                    <ItemsControl x:Name="DashboardItemsControl" ItemsSource="{Binding GroupedFields}"
+                                  AllowDrop="True"
+                                  PreviewMouseMove="DashboardItemsControl_PreviewMouseMove"
+                                  PreviewMouseLeftButtonDown="DashboardItemsControl_PreviewMouseLeftButtonDown"
+                                  PreviewMouseLeftButtonUp="DashboardItemsControl_PreviewMouseLeftButtonUp">
                         <ItemsControl.GroupStyle>
                             <GroupStyle ContainerStyle="{StaticResource GroupHeaderStyle}"/>
                         </ItemsControl.GroupStyle>
@@ -299,12 +337,14 @@
                                 <Setter Property="Margin" Value="10,5"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding Type}" Value="Separator">
-                                        <Setter Property="Width" Value="{Binding RelativeSource={RelativeSource AncestorType=ItemsPresenter}, Path=ActualWidth}"/>
+                                        <Setter Property="Width" Value="{Binding RelativeSource={RelativeSource AncestorType=ItemsPresenter}, Path=ActualWidth, Converter={StaticResource SubtractWidthConverter}, ConverterParameter=20}"/>
                                         <Setter Property="Margin" Value="10,15,10,5"/>
                                     </DataTrigger>
+                                    <!-- El texto largo ocupa todo el ancho disponible, restando sus márgenes
+                                         laterales para que no quede pegado a los bordes del panel. -->
                                     <DataTrigger Binding="{Binding Type}" Value="TextArea">
-                                        <Setter Property="Width" Value="{Binding RelativeSource={RelativeSource AncestorType=ItemsPresenter}, Path=ActualWidth}"/>
-                                        <Setter Property="Margin" Value="0,5"/>
+                                        <Setter Property="Width" Value="{Binding RelativeSource={RelativeSource AncestorType=ItemsPresenter}, Path=ActualWidth, Converter={StaticResource SubtractWidthConverter}, ConverterParameter=20}"/>
+                                        <Setter Property="Margin" Value="10,5"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -318,37 +358,42 @@
                 </ScrollViewer>
             </DockPanel>
 
-            <!-- Right: Records Grid -->
-            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                <Border.Style>
-                    <Style TargetType="Border">
+            <!-- Right: Records Grid (sin recuadro) -->
+            <DockPanel x:Name="RecordsPanel">
+                <DockPanel.Style>
+                    <Style TargetType="DockPanel">
+                        <Setter Property="Background" Value="Transparent"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Left">
                                 <Setter Property="Grid.Column" Value="0"/>
                                 <Setter Property="Grid.Row" Value="0"/>
                                 <Setter Property="Grid.RowSpan" Value="3"/>
+                                <Setter Property="Margin" Value="10,0,0,0"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Right">
                                 <Setter Property="Grid.Column" Value="2"/>
                                 <Setter Property="Grid.Row" Value="0"/>
                                 <Setter Property="Grid.RowSpan" Value="3"/>
+                                <Setter Property="Margin" Value="0,0,10,0"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Top">
                                 <Setter Property="Grid.Column" Value="0"/>
                                 <Setter Property="Grid.Row" Value="0"/>
                                 <Setter Property="Grid.ColumnSpan" Value="3"/>
+                                <Setter Property="Grid.RowSpan" Value="1"/>
+                                <Setter Property="Margin" Value="0,0,0,10"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding DashboardLayout}" Value="Bottom">
                                 <Setter Property="Grid.Column" Value="0"/>
                                 <Setter Property="Grid.Row" Value="2"/>
                                 <Setter Property="Grid.ColumnSpan" Value="3"/>
+                                <Setter Property="Grid.RowSpan" Value="1"/>
+                                <Setter Property="Margin" Value="0,0,0,10"/>
                             </DataTrigger>
                         </Style.Triggers>
-                    </Style>
-                </Border.Style>
-
-                <DockPanel>
-                    <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                                                </Style>
+                                            </DockPanel.Style>
+                                                <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -358,19 +403,28 @@
                             <TextBlock Text="{Binding AuditStatsText}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,5"/>
                         </WrapPanel>
 
-                        <Button Grid.Column="1" Command="{Binding ToggleFiltersCommand}" 
-                                Style="{StaticResource GhostButton}" Padding="10,0" Height="28" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🔍" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding IsFiltersPanelExpanded, ConverterParameter='Ocultar Filtros|Mostrar Filtros', Converter={StaticResource StringSwitchConverter}}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
+                        <WrapPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Command="{Binding ToggleFiltersCommand}"
+                                    Style="{StaticResource GhostButton}" Padding="10,0" Height="28" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🔍" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding IsFiltersPanelExpanded, ConverterParameter='Ocultar Filtros|Mostrar Filtros', Converter={StaticResource StringSwitchConverter}}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding OpenEmailConfigCommand}"
+                                    Style="{StaticResource GhostButton}" Padding="10,0" Height="28" VerticalAlignment="Center"
+                                    ToolTip="Configuración de correos" Margin="5,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="⚙️" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
                     </Grid>
 
                     <!-- Filter and Sort Bar -->
-                    <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundBrush}" 
-                            CornerRadius="8" Padding="12,8" Margin="0,0,0,15"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundBrush}"
+                            CornerRadius="0" Padding="12,8" Margin="0,0,0,15"
+                            BorderThickness="0"
                             Visibility="{Binding IsFiltersPanelExpanded, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -462,12 +516,14 @@
                         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                     Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                             <Button Content="☑️ Selección Múltiple" Command="{Binding ToggleMultiSelectCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                            <Button Content="📧 Enviar todos los correos" Command="{Binding SendEmailsCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5"/>
+                            <TextBlock Text="🔴" Visibility="{Binding HasMissingEmails, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center" Margin="0,5,10,5" ToolTip="Hay agentes sin correo electrónico asociado"/>
                             <Button Content="📥 Importar Excel" Command="{Binding ImportFromExcelCommand}" Padding="10,8" Style="{StaticResource SecondaryButton}" Margin="0,5,10,5" Background="#6f42c1"/>
                             <Button Content="📊 Exportar a Excel" Command="{Binding ExportToExcelCommand}" Padding="10,8" Style="{StaticResource ExcelButton}" Margin="0,5,0,5"/>
                         </WrapPanel>
 
                         <!-- MultiSelect Actions -->
-                        <Border Background="{DynamicResource BorderBrush}" CornerRadius="4" Padding="5" Margin="0,5,0,0"
+                        <Border Background="Transparent" CornerRadius="0" Padding="5" Margin="0,5,0,0"
                                 Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                 <TextBlock Text="MODO SELECCIÓN" VerticalAlignment="Center" FontWeight="Bold" Foreground="#ffc107" Margin="10,5,20,5"/>
@@ -481,20 +537,23 @@
                         </Border>
                     </StackPanel>
                     
-                    <DataGrid x:Name="RecordsGrid" ItemsSource="{Binding RecordsView}" 
-                               AutoGenerateColumns="False"
-                               IsReadOnly="True"
-                               Background="Transparent"
-                               Foreground="{DynamicResource TextBrush}"
-                               BorderThickness="0"
-                               GridLinesVisibility="None"
-                               HeadersVisibility="Column"
-                               CanUserAddRows="False"
-                               HorizontalScrollBarVisibility="Visible"
-                               SelectionUnit="FullRow"
-                               SelectionMode="Extended"
-                               AlternationCount="2"
-                               Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                        <ScrollViewer x:Name="RecordsScrollWrapper" VerticalScrollBarVisibility="Disabled">
+                        <DataGrid x:Name="RecordsGrid" ItemsSource="{Binding RecordsView}" 
+                                   AutoGenerateColumns="False"
+                                   IsReadOnly="True"
+                                   Background="Transparent"
+                                   Foreground="{DynamicResource TextBrush}"
+                                   BorderThickness="0"
+                                   GridLinesVisibility="None"
+                                   HeadersVisibility="Column"
+                                   CanUserAddRows="False"
+                                   HorizontalScrollBarVisibility="Visible"
+                                   VerticalScrollBarVisibility="Auto"
+                                   ScrollViewer.CanContentScroll="True"
+                                   SelectionUnit="FullRow"
+                                   SelectionMode="Extended"
+                                   AlternationCount="2"
+                                   Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                         
                         <DataGrid.Resources>
                             <conv:BindingProxy x:Key="Proxy" Data="{Binding}"/>
@@ -622,40 +681,16 @@
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
+                    </ScrollViewer>
                 </DockPanel>
-            </Border>
         </Grid>
 
-        <!-- Footer / Barra Inferior -->
-        <Border Grid.Row="2" Padding="20,5" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
-            <Grid>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Command="{Binding ShowGeneralHelpCommand}" 
-                            Style="{StaticResource GhostButton}" 
-                            Padding="10,2" Margin="0" Height="25">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="📘 Documentación y Guía del Sistema" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
-                        </StackPanel>
-                    </Button>
-                    <Separator Width="1" Height="15" Margin="10,0" Background="{DynamicResource BorderBrush}"/>
-                    <TextBlock Text="v2.1.0" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                </StackPanel>
-                
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <TextBlock Text="👤 Usuario: " FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding CurrentUser.Username}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,15,0"/>
-                    
-                    <Button Command="{Binding LogoutCommand}" 
-                            Style="{StaticResource GhostButton}" Foreground="{DynamicResource DangerBrush}"
-                            Padding="10,2" Margin="0" Height="25" Content="CERRAR SESIÓN"/>
-
-                    <TextBlock Text="CHECK-O - Auditoría de Calidad" 
-                               Margin="20,0,0,0"
-                               VerticalAlignment="Center" 
-                               FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic"/>
-                </StackPanel>
-            </Grid>
-        </Border>
+        <!-- Página única: campos arriba + auditorías abajo, un solo scroll (sin splitter) -->
+        <ScrollViewer x:Name="SinglePageRoot" Grid.Row="2" Margin="20"
+                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Visibility="Collapsed">
+            <StackPanel x:Name="SinglePageStack" Orientation="Vertical"/>
+        </ScrollViewer>
     </Grid>
 
 </Window>

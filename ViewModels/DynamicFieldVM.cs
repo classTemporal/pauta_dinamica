@@ -1,6 +1,7 @@
+using PautaDinamicaApp;
+using PautaDinamicaApp.Models;
 using System;
 using System.Collections.Generic;
-using PautaDinamicaApp.Models;
 using PautaDinamicaApp.Services;
 using System.Windows.Input;
 using System.Linq;
@@ -13,6 +14,7 @@ namespace PautaDinamicaApp.ViewModels
     {
         private object? _value;
         private string? _validationError;
+        private string? _duplicateWarning;
         private bool _isValid = true;
 
         public FieldDefinition Definition { get; }
@@ -41,7 +43,7 @@ namespace PautaDinamicaApp.ViewModels
             var currentPaths = GetPathsList();
             if (!Definition.AllowMultipleAttachments && currentPaths.Count > 0)
             {
-                System.Windows.MessageBox.Show("Solo se permite un archivo adjunto en este campo.", "Límite Alcanzado");
+                MessageBoxHelper.ShowNonCritical("Solo se permite un archivo adjunto en este campo.", "Límite Alcanzado", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -144,9 +146,9 @@ namespace PautaDinamicaApp.ViewModels
             if (selector.ShowDialog() == true)
             {
                 string val = selector.SelectedValue;
-                if (val == "TODAY")
+                if (DateDefaultValue.IsDynamic(val))
                 {
-                    val = DateTime.Now.ToString("dd/MM/yyyy");
+                    val = DateDefaultValue.Resolve(val);
                 }
                 Value = val;
             }
@@ -155,9 +157,9 @@ namespace PautaDinamicaApp.ViewModels
         private void OpenTemplatePicker()
         {
             var storage = new StorageService();
-            var templates = storage.LoadTemplates();
-
-            var win = new PautaDinamicaApp.Views.TemplatePickerWindow(templates);
+            var mainVm = System.Windows.Application.Current.MainWindow.DataContext as MainViewModel;
+            string pautaId = mainVm?.CurrentPauta?.Id ?? string.Empty;
+            var win = new PautaDinamicaApp.Views.TemplatePickerWindow(pautaId);
             win.Owner = System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
             if (win.ShowDialog() == true)
             {
@@ -188,9 +190,9 @@ namespace PautaDinamicaApp.ViewModels
                 }
                 else if (Definition.Type == FieldType.Date)
                 {
-                    if (DateTime.TryParse(Definition.DefaultValue, out DateTime d)) _value = d.ToString("dd/MM/yyyy");
-                    else if (Definition.DefaultValue.Equals("TODAY", StringComparison.OrdinalIgnoreCase)) _value = DateTime.Now.ToString("dd/MM/yyyy");
-                    else _value = Definition.DefaultValue;
+                    _value = DateDefaultValue.Resolve(Definition.DefaultValue);
+                    if (string.IsNullOrEmpty(_value?.ToString()))
+                        _value = Definition.DefaultValue;
                 }
                 else if (Definition.Type == FieldType.Time)
                 {
@@ -243,6 +245,20 @@ namespace PautaDinamicaApp.ViewModels
             set => SetProperty(ref _validationError, value);
         }
 
+        public string? DuplicateWarning
+        {
+            get => _duplicateWarning;
+            set
+            {
+                if (SetProperty(ref _duplicateWarning, value))
+                {
+                    OnPropertyChanged(nameof(HasDuplicateWarning));
+                }
+            }
+        }
+
+        public bool HasDuplicateWarning => !string.IsNullOrEmpty(_duplicateWarning);
+
         public override bool IsValid
         {
             get => _isValid;
@@ -260,10 +276,13 @@ namespace PautaDinamicaApp.ViewModels
         {
             if (Definition.KeepValueOnReset) { }
             else InitializeDefaultValue();
-
             IsValid = true;
             ValidationError = "";
+            DuplicateWarning = "";
+            OnPropertyChanged(nameof(HasDuplicateWarning));
             OnPropertyChanged(nameof(Value));
+            if (Definition.Type == FieldType.FileAttachment)
+                OnPropertyChanged(nameof(Paths));
         }
 
         public bool Validate()
