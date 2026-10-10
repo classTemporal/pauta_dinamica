@@ -635,9 +635,6 @@ namespace PautaDinamicaApp.ViewModels
             var content = new StringBuilder();
             content.AppendLine("# 📘 Documentación del Sistema");
             content.AppendLine("");
-            content.AppendLine("**Versión:** 2.1.0");
-            content.AppendLine("**Creador:** Angel Gustavo Pacheco Manzanero");
-            content.AppendLine("");
             content.AppendLine("### 🚀 Resumen del Sistema");
             content.AppendLine("Pauta Dinámica es una herramienta avanzada diseñada para la **Auditoría de Calidad** y el **Control de Procesos**. Su objetivo principal es permitir la creación de formularios 100% dinámicos, eliminando la dependencia de hojas de cálculo estáticas y automatizando la generación de reportes y envío de métricas.");
             content.AppendLine("");
@@ -670,14 +667,9 @@ namespace PautaDinamicaApp.ViewModels
             content.AppendLine("- Puedes hacer que las filas de la tabla cambien de color automáticamente si un campo (ej: 'Calificación') alcanza un valor específico (ej: '100%'). Esto se configura en **CONFIG. GENERAL > Rutas**.");
             content.AppendLine("");
             content.AppendLine("---");
-            content.AppendLine("");
-            content.AppendLine("## 🔗 Enlaces del Desarrollador");
-            content.AppendLine("");
-            content.AppendLine("- **LinkedIn:** [Angel Temporal Pacheco](https://www.linkedin.com/in/angel-temporal-pacheco/)");
-            content.AppendLine("- **GitHub:** [classTemporal](https://github.com/classTemporal)");
-            content.AppendLine("");
-            content.AppendLine("---");
             content.AppendLine("*Tip: Si tienes dudas sobre los criterios de una pauta específica, presiona el botón '?' circular junto al selector de pautas.*");
+            content.AppendLine("");
+            content.AppendLine("Ver la versión y los datos del desarrollador en **Config. General > Sistema > Sobre esta aplicación**.");
 
             var vm = new HelpViewModel("Documentación General", content.ToString());
             var win = new Views.HelpWindow { DataContext = vm };

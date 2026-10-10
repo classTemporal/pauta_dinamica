@@ -52,7 +52,7 @@ namespace PautaDinamicaApp.ViewModels
         public UserModel? CurrentUser => SessionService.CurrentUser;
 
         /// <summary>
-        /// Versión de la aplicación (del ensamblado, ej: "2.1.0").
+        /// Versión de la aplicación (del ensamblado, ej: "3.0.0").
         /// Se muestra en la tarjeta "Sobre esta aplicación".
         /// </summary>
         public string AppVersion
