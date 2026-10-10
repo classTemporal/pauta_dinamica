@@ -175,9 +175,8 @@ namespace PautaDinamicaApp.Services
                 return false;
             }
 
-            // Adjuntos según la configuración de la pauta (PDF + campos elegidos).
-            // Aplica igual al correo principal y a los adicionales.
-            var attachments = CollectAttachments(pauta, entry, fields, pdfPath);
+            // Adjuntos de ESTE correo (principal): PDF + campos elegidos en su configuración.
+            var attachments = CollectAttachments(pauta.AttachPdfToEmail, pauta.ExcludedAttachmentFieldIds, entry, fields, pdfPath);
 
             EmailMethod method = pauta.EmailMethod;
 
@@ -255,8 +254,9 @@ namespace PautaDinamicaApp.Services
                 return false;
             }
 
-            // Misma configuración de adjuntos que el correo principal: PDF + campos elegidos.
-            var attachments = CollectAttachments(pauta, entry, fields, pdfPath);
+            // Adjuntos de ESTE correo adicional (configuración propia de la regla,
+            // independiente del principal): PDF + campos elegidos en su botón de adjuntos.
+            var attachments = CollectAttachments(rule.AttachPdfToEmail, rule.ExcludedAttachmentFieldIds, entry, fields, pdfPath);
 
             EmailMethod method = pauta.EmailMethod;
 
@@ -269,24 +269,23 @@ namespace PautaDinamicaApp.Services
         }
 
         /// <summary>
-        /// Recolecta los archivos que acompañarán el correo según la configuración de la pauta.
+        /// Recolecta los archivos que acompañarán UN correo según su propia configuración.
         ///
         /// <para>
-        /// Se usa igual en el correo principal (<see cref="SendEmail"/>) y en los adicionales
-        /// (<see cref="SendConditionalEmail"/>): el PDF solo si <c>AttachPdfToEmail</c> está
-        /// activo, y cada campo de adjunto solo si su propio flag lo permite y su ID no está
-        /// en <c>ExcludedAttachmentFieldIds</c>. Por defecto (sin configuración) se envía todo,
-        /// que es el comportamiento histórico.
+        /// El correo principal usa la configuración de la pauta y cada correo adicional la
+        /// de su regla: el PDF solo si corresponde, y cada campo de adjunto solo si su
+        /// propio flag lo permite y su ID no está en excluidos. Sin configuración (todo
+        /// incluido) se envía todo, que es el comportamiento histórico.
         /// </para>
         /// </summary>
-        private static List<string> CollectAttachments(PautaSchema pauta, AuditEntry entry, List<FieldDefinition> fields, string? pdfPath)
+        private static List<string> CollectAttachments(bool includePdf, System.Collections.Generic.List<string>? excludedIds, AuditEntry entry, List<FieldDefinition> fields, string? pdfPath)
         {
             var attachments = new List<string>();
 
-            if (pauta.AttachPdfToEmail && !string.IsNullOrEmpty(pdfPath) && File.Exists(pdfPath))
+            if (includePdf && !string.IsNullOrEmpty(pdfPath) && File.Exists(pdfPath))
                 attachments.Add(pdfPath);
 
-            var excluded = pauta.ExcludedAttachmentFieldIds;
+            var excluded = excludedIds;
 
             if (fields != null)
             {

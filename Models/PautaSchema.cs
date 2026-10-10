@@ -183,9 +183,10 @@ namespace PautaDinamicaApp.Models
         private System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule> _conditionalEmailRules = new();
         public System.Collections.ObjectModel.ObservableCollection<ConditionalEmailRule> ConditionalEmailRules { get => _conditionalEmailRules; set => SetProperty(ref _conditionalEmailRules, value); }
 
-        // --- Adjuntos del Correo (principal y adicionales) ---
-        // Configuración centralizada de qué archivos acompañan cada correo enviado.
-        // Solo aplica al método Outlook (mailto no admite adjuntos).
+        // --- Adjuntos del Correo Principal ---
+        // Qué archivos acompañan el correo principal. Cada correo adicional tiene
+        // su propia configuración en la regla. Solo aplica al método Outlook
+        // (mailto no admite adjuntos).
         private bool _attachPdfToEmail = true;
 
         /// <summary>

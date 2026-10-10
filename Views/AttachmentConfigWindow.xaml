@@ -22,9 +22,9 @@
 
         <TextBlock Text="📎 Adjuntos del correo" FontSize="18" FontWeight="Bold"
                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,5"/>
-        <TextBlock Grid.Row="1" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"
+        <TextBlock Grid.Row="1" x:Name="DescriptionText" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"
                    TextWrapping="Wrap" Margin="0,0,0,12"
-                   Text="Marca los archivos que se enviarán con el correo principal y con los correos adicionales. Solo aplica al método Outlook (mailto no admite adjuntos)."/>
+                   Text="Marca los archivos que se enviarán con este correo. Solo aplica al método Outlook (mailto no admite adjuntos)."/>
 
         <CheckBox Grid.Row="2" x:Name="PdfCheck" Margin="0,0,0,12" VerticalContentAlignment="Center">
             <TextBlock Text="📄 Incluir PDF del reporte" FontWeight="SemiBold" TextWrapping="Wrap"/>

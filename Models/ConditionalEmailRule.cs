@@ -65,6 +65,54 @@ namespace PautaDinamicaApp.Models
         /// </summary>
         public string BodyHtmlTemplate { get => _bodyHtmlTemplate; set => SetProperty(ref _bodyHtmlTemplate, value); }
 
+        // --- Adjuntos de ESTE correo adicional (independiente del principal) ---
+        private bool _attachPdfToEmail = true;
+
+        /// <summary>
+        /// Incluir el PDF del reporte en este correo adicional. Por defecto <c>true</c>.
+        /// </summary>
+        public bool AttachPdfToEmail
+        {
+            get => _attachPdfToEmail;
+            set
+            {
+                if (Equals(_attachPdfToEmail, value)) return;
+                SetProperty(ref _attachPdfToEmail, value);
+                OnPropertyChanged(nameof(AttachmentSummary));
+            }
+        }
+
+        private System.Collections.Generic.List<string> _excludedAttachmentFieldIds = new();
+
+        /// <summary>
+        /// IDs de campos de archivo adjunto que NO se enviarán con este correo adicional.
+        /// Vacío = se envían todos (comportamiento histórico).
+        /// </summary>
+        public System.Collections.Generic.List<string> ExcludedAttachmentFieldIds
+        {
+            get => _excludedAttachmentFieldIds;
+            set
+            {
+                if (Equals(_excludedAttachmentFieldIds, value)) return;
+                SetProperty(ref _excludedAttachmentFieldIds, value);
+                OnPropertyChanged(nameof(AttachmentSummary));
+            }
+        }
+
+        /// <summary>
+        /// Resumen corto para mostrar junto al botón de adjuntos de la regla.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string AttachmentSummary
+        {
+            get
+            {
+                string pdf = _attachPdfToEmail ? "PDF: sí" : "PDF: no";
+                int n = _excludedAttachmentFieldIds?.Count ?? 0;
+                return n == 0 ? $"{pdf} · Todos los adjuntos" : $"{pdf} · {n} excluido(s)";
+            }
+        }
+
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsValid => true;
 
