@@ -142,6 +142,10 @@ namespace PautaDinamicaApp.Services
             string cc = ProcessTemplate(pauta.EmailCcTemplate, entry, fields, pauta.EmailReplacementRules);
             string subject = ProcessTemplate(pauta.EmailSubjectTemplate, entry, fields, pauta.EmailReplacementRules);
 
+            // Tokens de fecha dinámica ([Hoy], [Semana], [Semana:Sab], [Mes], [Año],
+            // [Rango]) también en el asunto, igual que en el cuerpo.
+            subject = InsertDynamicDates(subject, pauta);
+
             // El cuerpo depende del método de envío:
             //   - Outlook -> plantilla HTML enriquecida (.HTMLBody, admite formato y tablas).
             //   - Mailto  -> plantilla de texto plano (mailto no puede transportar marcado).
@@ -225,6 +229,9 @@ namespace PautaDinamicaApp.Services
 
             string cc = ProcessTemplate(string.IsNullOrWhiteSpace(rule.CcTemplate) ? pauta.EmailCcTemplate : rule.CcTemplate, entry, fields, pauta.EmailReplacementRules);
             string subject = ProcessTemplate(rule.SubjectTemplate, entry, fields, pauta.EmailReplacementRules);
+
+            // Tokens de fecha dinámica también en el asunto del adicional, igual que el principal.
+            subject = InsertDynamicDates(subject, pauta);
 
             // Igual que el correo principal: el cuerpo sigue el método de la pauta.
             // El cuerpo HTML propio de la regla tiene prioridad; si está vacío se hereda el
