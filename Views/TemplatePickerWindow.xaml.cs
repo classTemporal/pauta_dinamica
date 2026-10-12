@@ -373,8 +373,11 @@ namespace PautaDinamicaApp.Views
             win.ShowDialog();
 
             // Recargar plantillas por si hubo cambios en la otra ventana
-            _allTemplates.Clear();
+            // (mismo fallback a globales que al abrir, por si se canceló sin guardar).
             var updated = _storageService.LoadTemplatesForPauta(_pautaId);
+            if (!updated.Any())
+                updated = _storageService.LoadTemplates().Where(t => string.IsNullOrEmpty(t.PautaId)).ToList();
+            _allTemplates.Clear();
             foreach (var t in updated) _allTemplates.Add(t);
 
             LoadCategories();

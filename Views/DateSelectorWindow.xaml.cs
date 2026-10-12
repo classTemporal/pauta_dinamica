@@ -12,13 +12,23 @@ namespace PautaDinamicaApp.Views
         /// Indica si se muestra la opción "día fijo para todos los meses".
         /// Solo debe ser <c>true</c> en configuración de pauta (valor predeterminado);
         /// en captura de datos, filtros o rangos se oculta para no guardar tokens dinámicos.
+        /// El botón "fecha de hoy (dinámico)" también es exclusivo de configuración.
         /// </summary>
         public bool AllowFixedMonthDay { get; }
 
-        public DateSelectorWindow(string currentValue, bool allowFixedMonthDay = false)
+        /// <summary>
+        /// En captura (dashboard) un solo clic en un día lo selecciona y cierra,
+        /// para priorizar rapidez. En configuración se exige ACEPTAR.
+        /// </summary>
+        public bool SelectOnDayClick { get; }
+
+        private bool _ready;
+
+        public DateSelectorWindow(string currentValue, bool allowFixedMonthDay = false, bool selectOnDayClick = false)
         {
             InitializeComponent();
             AllowFixedMonthDay = allowFixedMonthDay;
+            SelectOnDayClick = selectOnDayClick;
 
             if (AllowFixedMonthDay)
             {
@@ -64,6 +74,10 @@ namespace PautaDinamicaApp.Views
             }
 
             UpdateMonthDayHint();
+
+            // El cambio programático de SelectedDate arriba dispara SelectedDatesChanged;
+            // solo los clics posteriores del usuario auto-aceptan (modo dashboard).
+            Loaded += (_, _) => _ready = true;
         }
 
         private int SelectedDay => MainCalendar.SelectedDate?.Day ?? DateTime.Today.Day;
@@ -87,6 +101,35 @@ namespace PautaDinamicaApp.Views
         private void MainCalendar_SelectedDatesChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             UpdateMonthDayHint();
+
+            if (SelectOnDayClick && _ready && MainCalendar.SelectedDate.HasValue)
+                AcceptDate(MainCalendar.SelectedDate.Value);
+        }
+
+        /// <summary>
+        /// Click directo sobre un día (modo dashboard): cierra aunque el día ya estuviera
+        /// seleccionado (en ese caso no hay SelectedDatesChanged que lo detecte).
+        /// Los clics en encabezado/flechas de mes se ignoran.
+        /// </summary>
+        private void MainCalendar_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (!SelectOnDayClick || !_ready) return;
+            System.Windows.DependencyObject? obj = e.OriginalSource as System.Windows.DependencyObject;
+            while (obj != null && !(obj is System.Windows.Controls.Primitives.CalendarDayButton))
+                obj = System.Windows.Media.VisualTreeHelper.GetParent(obj);
+            if (obj is System.Windows.Controls.Primitives.CalendarDayButton day
+                && day.DataContext is DateTime date)
+                AcceptDate(date);
+        }
+
+        private bool _accepted;
+
+        private void AcceptDate(DateTime date)
+        {
+            if (_accepted) return;
+            _accepted = true;
+            SelectedValue = date.ToString("dd/MM/yyyy");
+            DialogResult = true;
         }
 
         private void FixedMonthDayCheck_Changed(object sender, RoutedEventArgs e)

@@ -25,7 +25,7 @@ namespace PautaDinamicaApp.ViewModels
             InitializeDefaultValue();
             PickTimeCommand = new RelayCommand(_ => PickTime());
             PickDateCommand = new RelayCommand(_ => PickDate());
-            OpenTemplatesCommand = new RelayCommand(_ => OpenTemplatePicker());
+            OpenTemplatesCommand = new RelayCommand(p => OpenTemplatePicker(p as System.Windows.Controls.TextBox));
             AttachFileCommand = new RelayCommand(_ => AttachFile());
             RemoveFileCommand = new RelayCommand(p => RemoveFile(p as string));
         }
@@ -140,7 +140,7 @@ namespace PautaDinamicaApp.ViewModels
             if (Definition.Type != FieldType.Date) return;
 
             string currentVal = Value?.ToString() ?? "";
-            var selector = new PautaDinamicaApp.Views.DateSelectorWindow(currentVal);
+            var selector = new PautaDinamicaApp.Views.DateSelectorWindow(currentVal, selectOnDayClick: true);
             selector.Owner = System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
 
             if (selector.ShowDialog() == true)
@@ -154,26 +154,64 @@ namespace PautaDinamicaApp.ViewModels
             }
         }
 
-        private void OpenTemplatePicker()
+        private void OpenTemplatePicker(System.Windows.Controls.TextBox? box)
         {
             var storage = new StorageService();
             var mainVm = System.Windows.Application.Current.MainWindow.DataContext as MainViewModel;
             string pautaId = mainVm?.CurrentPauta?.Id ?? string.Empty;
             var win = new PautaDinamicaApp.Views.TemplatePickerWindow(pautaId);
             win.Owner = System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+
+            // Posición del click: el TextBox conserva SelectionStart/Length aunque el
+            // botón le quite el foco. Si nunca se tocó (0/0 con texto), se usa el modo
+            // anterior (agregar al final) para no insertar al inicio por sorpresa.
+            int selStart = -1, selLen = 0;
+            string currentText = Value?.ToString() ?? "";
+            if (box != null)
+            {
+                try
+                {
+                    selStart = box.SelectionStart;
+                    selLen = box.SelectionLength;
+                    currentText = box.Text ?? currentText;
+                    if (selStart == 0 && selLen == 0 && !string.IsNullOrEmpty(currentText))
+                        selStart = -1;
+                }
+                catch { selStart = -1; }
+            }
+
             if (win.ShowDialog() == true)
             {
                 string selectedContent = win.SelectedTemplateContent;
-                string currentText = Value?.ToString() ?? "";
 
-                if (string.IsNullOrWhiteSpace(currentText))
+                if (selStart < 0 || selStart > currentText.Length)
                 {
-                    Value = selectedContent;
+                    if (string.IsNullOrWhiteSpace(currentText))
+                    {
+                        Value = selectedContent;
+                    }
+                    else
+                    {
+                        string separator = Type == FieldType.TextArea ? (currentText.EndsWith("\n") ? "" : "\n\n") : " ";
+                        Value = currentText + separator + selectedContent;
+                    }
                 }
                 else
                 {
-                    string separator = Type == FieldType.TextArea ? (currentText.EndsWith("\n") ? "" : "\n\n") : " ";
-                    Value = currentText + separator + selectedContent;
+                    int len = Math.Min(Math.Max(0, selLen), Math.Max(0, currentText.Length - selStart));
+                    Value = currentText.Substring(0, selStart) + selectedContent + currentText.Substring(selStart + len);
+                }
+
+                // Dejar el caret tras lo insertado para seguir escribiendo ahí.
+                if (box != null)
+                {
+                    try
+                    {
+                        box.Focus();
+                        box.CaretIndex = Math.Min(box.Text?.Length ?? 0, selStart < 0 ? (Value?.ToString()?.Length ?? 0) : selStart + selectedContent.Length);
+                        box.SelectionLength = 0;
+                    }
+                    catch { }
                 }
             }
         }

@@ -323,6 +323,16 @@ namespace PautaDinamicaApp.ViewModels
         private void LoadTemplates()
         {
             var models = _storageService.LoadTemplatesForPauta(_pautaId);
+            if (!models.Any() && !string.IsNullOrEmpty(_pautaId))
+            {
+                // Plantillas heredadas (v2.1.0, globales): se importan como copias propias
+                // de la pauta para poder editarlas y categorizarlas aquí. Las originales
+                // globales no se tocan, así otras pautas las siguen viendo.
+                models = _storageService.LoadTemplates()
+                    .Where(t => string.IsNullOrEmpty(t.PautaId))
+                    .Select(t => new MessageTemplate { Content = t.Content, Category = t.Category, PautaId = _pautaId })
+                    .ToList();
+            }
             _allTemplates = new ObservableCollection<TemplateItemVM>(models.Select(m => new TemplateItemVM(m)));
 
             IsCategorizedMode = models.Any(t => !string.IsNullOrWhiteSpace(t.Category)) || _storageService.LoadTemplateCategories(_pautaId).Any();
