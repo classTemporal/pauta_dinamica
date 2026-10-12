@@ -866,6 +866,27 @@ namespace PautaDinamicaApp.ViewModels
             // 1. Validar Pauta Specific Templates
             foreach (var pauta in Pautas)
             {
+                // Nombre vacío en un correo adicional (caja borrada): se asigna uno por
+                // defecto ANTES de validar, para que los mensajes identifiquen la regla
+                // y no se guarde sin nombre.
+                if (pauta.ConditionalEmailRules != null)
+                {
+                    var used = new HashSet<string>(
+                        pauta.ConditionalEmailRules.Select(r => r.Name ?? ""),
+                        StringComparer.OrdinalIgnoreCase);
+                    int n = pauta.ConditionalEmailRules.Count + 1;
+                    foreach (var rule in pauta.ConditionalEmailRules)
+                    {
+                        if (string.IsNullOrWhiteSpace(rule.Name))
+                        {
+                            string candidate;
+                            do { candidate = $"Correo adicional {n++}"; }
+                            while (!used.Add(candidate));
+                            rule.Name = candidate;
+                        }
+                    }
+                }
+
                 var pautaFields = _storageService.LoadConfiguration(pauta.Id);
                 var pautaLabels = new HashSet<string>(pautaFields.Select(f => f.Label), StringComparer.OrdinalIgnoreCase);
                 pautaLabels.Add("Fecha");
@@ -882,11 +903,18 @@ namespace PautaDinamicaApp.ViewModels
                 // Validar plantillas de correos adicionales condicionales
                 if (pauta.ConditionalEmailRules != null)
                 {
+                    var pautaIds = new HashSet<string>(pautaFields.Select(f => f.Id), StringComparer.OrdinalIgnoreCase);
                     foreach (var rule in pauta.ConditionalEmailRules)
                     {
                         if (string.IsNullOrWhiteSpace(rule.TriggerFieldId) || string.IsNullOrWhiteSpace(rule.TriggerValue))
                         {
                             MessageBoxHelper.Show($"El correo adicional '{rule.Name}' de la pauta '{pauta.Name}' no tiene campo o valor de detección configurado.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+
+                        if (!pautaIds.Contains(rule.TriggerFieldId))
+                        {
+                            MessageBoxHelper.Show($"El correo adicional '{rule.Name}' de la pauta '{pauta.Name}' usa un campo de detección que ya no existe en la pauta. Elige el campo de nuevo.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
 

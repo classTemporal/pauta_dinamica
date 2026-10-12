@@ -159,6 +159,23 @@ namespace PautaDinamicaApp.Views
             InsertAtCaret(EmailBodyTextBox, picked.Value.Token);
         }
 
+        /// <summary>
+        /// El combo de campo de detección es OneWay a propósito: al recargar la lista de
+        /// campos (cambio de pauta) el ComboBox pasa por un estado vacío transitorio y con
+        /// TwoWay ese vacío se empujaba al modelo, borrando el TriggerFieldId guardado.
+        /// Aquí solo se propaga la elección real del usuario (nunca el nulo transitorio).
+        /// </summary>
+        private void TriggerFieldCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.ComboBox cb
+                && cb.DataContext is Models.ConditionalEmailRule rule
+                && cb.SelectedValue is string id
+                && !string.IsNullOrEmpty(id))
+            {
+                rule.TriggerFieldId = id;
+            }
+        }
+
         private void InsertSubjectField_Click(object sender, RoutedEventArgs e)
         {
             string? placeholder = Views.FieldPickerPopup.Pick(PautaFields(), this);

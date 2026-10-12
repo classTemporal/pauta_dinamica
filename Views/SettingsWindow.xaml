@@ -541,9 +541,10 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="Si el campo..." Style="{StaticResource LabelStyle}" FontSize="11"/>
                                                                     <ComboBox ItemsSource="{Binding Data.CurrentPautaFields, Source={StaticResource Proxy}}"
-                                                                              SelectedValue="{Binding TriggerFieldId}"
+                                                                              SelectedValue="{Binding TriggerFieldId, Mode=OneWay}"
                                                                               SelectedValuePath="Id"
-                                                                              DisplayMemberPath="Label" Height="38" VerticalContentAlignment="Center"/>
+                                                                              DisplayMemberPath="Label" Height="38" VerticalContentAlignment="Center"
+                                                                              SelectionChanged="TriggerFieldCombo_SelectionChanged"/>
                                                                 </StackPanel>
                                                                 <StackPanel Grid.Column="2">
                                                                     <TextBlock Text="...tiene exactamente este valor:" Style="{StaticResource LabelStyle}" FontSize="11"/>
