@@ -126,8 +126,13 @@ namespace PautaDinamicaApp.Services
 
             if (type == FieldType.Boolean)
             {
-                if (s.Equals("True", StringComparison.OrdinalIgnoreCase) || s == "1") return "Sí";
-                if (s.Equals("False", StringComparison.OrdinalIgnoreCase) || s == "0") return "No";
+                if (s.Equals("True", StringComparison.OrdinalIgnoreCase) || s == "1"
+                    || s.Equals("Cumple", StringComparison.OrdinalIgnoreCase)
+                    || s.Equals("Sí", StringComparison.OrdinalIgnoreCase) || s.Equals("Si", StringComparison.OrdinalIgnoreCase)) return "Cumple";
+                if (s.Equals("False", StringComparison.OrdinalIgnoreCase) || s == "0"
+                    || s.Equals("No cumple", StringComparison.OrdinalIgnoreCase)
+                    || s.Equals("No Cumple", StringComparison.OrdinalIgnoreCase)
+                    || s.Equals("No", StringComparison.OrdinalIgnoreCase)) return "No cumple";
             }
             return s;
         }

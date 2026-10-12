@@ -62,7 +62,17 @@ namespace PautaDinamicaApp.Services
 
             // Codifica solo cuando el destino es HTML. En texto plano (mailto) se conserva
             // el comportamiento original para no mostrar entidades al usuario.
-            string Clean(string? value) => encodeValues ? System.Net.WebUtility.HtmlEncode(value ?? "") : (value ?? "");
+            // Además en HTML los saltos de línea del valor (\r\n de TextBox multilínea)
+            // deben ser <br/> o el texto sale todo pegado en un solo párrafo.
+            string Clean(string? value)
+            {
+                string v = value ?? "";
+                if (!encodeValues) return v;
+                return System.Net.WebUtility.HtmlEncode(v)
+                    .Replace("\r\n", "<br/>")
+                    .Replace("\n", "<br/>")
+                    .Replace("\r", "<br/>");
+            }
 
             // 1. Reemplazar [Fecha]
             result = result.Replace("[Fecha]", Clean(entry.Timestamp.ToString("dd/MM/yyyy HH:mm")), StringComparison.OrdinalIgnoreCase);
@@ -85,6 +95,7 @@ namespace PautaDinamicaApp.Services
                         }
 
                         // --- REGLAS DE REEMPLAZO (Multi-Campo) ---
+                        bool ruleMatched = false;
                         if (rules != null)
                         {
                             var rule = rules.FirstOrDefault(r =>
@@ -95,9 +106,21 @@ namespace PautaDinamicaApp.Services
                             if (rule != null)
                             {
                                 value = rule.ReplacementValue;
+                                ruleMatched = true;
                             }
                         }
                         // ---------------------------
+                        // Los booleanos se muestran como Cumple/No cumple (igual que el PDF),
+                        // nunca True/False. Un objeto bool siempre se presenta así, sin importar
+                        // el tipo actual del campo (protege residuos de un cambio de tipo).
+                        // Los textos True/False/1/0 solo se convierten en campos Boolean.
+                        // No se toca el valor si una regla lo reemplazó.
+                        if (!ruleMatched)
+                        {
+                            if (val is bool b) value = b ? "Cumple" : "No cumple";
+                            else if (field.Type == FieldType.Boolean)
+                                value = NormalizeBooleanDisplay(value);
+                        }
                         // La comparación de reglas usa el valor crudo; la codificación se
                         // aplica solo al insertar, para no alterar el matching.
                         result = result.Replace(placeholder, Clean(value), StringComparison.OrdinalIgnoreCase);
@@ -106,6 +129,28 @@ namespace PautaDinamicaApp.Services
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Presenta un valor booleano como <c>Cumple</c>/<c>No cumple</c> (igual que el PDF).
+        /// Convierte bool, <c>True</c>/<c>False</c> y <c>1</c>/<c>0</c>; también acepta las
+        /// formas heredadas <c>Sí</c>/<c>No</c>. Cualquier otro texto (incluido un
+        /// reemplazo de regla) queda intacto.
+        /// </summary>
+        private static string NormalizeBooleanDisplay(object? value)
+        {
+            if (value is bool b) return b ? "Cumple" : "No cumple";
+            string s = (value?.ToString() ?? "").Trim();
+            if (s.Equals("True", StringComparison.OrdinalIgnoreCase) || s == "1"
+                || s.Equals("Cumple", StringComparison.OrdinalIgnoreCase)
+                || s.Equals("Sí", StringComparison.OrdinalIgnoreCase) || s.Equals("Si", StringComparison.OrdinalIgnoreCase))
+                return "Cumple";
+            if (s.Equals("False", StringComparison.OrdinalIgnoreCase) || s == "0"
+                || s.Equals("No cumple", StringComparison.OrdinalIgnoreCase)
+                || s.Equals("No Cumple", StringComparison.OrdinalIgnoreCase)
+                || s.Equals("No", StringComparison.OrdinalIgnoreCase))
+                return "No cumple";
+            return value?.ToString() ?? "";
         }
 
         /// <summary>

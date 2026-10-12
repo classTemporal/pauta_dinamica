@@ -314,17 +314,21 @@ Todo opcional y configurable. Si no se configura nada, el comportamiento actual 
 
 ## 14. Notas de implementación (decisiones tomadas al codificar)
 
-### 14.1 Semántica retrospectiva del rango semanal
+### 14.1 Semántica del rango semanal (semana en curso)
 
-`VentanaSemanal` devuelve el bloque más reciente que **ya cerró** en `ToDay`, no el que está en
-curso. Es lo que necesita una auditoría: reporta el periodo terminado.
+`VentanaSemanal` devuelve el bloque `FromDay → ToDay` de la semana que **contiene a hoy**
+(semana en curso). Decisión del 12/10/2026: antes devolvía el bloque más reciente ya
+cerrado, pero el uso real (asunto `Auditoría de Llamadas del [Semana:Sab]` enviado el lunes)
+exige la semana vigente.
 
-Con hoy = viernes 09/10/2026:
+Con hoy = lunes 12/10/2026:
 
 | Config | Resultado |
 |---|---|
-| Sábado → viernes | `03/10/2026 al 09/10/2026` (cierra hoy) |
-| Domingo → sábado | `27/09/2026 al 03/10/2026` (el bloque 04/10→10/10 aún no cierra) |
+| Sábado → viernes | `10/10/2026 al 16/10/2026` (semana en curso) |
+| Lunes → domingo | `12/10/2026 al 18/10/2026` (semana en curso) |
+
+Con hoy = viernes 09/10/2026, sábado → viernes es `03/10/2026 al 09/10/2026` (cierra hoy).
 
 El orden invertido (sábado → viernes) cruza el fin de semana sin problema.
 

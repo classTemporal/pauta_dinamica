@@ -214,31 +214,35 @@ namespace PautaDinamicaApp.Services
         }
 
         /// <summary>
-        /// Rango del día <paramref name="fromDay"/> al día <paramref name="toDay"/> de la semana.
+        /// Rango del día <paramref name="fromDay"/> al día <paramref name="toDay"/> de la semana
+        /// que contiene a hoy (semana en curso).
         ///
         /// <para>
-        /// Semántica retrospectiva: devuelve el bloque más reciente que YA CERRÓ en
-        /// <paramref name="toDay"/>. Es lo que necesita una auditoría semanal, que reporta
-        /// el periodo terminado y no uno en curso.
+        /// Semántica de semana actual: devuelve el bloque <c>fromDay → toDay</c> al que
+        /// pertenece hoy. Es lo que necesita un asunto como
+        /// <c>Auditoría de Llamadas del [Semana:Sab]</c>, que debe mostrar la semana
+        /// vigente al enviar, no la anterior.
         /// </para>
         /// <para>
-        /// Ejemplos con hoy = viernes 09/10/2026:
+        /// Ejemplos con hoy = lunes 12/10/2026:
         /// <list type="bullet">
-        ///   <item><description>Sábado → viernes: <c>03/10 al 09/10</c> (cierra hoy)</description></item>
-        ///   <item><description>Domingo → sábado: <c>27/09 al 03/10</c> (el bloque 04/10→10/10 aún no cierra)</description></item>
+        ///   <item><description>Sábado → viernes: <c>10/10 al 16/10</c> (semana en curso)</description></item>
+        ///   <item><description>Lunes → domingo: <c>12/10 al 18/10</c> (semana en curso)</description></item>
         /// </list>
+        /// Con hoy = viernes 09/10/2026, sábado → viernes es <c>03/10 al 09/10</c>
+        /// (la semana cierra hoy).
         /// El orden invertido (ej: sábado → viernes) cruza el fin de semana sin problema.
         /// </para>
         /// </summary>
         private static DateRange VentanaSemanal(DateTime today, DayOfWeek fromDay, DayOfWeek toDay)
         {
-            // Distancia hacia atrás desde hoy hasta el último 'toDay' ocurrido (incluido hoy).
-            int backTo = ((int)today.DayOfWeek - (int)toDay + 7) % 7;
-            DateTime to = today.AddDays(-backTo);
+            // Distancia hacia atrás desde hoy hasta el 'fromDay' de esta semana (incluido hoy).
+            int backFrom = ((int)today.DayOfWeek - (int)fromDay + 7) % 7;
+            DateTime from = today.AddDays(-backFrom);
 
             // Longitud del bloque: de fromDay a toDay, inclusive.
             int span = ((int)toDay - (int)fromDay + 7) % 7;
-            DateTime from = to.AddDays(-span);
+            DateTime to = from.AddDays(span);
 
             return new DateRange(from, to);
         }

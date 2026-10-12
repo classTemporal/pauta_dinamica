@@ -14,13 +14,13 @@ namespace PautaDinamicaApp.Views.Converters
 
             string s = value.ToString()?.ToLower() ?? "";
 
-            if (s == "true" || s == "1" || s == "si" || s == "sí" || s == "yes")
+            if (s == "true" || s == "1" || s == "si" || s == "sí" || s == "yes" || s == "cumple")
                 return true;
 
-            if (s == "false" || s == "0" || s == "no")
+            if (s == "false" || s == "0" || s == "no" || s == "no cumple")
                 return false;
 
-            return false; // Fallback for things like "Cumple"
+            return false; // Fallback
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

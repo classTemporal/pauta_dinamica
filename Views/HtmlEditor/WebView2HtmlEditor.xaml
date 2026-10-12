@@ -74,7 +74,7 @@
                 <Button Style="{StaticResource ToolButton}" Content="1.0" ToolTip="Interlineado sencillo" Click="LineSingle_Click"/>
                 <Button Style="{StaticResource ToolButton}" Content="1.5" ToolTip="Interlineado medio" Click="LineMiddle_Click"/>
                 <Button Style="{StaticResource ToolButton}" Content="2.0" ToolTip="Interlineado doble" Click="LineDouble_Click"/>
-                <Button Style="{StaticResource ToolButton}" Content="Otro…" ToolTip="Interlineado personalizado (0.5 a 3)" Click="LineCustom_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="Otro…" ToolTip="Interlineado personalizado (0.5 a 3). Ojo: menos de 1 enciman las líneas y Outlook corta el texto" Click="LineCustom_Click"/>
             </WrapPanel>
         </Border>
         <Border Grid.Row="1" Background="{DynamicResource BackgroundBrush}"

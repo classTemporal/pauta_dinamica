@@ -64,7 +64,10 @@ html,body{margin:0;padding:0;background:#fff;}
 /* Tope absoluto (no porcentual): no interfiere con columnas angostas ni se serializa. */
 #ed img{max-width:600px;height:auto;}
 #ed p{margin:0 0 12px 0;}
-/* 12px ≈ separación que Outlook aplica a los párrafos: lo que ves es lo que sale. */
+/* 12px ≈ separación que Outlook aplica a los párrafos: lo que ves es lo que sale.
+   Los separadores vacíos (<p><br></p>) no llevan margen ni en el editor ni al
+   enviar (getHtml los normaliza): equivalen a una sola línea en blanco. */
+#ed p:has(> br:only-child){margin-top:0;margin-bottom:0;}
 </style></head>
 <body><div id=""ed"" contenteditable=""true""></div>
 <script>
@@ -121,7 +124,19 @@ return null;}
 function anchorNode(){const r=pickRange();return r?r.startContainer:null;}
 function cmd(n,v){ed().focus();try{document.execCommand(n,false,v==null?null:v);}catch(e){}notify();}
 function setHtml(h){ed().innerHTML=h||'';lastHtml=ed().innerHTML;}
-function getHtml(){ed().querySelectorAll('img[data-sel]').forEach(i=>i.removeAttribute('data-sel'));return ed().innerHTML;}
+function getHtml(){ed().querySelectorAll('img[data-sel]').forEach(i=>i.removeAttribute('data-sel'));
+return serializeTight(ed().innerHTML);}
+// Los separadores vacíos (<p><br></p>, <p>&nbsp;</p>, <p><o:p>&nbsp;</o:p></p>...) salen
+// con margen 0 para que equivalgan a una sola línea en blanco en Outlook. Solo se toca
+// el serializado (el editor en vivo no se muta); el CSS del editor los muestra igual.
+function serializeTight(html){const d=document.createElement('div');d.innerHTML=html;
+d.querySelectorAll('p').forEach(p=>{if(isEmptyPara(p)){p.style.marginTop='0';p.style.marginBottom='0';}});
+return d.innerHTML;}
+function isEmptyPara(p){for(const n of p.childNodes){
+if(n.nodeType===3){if(n.textContent.replace(/[\s ]/g,'')!=='')return false;}
+else if(n.nodeType===1){const t=n.tagName;if(t==='BR')continue;
+if(t==='O:P'){if((n.textContent||'').replace(/[\s ]/g,'')!=='')return false;continue;}
+return false;}}return true;}
 function insertText(t){ed().focus();try{if(!document.execCommand('insertText',false,t)){document.execCommand('insertHTML',false,escapeHtml(t));}}catch(e){document.execCommand('insertHTML',false,escapeHtml(t));}notify();}
 function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function fontSizeDelta(d){const r=pickTextRange();let base=14;
@@ -186,9 +201,11 @@ function adjustRow(d){const a=anchorNode();let n=a;let tr=null;while(n&&n!==ed()
 if(!tr)return;for(const c of tr.cells){let h=c.style.height?parseFloat(c.style.height):c.offsetHeight;h=Math.max(16,Math.min(400,h+d));c.style.height=h+'px';}notify();}
 function setLineHeight(v){const r=pickTextRange();if(!r)return;ed().focus();
 const blocks=new Set();
-const addBlock=(n)=>{while(n&&n!==ed()&&n){const t=n.tagName||'';if(/^(P|H1|H2|H3|H4|H5|H6|DIV|LI|BLOCKQUOTE)$/.test(t)){blocks.add(n);break;}n=n.parentNode;}};
-addBlock(r.startContainer);addBlock(r.endContainer);
-if(blocks.size===0){try{document.execCommand('formatBlock',false,'p');}catch(e){}addBlock(sel.anchorNode);}
+try{const w=document.createTreeWalker(ed(),NodeFilter.SHOW_ELEMENT,null);
+while(w.nextNode()){const n=w.currentNode;const t=n.tagName||'';
+if(/^(P|H1|H2|H3|H4|H5|H6|DIV|LI|BLOCKQUOTE|TD|TH)$/.test(t)){try{if(r.intersectsNode(n))blocks.add(n);}catch(e){}}}}catch(e){}
+if(blocks.size===0){const a=r.startContainer;let n=a.nodeType===1?a:a.parentElement;
+while(n&&n!==ed()){const t=n.tagName||'';if(/^(P|H1|H2|H3|H4|H5|H6|DIV|LI|BLOCKQUOTE|TD|TH)$/.test(t)){blocks.add(n);break;}n=n.parentNode;}}
 blocks.forEach(b=>{b.style.lineHeight=v;b.style.marginTop='0';b.style.marginBottom='2px';});
 notify();}
 </script></body></html>";
